@@ -14,7 +14,7 @@
 import { useEffect } from "react";
 import type { VehicleKind } from "@/game/config/tuning";
 import { CONTROL_CODES } from "@/game/systems/controls";
-import { nextWeapon, type WeaponId } from "@/game/combat/weapons";
+import { nextWeapon, weaponAtSlot, type WeaponId } from "@/game/combat/weapons";
 import { MAX_DELTA_SECONDS } from "@/game/config/tuning";
 import { isSummoned, stepLinger, wantsSummon } from "@/game/dokebi/summonWindow";
 
@@ -43,6 +43,14 @@ export interface InputState {
   attackQueued: boolean;
   /** 무기 바꾸기 요청. 눌림 이벤트만 담는다 */
   weaponQueued: boolean;
+  /**
+   * 숫자키로 **직접 고른** 무기의 자리 번호(1부터). 고르지 않았으면 0.
+   *
+   * 순환(Q)과 따로 두는 이유: 여섯 자루를 한 키로 돌리면 원하는 것까지
+   * 최대 다섯 번을 눌러야 하고, 그 사이 화면에서 눈을 떼게 된다. 전투
+   * 중에는 그 다섯 번이 곧 맞는 횟수다.
+   */
+  weaponSlotQueued: number;
   /** 점프 키를 누르고 있는지. 활강은 눌림이 아니라 유지로 판정한다 */
   jumpHeld: boolean;
   /** 도깨비 동료를 불러 둔 상태인지 (토글) */
@@ -79,6 +87,7 @@ export function createInputState(): InputState {
     jumpQueued: false,
     attackQueued: false,
     weaponQueued: false,
+    weaponSlotQueued: 0,
     jumpHeld: false,
     // 처음부터 동료가 옆에 있어야 존재를 알 수 있다.
     companionSummoned: true,
@@ -231,6 +240,18 @@ export function useKeyboardBindings(
       // 무기 바꾸기 — 공격(J)과 달리 왼손 자리에 둔다. 달리면서 바꿀 수 있어야 한다.
       if (event.code === CONTROL_CODES.weapon && !event.repeat) {
         input.weaponQueued = true;
+        return;
+      }
+      /*
+       * 숫자키로 곧장 고르기.
+       *
+       * `Digit1`~`Digit6`만 본다 — `Numpad…`까지 받으면 자리 번호가 두 경로로
+       * 들어와 어느 쪽이 이겼는지 알 수 없다. 범위 밖은 무시한다(무기가
+       * 늘거나 줄어도 여기를 고칠 일이 없게, 상한은 목록이 정한다).
+       */
+      const slot = /^Digit([1-9])$/.exec(event.code);
+      if (slot && !event.repeat) {
+        input.weaponSlotQueued = Number(slot[1]);
         return;
       }
       // 동료 소환·해제와 능력 — 이동 키에서 손을 떼지 않고 닿는 자리에 둔다.
@@ -467,6 +488,16 @@ export function projectCommands(
   if (input.weaponQueued) {
     input.weaponQueued = false;
     link.weapon = nextWeapon(link.weapon);
+  }
+
+  /*
+   * 숫자키 쪽을 **뒤에** 둔다. 같은 프레임에 둘 다 들어오면 직접 고른 쪽이
+   * 이겨야 한다 — 「3번을 눌렀는데 4번이 잡히는」 일이 없어야 손이 믿는다.
+   */
+  if (input.weaponSlotQueued !== 0) {
+    const chosen = weaponAtSlot(input.weaponSlotQueued);
+    input.weaponSlotQueued = 0;
+    if (chosen !== null) link.weapon = chosen;
   }
 
   /*

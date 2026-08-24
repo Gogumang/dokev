@@ -150,9 +150,14 @@ export const CONTROLS: readonly ControlRow[] = [
   {
     id: "weapon",
     action: "무기 바꾸기",
-    keyboard: "Q",
+    /*
+     * 여섯 자루라 순환만으로는 답답하다 — 원하는 것까지 최대 다섯 번이고,
+     * 전투 중에는 그 다섯 번이 곧 맞는 횟수다. 숫자키는 `WEAPON_ORDER`의
+     * 자리 번호를 그대로 쓴다.
+     */
+    keyboard: "Q (다음) · 1~6 (곧장 고르기)",
     touch: "무기 버튼",
-    hint: { key: "Q", label: "무기" },
+    hint: { key: "Q / 1~6", label: "무기" },
   },
   {
     id: "talk",

@@ -248,6 +248,22 @@ export function nextWeapon(id: WeaponId): WeaponId {
 }
 
 /**
+ * 자리 번호(1부터)로 무기를 고른다. 범위 밖이면 null.
+ *
+ * 숫자키가 읽는다. **번호를 여기서 정하지 않는다** — `WEAPON_ORDER`가 곧
+ * 번호다. 따로 표를 두면 순서를 바꿀 때 화면의 「3」과 손의 「3」이 갈라진다.
+ *
+ * 범위 밖에서 시작 무기로 되돌리지 않고 null을 주는 것이 `nextWeapon`과
+ * 다른 점이다. 저 쪽은 낡은 저장값을 복구하는 자리라 무엇이든 하나를
+ * 골라야 하고, 이 쪽은 **사람이 방금 누른 키**라 없는 자리면 아무 일도
+ * 일어나지 않는 편이 맞다 — 7을 눌렀는데 무기가 바뀌면 그게 버그다.
+ */
+export function weaponAtSlot(slot: number): WeaponId | null {
+  if (!Number.isInteger(slot) || slot < 1 || slot > WEAPON_ORDER.length) return null;
+  return WEAPON_ORDER[slot - 1];
+}
+
+/**
  * 탄이 닿는 거리(m). 근접 무기는 부채꼴 사거리를 돌려준다.
  *
  * 두 종류의 「사거리」를 한 이름으로 묻을 수 있어야 지도·HUD·검사가 무기
