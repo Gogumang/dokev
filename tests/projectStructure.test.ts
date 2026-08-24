@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
  * 문서를 다시 쓰는 것만으로는 또 낡는다. 여기서 대조한다.
  */
 
-const plan = readFileSync("PROJECT_PLAN.md", "utf8");
+const plan = readFileSync("docs/PROJECT_PLAN.md", "utf8");
 
 describe("문서에 적힌 디렉터리", () => {
   const documented = [

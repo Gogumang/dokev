@@ -71,7 +71,7 @@ describe("README의 내용", () => {
   });
 
   it("문서 링크가 실제 파일을 가리킨다", () => {
-    const links = [...readme.matchAll(/\]\(\.\/([A-Z_]+\.md)\)/g)].map((match) => match[1]);
+    const links = [...readme.matchAll(/\]\(\.\/((?:docs\/)?[A-Z_]+\.md)\)/g)].map((match) => match[1]);
     expect(links.length).toBeGreaterThan(2);
     for (const file of links) {
       expect(() => readFileSync(file, "utf8"), `${file}가 없다`).not.toThrow();
