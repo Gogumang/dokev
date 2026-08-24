@@ -15,7 +15,7 @@
 
 import type { AttackTiming } from "@/game/combat/attackPhase";
 
-export type WeaponId = "bat" | "hammer" | "popgun";
+export type WeaponId = "sword" | "bat" | "hammer" | "popgun" | "beam" | "bow";
 
 /**
  * 어떻게 닿는가.
@@ -78,6 +78,28 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
    * 수치를 바꾸지 않았다. 무기를 나누면서 기본 손맛까지 흔들면 「무기가
    * 늘었다」와 「전투가 달라졌다」를 구분할 수 없다.
    */
+  /**
+   * 장난감 칼 — 제일 빠르고 제일 짧다.
+   *
+   * 방망이가 이미 「가벼운 근접」인데 하나 더 두는 이유는 **간격**이다.
+   * 방망이는 2.4m를 좁게 훑고, 칼은 1.9m를 **넓게** 벤다(반각 1.5rad ≈ 172도
+   * 부채꼴) — 둘러싸였을 때 값을 하는 것이 이쪽이다. 대신 한 발짝만 물러나면
+   * 아예 닿지 않는다.
+   *
+   * 피해는 방망이와 같은 1이다. 「빠르고 세다」가 되면 방망이가 사라진다.
+   */
+  sword: {
+    id: "sword",
+    kind: "melee",
+    name: "장난감 칼",
+    tagline: "제일 빠르다. 넓게 베지만 한 발짝만 물러나도 안 닿는다",
+    timing: { windupSeconds: 0.05, activeSeconds: 0.11, recoverySeconds: 0.2 },
+    reachMeters: 1.9,
+    halfAngle: 1.5,
+    damage: 1,
+    knockbackScale: 0.7,
+    bolt: null,
+  },
   bat: {
     id: "bat",
     kind: "melee",
@@ -140,6 +162,63 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
     knockbackScale: 0.6,
     bolt: { speed: 12, lifeSeconds: 1.4, spawnHeight: 1.05, hitRadius: 0.75 },
   },
+  /**
+   * 유령 잡는 광선총 — **밀지 않고 끌어당긴다.**
+   *
+   * 원작 트레일러의 원거리 무기가 「장난감 같은 총」인 것과, 우리 게임이
+   * 도깨비를 **잡아서 친구로 만드는** 게임인 것이 여기서 만난다. 다른
+   * 무기가 전부 적을 밀어내는데, 이것만 반대다 — 넉백 배율이 **음수**여서
+   * 맞은 도깨비가 내 쪽으로 딸려 온다.
+   *
+   * 규칙을 새로 만들지 않았다. `strikeEnemy`가 「밀어내는 방향 × 배율」로
+   * 속도를 정하므로, 배율의 부호만 뒤집으면 그대로 끌어당김이 된다 —
+   * 무기 표를 읽기만 하는 전투 코드가 지켜지는지가 여기서 드러난다.
+   *
+   * 이것이 쓸모 있는 자리: 멀리 도망가는 도깨비를 끌어와 근접으로 마무리하고,
+   * 약해진 놈을 포획 범위 안으로 당긴다. 대신 **끌어당기므로 위험하다** —
+   * 여러 기를 당기면 내 발밑에 다 모인다.
+   */
+  beam: {
+    id: "beam",
+    kind: "ranged",
+    name: "유령 잡는 광선총",
+    tagline: "맞으면 끌려온다. 여러 기를 당기면 내 발밑에 다 모인다",
+    timing: { windupSeconds: 0.12, activeSeconds: 0.08, recoverySeconds: 0.32 },
+    reachMeters: 0,
+    halfAngle: 0,
+    damage: 1,
+    /*
+     * 음수 — 이것이 이 무기의 전부다. 크기는 방망이보다 작게 둔다. 세게
+     * 당기면 적이 등 뒤로 지나가 버려 조준이 의미를 잃는다.
+     */
+    knockbackScale: -0.9,
+    /** 굵고 빠른 광선. 사거리 21m로 딱총보다 길다 */
+    bolt: { speed: 30, lifeSeconds: 0.7, spawnHeight: 1.1, hitRadius: 0.9 },
+  },
+  /**
+   * 장난감 활 — 제일 멀리, 제일 세게, 제일 느리게.
+   *
+   * 원거리가 딱총 하나뿐일 때는 「멀리서 조금씩 깎기」한 가지였다. 활은
+   * 반대쪽 끝이다 — 35m 밖에서 **한 발에 로봇을 눕힌다.** 대신 쏘고 나서
+   * 0.86초 동안 아무것도 못 한다(방망이 두 번에 가까운 시간이다).
+   *
+   * 근접 무기 중 제일 느린 망치(1.03초)보다도 빠르게 둔 것은 의도적이다 —
+   * 「느릴수록 세다」 줄에서 활과 망치가 같은 피해로 나란히 서고, 둘을
+   * 가르는 것이 무게가 아니라 **거리**가 된다.
+   */
+  bow: {
+    id: "bow",
+    kind: "ranged",
+    name: "장난감 활",
+    tagline: "제일 멀리 닿고 한 발에 눕힌다. 대신 쏘고 나서 한참 굳는다",
+    timing: { windupSeconds: 0.34, activeSeconds: 0.06, recoverySeconds: 0.46 },
+    reachMeters: 0,
+    halfAngle: 0,
+    damage: 2,
+    knockbackScale: 0.35,
+    /** 사거리 35.2m — 도시 한 블록 건너까지 닿는다 */
+    bolt: { speed: 22, lifeSeconds: 1.6, spawnHeight: 1.15, hitRadius: 0.7 },
+  },
 };
 
 /**
@@ -148,7 +227,14 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
  * 표(`WEAPONS`)의 키 순서에 기대지 않는다 — 객체 키 순서에 조작 순서를
  * 맡기면 정의를 위아래로 옮기는 것만으로 손에 잡히는 무기가 바뀐다.
  */
-export const WEAPON_ORDER: readonly WeaponId[] = ["bat", "hammer", "popgun"];
+export const WEAPON_ORDER: readonly WeaponId[] = [
+  "bat",
+  "sword",
+  "hammer",
+  "popgun",
+  "beam",
+  "bow",
+];
 
 /** 시작 무기 */
 export const DEFAULT_WEAPON: WeaponId = WEAPON_ORDER[0];

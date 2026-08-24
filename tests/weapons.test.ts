@@ -52,9 +52,15 @@ describe("무기 사이의 관계", () => {
       for (let j = i + 1; j < WEAPON_ORDER.length; j += 1) {
         const a = WEAPONS[WEAPON_ORDER[i]];
         const b = WEAPONS[WEAPON_ORDER[j]];
+        /*
+         * 사거리는 `weaponRange`로 잰다. `reachMeters`는 원거리 무기에서 0이라,
+         * 그것으로 비교하면 **원거리끼리는 언제나 같은 축**이 되어 검사가
+         * 조용히 헐거워진다 — 광선총과 딱총이 사거리 21m와 16.8m로 실제로는
+         * 다른데도 "같다"고 읽혔다.
+         */
         const differences = [
           swingSeconds(a) !== swingSeconds(b),
-          a.reachMeters !== b.reachMeters,
+          weaponRange(a) !== weaponRange(b),
           a.damage !== b.damage,
         ].filter(Boolean).length;
         expect(differences, `${a.id} vs ${b.id}: 다른 축이 ${differences}개뿐`).toBeGreaterThan(1);
@@ -177,6 +183,52 @@ describe("무기 사이의 관계", () => {
       if (bolt === null) continue;
       expect(bolt.speed, `${id} 탄속 ${bolt.speed}m/s`).toBeGreaterThan(LOCOMOTION.run.maxSpeed);
     }
+  });
+
+  it("광선총은 밀지 않고 끌어당긴다 — 넉백이 음수인 무기가 하나 있다", () => {
+    /*
+     * 이 게임은 도깨비를 **잡아서 친구로 만드는** 게임이다. 전부 밀어내는
+     * 무기뿐이면 「멀어지게 하기」밖에 못 한다 — 끌어오는 수단이 하나는
+     * 있어야 도망가는 놈을 붙잡는 선택지가 생긴다.
+     *
+     * 전투 코드를 고쳐 만든 것이 아니다. `strikeEnemy`가 「밀어내는 방향 ×
+     * 배율」로 속도를 정하므로 부호만 뒤집으면 끌어당김이 된다.
+     */
+    const pullers = WEAPON_ORDER.filter((id) => WEAPONS[id].knockbackScale < 0);
+    expect(pullers.length, `끌어당기는 무기 ${pullers.length}자루`).toBe(1);
+    expect(pullers[0]).toBe("beam");
+  });
+
+  it("끌어당기는 세기가 지나치지 않다", () => {
+    /*
+     * 세게 당기면 적이 **등 뒤로 지나가** 조준이 의미를 잃는다. 제일 가벼운
+     * 근접(방망이)보다 약하게 둔다.
+     */
+    expect(Math.abs(WEAPONS.beam.knockbackScale)).toBeLessThan(WEAPONS.bat.knockbackScale);
+  });
+
+  it("원거리 셋이 서로 다른 거리를 맡는다", () => {
+    /*
+     * 사거리가 비슷하면 셋 중 제일 센 것만 남는다. 「가까이·중간·멀리」로
+     * 갈라져 있어야 무엇을 들지가 상황으로 정해진다.
+     */
+    const ranges = WEAPON_ORDER.filter((id) => WEAPONS[id].kind === "ranged")
+      .map((id) => weaponRange(WEAPONS[id]))
+      .sort((a, b) => a - b);
+    for (let i = 1; i < ranges.length; i += 1) {
+      expect(
+        ranges[i] / ranges[i - 1],
+        `사거리 ${ranges[i - 1].toFixed(1)}m와 ${ranges[i].toFixed(1)}m가 너무 가깝다`,
+      ).toBeGreaterThan(1.2);
+    }
+  });
+
+  it("근접 셋이 서로 다른 부채꼴을 맡는다", () => {
+    // 넓게 베는 것과 좁게 찌르는 것이 갈려야 둘러싸였을 때의 선택이 생긴다
+    const angles = WEAPON_ORDER.filter((id) => WEAPONS[id].kind === "melee").map(
+      (id) => WEAPONS[id].halfAngle,
+    );
+    expect(new Set(angles).size, `반각 ${angles.join(", ")}`).toBe(angles.length);
   });
 
   it("넉백이 무기 무게를 따라간다", () => {
