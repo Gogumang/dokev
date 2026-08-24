@@ -48,49 +48,49 @@ function Shadow({ cx, cy, rx }: { cx: number; cy: number; rx: number }) {
 }
 
 /**
- * 아이.
+ * 아이 — 옆모습으로 걷는다.
  *
- * 정면으로 걸어온다. 게임 안의 비례(머리가 크고 다리가 짧은 아이 체형)를 따라야
- * 들어갔을 때 같은 인물로 읽힌다.
+ * 처음에는 정면으로 세워 뒀는데, 정면 부동자세는 **서 있는 그림**이지
+ * 어디론가 가는 그림이 아니다. 첫 화면이 약속해야 하는 것은 「여기서 논다」이고,
+ * 그건 걷는 자세에서 나온다.
+ *
+ * 보드를 옆구리에 낀다. 게임의 첫 여정 두 번째 단계가 보드를 꺼내는 것이라
+ * (`quest/questContent.ts`) 화면과 안이 같은 말을 한다.
+ *
+ * 그늘을 한 겹 넣는다. 평면 색만 쌓으면 도형이 되고, 아래쪽에 어두운 색이
+ * 한 번 들어가야 덩어리로 보인다.
  */
 function Kid({ x, y, scale }: { x: number; y: number; scale: number }) {
   return (
-    /*
-     * 외곽선을 두른다. 배경이 밝아지면서 인물이 바닥에 녹아붙었다 — 만화적인
-     * 인물을 사실적인 배경 위에 세울 때 선이 그 둘을 갈라 준다.
-     */
     <g transform={`translate(${x} ${y}) scale(${scale})`} stroke="#241d2a" strokeWidth="3">
-      <rect x="-26" y="-6" width="52" height="58" rx="16" fill={HOODIE} />
-      <path d="M-26 20 L-26 44 Q0 56 26 44 L26 20 Z" fill={HOODIE_DARK} />
-      {/* 가방끈이 어깨 앞으로 넘어온다 — 실루엣의 포인트 색 */}
-      <rect x="-15" y="-4" width="6" height="34" rx="3" fill={BAG} />
-      <rect x="9" y="-4" width="6" height="34" rx="3" fill={BAG} />
+      {/* 뒤쪽 다리와 팔 — 먼저 그려야 몸 뒤로 간다 */}
+      <path d="M-6 46 L-22 74 L-14 80 L4 52 Z" fill="#2f3c58" />
+      <path d="M-24 76 L-6 84 L-10 92 L-30 86 Z" fill={SHOE} />
+      <path d="M-12 4 L-30 28 L-22 34 L-4 12 Z" fill={HOODIE_DARK} />
 
-      {/* 팔 — 걷는 중이라 앞뒤로 벌어진다 */}
-      <rect x="-38" y="2" width="14" height="36" rx="7" fill={HOODIE} />
-      <rect x="24" y="8" width="14" height="34" rx="7" fill={HOODIE_DARK} />
-      <circle cx="-31" cy="42" r="7" fill={SKIN} />
-      <circle cx="31" cy="46" r="7" fill={SKIN} />
+      {/* 가방 */}
+      <rect x="-26" y="-2" width="20" height="34" rx="8" fill={BAG} />
 
-      <rect x="-19" y="48" width="16" height="34" rx="7" fill={PANTS} />
-      <rect x="3" y="48" width="16" height="30" rx="7" fill={PANTS} />
-      <rect x="-23" y="78" width="24" height="12" rx="6" fill={SHOE} />
-      <rect x="1" y="74" width="24" height="12" rx="6" fill={SHOE} />
+      {/* 몸통 — 앞으로 살짝 기운다. 수직으로 세우면 다시 서 있는 그림이 된다 */}
+      <path d="M-16 -6 L20 -10 L26 34 Q4 44 -14 36 Z" fill={HOODIE} />
+      <path d="M-14 22 L26 18 L26 34 Q4 44 -14 36 Z" fill={HOODIE_DARK} />
 
-      <circle cx="0" cy="-26" r="26" fill={SKIN} />
-      <path
-        d="M-27 -30 Q-22 -58 0 -58 Q22 -58 27 -30 Q14 -42 0 -40 Q-14 -42 -27 -30 Z"
-        fill={HAIR}
-      />
-      <circle cx="-9" cy="-24" r="3.4" fill="#241d2a" stroke="none" />
-      <circle cx="9" cy="-24" r="3.4" fill="#241d2a" stroke="none" />
-      <path
-        d="M-7 -12 Q0 -6 7 -12"
-        stroke="#241d2a"
-        strokeWidth="2.6"
-        fill="none"
-        strokeLinecap="round"
-      />
+      {/* 앞쪽 다리 */}
+      <path d="M6 40 L24 68 L14 74 L-2 46 Z" fill={PANTS} />
+      <path d="M12 70 L30 78 L26 88 L8 80 Z" fill={SHOE} />
+
+      {/* 앞쪽 팔 — 보드를 낀다 */}
+      <path d="M14 2 L34 20 L26 28 L8 12 Z" fill={HOODIE} />
+      <circle cx="32" cy="26" r="7" fill={SKIN} />
+      <rect x="6" y="26" width="52" height="12" rx="6" fill="#4bbf7a" transform="rotate(-8 30 32)" />
+      <circle cx="18" cy="40" r="4" fill="#2a2630" />
+      <circle cx="46" cy="36" r="4" fill="#2a2630" />
+
+      {/* 머리 — 옆얼굴 */}
+      <circle cx="6" cy="-30" r="24" fill={SKIN} />
+      <path d="M-18 -34 Q-14 -60 8 -60 Q30 -60 30 -38 Q16 -48 -2 -44 Q-12 -42 -18 -34 Z" fill={HAIR} />
+      <circle cx="16" cy="-30" r="3.4" fill="#241d2a" stroke="none" />
+      <path d="M20 -20 Q26 -18 28 -23" stroke="#241d2a" strokeWidth="2.6" fill="none" strokeLinecap="round" />
     </g>
   );
 }
@@ -98,9 +98,15 @@ function Kid({ x, y, scale }: { x: number; y: number; scale: number }) {
 /**
  * 도깨비 하나.
  *
- * 셋이 덩어리 모양으로 갈려야 한다 — 초롱은 위가 밝은 등불, 그을음은 아래가
+ * 셋이 **덩어리 모양으로** 갈려야 한다 — 초롱은 위가 밝은 등불, 그을음은 아래가
  * 무거운 연기, 물비늘은 납작한 물웅덩이다. 같은 원 셋을 색만 바꿔 놓으면
  * 「넷을 모으는 게임」이라는 말이 이 화면에서 거짓이 된다.
+ *
+ * 각자에 그늘을 한 겹 넣는다. 평면 색 하나로는 스티커가 되고, 아래가 어두워져야
+ * 바닥 위에 놓인 것으로 보인다.
+ *
+ * 셋 다 **가는 쪽을 본다.** 아이가 오른쪽으로 걷는데 동료가 정면을 보고 있으면
+ * 같이 가는 것이 아니라 각자 서 있는 것이 된다.
  */
 function Dokebi({
   x,
@@ -119,29 +125,39 @@ function Dokebi({
     <g transform={`translate(${x} ${y}) scale(${scale})`} stroke="#241d2a" strokeWidth="3">
       {kind === "chorong" && (
         <>
-          <circle cx="0" cy="0" r="26" fill={tone.body} />
-          <path d="M-18 -14 Q0 -34 18 -14 Z" fill={tone.accent} />
-          <rect x="-4" y="-38" width="8" height="10" rx="3" fill={tone.accent} />
+          {/* 등불 — 위가 밝고 손잡이가 달렸다. 떠 있어서 다리가 없다 */}
+          <rect x="-3" y="-44" width="6" height="12" rx="3" fill={tone.accent} />
+          <path d="M-14 -32 L14 -32 L20 -6 Q0 6 -20 -6 Z" fill={tone.body} />
+          <path d="M-19 -8 L19 -8 L20 -6 Q0 6 -20 -6 Z" fill="#e0b449" />
+          <path d="M-11 -30 L11 -30 L13 -18 Q0 -12 -13 -18 Z" fill={tone.accent} />
+          <circle cx="1" cy="-18" r="3" fill="#241d2a" stroke="none" />
+          <circle cx="11" cy="-19" r="3" fill="#241d2a" stroke="none" />
         </>
       )}
       {kind === "geueum" && (
         <>
+          {/* 연기 — 아래가 무겁고 윤곽이 뭉개진다 */}
           <path
-            d="M-28 18 Q-34 -12 -12 -20 Q0 -32 14 -20 Q34 -12 28 18 Q0 28 -28 18 Z"
+            d="M-30 16 Q-38 -10 -14 -18 Q-4 -32 12 -22 Q34 -16 28 14 Q0 26 -30 16 Z"
             fill={tone.body}
           />
-          <circle cx="0" cy="-2" r="6" fill={tone.accent} />
+          <path d="M-30 16 Q0 26 28 14 Q26 22 0 26 Q-26 24 -30 16 Z" fill="#413b49" />
+          <circle cx="6" cy="-6" r="5" fill={tone.accent} stroke="none" />
+          <circle cx="16" cy="-8" r="3.4" fill="#241d2a" stroke="none" />
+          <circle cx="4" cy="-10" r="3.4" fill="#241d2a" stroke="none" />
         </>
       )}
       {kind === "mulbineul" && (
         <>
-          <ellipse cx="0" cy="4" rx="30" ry="18" fill={tone.body} />
-          <ellipse cx="-8" cy="-1" rx="9" ry="5" fill={tone.accent} opacity="0.9" />
-          <ellipse cx="10" cy="6" rx="7" ry="4" fill={tone.accent} opacity="0.75" />
+          {/* 물웅덩이 — 납작하고 결이 있다 */}
+          <ellipse cx="0" cy="2" rx="32" ry="17" fill={tone.body} />
+          <path d="M-32 4 Q0 22 32 4 Q30 16 0 19 Q-30 16 -32 4 Z" fill="#227fae" />
+          <ellipse cx="-10" cy="-4" rx="10" ry="4" fill={tone.accent} opacity="0.95" stroke="none" />
+          <ellipse cx="12" cy="2" rx="7" ry="3" fill={tone.accent} opacity="0.8" stroke="none" />
+          <circle cx="14" cy="-6" r="3.2" fill="#241d2a" stroke="none" />
+          <circle cx="2" cy="-8" r="3.2" fill="#241d2a" stroke="none" />
         </>
       )}
-      <circle cx="-8" cy="-2" r="3" fill="#241d2a" stroke="none" />
-      <circle cx="8" cy="-2" r="3" fill="#241d2a" stroke="none" />
     </g>
   );
 }
@@ -305,15 +321,15 @@ export function StreetScene() {
        * 아이와 도깨비 셋. 아이를 가운데에서 오른쪽으로 밀고 도깨비를 왼쪽으로
        * 펼친다 — 한 줄로 세우면 행렬이 되고, 흩어 두어야 같이 걷는 무리가 된다.
        */}
-      <Shadow cx={330} cy={628} rx={50} />
-      <Shadow cx={492} cy={652} rx={46} />
-      <Shadow cx={648} cy={620} rx={42} />
-      <Shadow cx={816} cy={664} rx={76} />
+      <Shadow cx={556} cy={618} rx={48} />
+      <Shadow cx={700} cy={640} rx={44} />
+      <Shadow cx={840} cy={608} rx={40} />
+      <Shadow cx={992} cy={650} rx={74} />
 
-      <Dokebi x={330} y={552} scale={1.45} kind="mulbineul" />
-      <Dokebi x={492} y={568} scale={1.36} kind="geueum" />
-      <Dokebi x={648} y={538} scale={1.28} kind="chorong" />
-      <Kid x={816} y={538} scale={1.66} />
+      <Dokebi x={556} y={548} scale={1.4} kind="mulbineul" />
+      <Dokebi x={700} y={562} scale={1.34} kind="geueum" />
+      <Dokebi x={840} y={520} scale={1.5} kind="chorong" />
+      <Kid x={992} y={528} scale={1.6} />
     </svg>
   );
 }
