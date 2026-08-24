@@ -10,6 +10,8 @@
  * 직접 갱신한다. 초당 60번 리렌더는 그 자체로 프레임을 깎아먹는다.
  */
 
+import { ScriptBox } from "@/components/hud/ScriptBox";
+import type { ScriptLine } from "@/game/quest/script";
 import { useEffect, useRef, useState } from "react";
 
 import { CityMap } from "@/components/hud/CityMap";
@@ -69,6 +71,8 @@ interface WorldHudProps {
   foundClues: readonly string[];
   /** 주민 대사와 「말 걸 수 있음」. 군중이 매 프레임 갱신한다 */
   talkView: { line: string | null; speaker: string; nearby: boolean };
+  /** 지금 보여 줄 대본 한 줄. 없으면 null */
+  scriptLine: ScriptLine | null;
   /** 지금 도깨비 자리에 서 있는지. 「손을 내밀라」를 띄운다 */
   discovery: DiscoveryView;
   /** 지금 구역 — 바뀔 때만 배너를 띄운다 */
@@ -122,6 +126,7 @@ export function WorldHud({
   summary,
   dialogue,
   talkView,
+  scriptLine,
   discovery,
   nickname,
   foundClues,
@@ -377,6 +382,8 @@ export function WorldHud({
       >
         <CompanionSpeech dialogue={dialogue} speaker={dokebiName} />
         <ResidentSpeech talk={talkView} talkKey={keyLabel(CONTROL_CODES.talk)} />
+        {/* 대본은 말풍선보다 아래·크게. 「읽는 말」과 「지나가는 말」을 갈라 둔다 */}
+        <ScriptBox line={scriptLine} />
       </div>
       {/*
         하단 중앙에 쌓는다.

@@ -12,6 +12,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { SceneErrorBoundary } from "@/components/ErrorBoundary";
+import {
+  SCRIPT_LINE_SECONDS,
+  advanceLine,
+  createScriptState,
+  currentLine,
+  startScript,
+} from "@/game/quest/script";
 import { WorldHud } from "@/components/hud/WorldHud";
 import { GameScene, type RuntimeStats } from "@/game/scene/GameScene";
 import { useWorldAudio } from "@/game/systems/audio";
@@ -364,6 +371,26 @@ export function PlayClient() {
   const { clueView, foundClues } = useFoundClues(resumeFrom?.foundClues, reportClue);
 
   // 문 안내. 씬이 매 프레임 쓰고 HUD가 들여다본다 — 다른 뷰들과 같은 방식이다.
+  /*
+   * 대본. **프레임 루프가 아니라 타이머로 넘긴다.**
+   *
+   * 대사는 시뮬레이션이 아니라 UI다. 한 줄이 3.2초이므로 초당 0.3회 렌더이고,
+   * 이 저장소가 금지한 「매 프레임 setState」와는 성질이 다르다. 프레임 루프에
+   * 넣으면 `PlayerRig`가 더 무거워지기만 한다.
+   */
+  const [script, setScript] = useState(createScriptState);
+
+  useEffect(() => {
+    if (script.id === null) return;
+    const timer = setTimeout(
+      () => setScript(advanceLine),
+      SCRIPT_LINE_SECONDS * 1000,
+    );
+    return () => clearTimeout(timer);
+    // 줄이 바뀔 때마다 새 타이머를 건다 — 그래야 눌러서 넘긴 뒤 남은 시간이 안 샌다
+  }, [script.id, script.index]);
+
+
   const [talkView] = useState(() => ({
     line: null as string | null,
     speaker: "주민",
@@ -406,6 +433,13 @@ export function PlayClient() {
       if (metDokebiRef.current.includes(found)) return;
       const next = [...metDokebiRef.current, found];
       metDokebiRef.current = next;
+      /*
+       * 친구가 되는 순간이 이 게임의 세계관이 서는 자리다 — 이긴 것이 사라지지
+       * 않고 곁에 남는다(DESIGN_GUIDE 「세계관 — 도깨비란 무엇인가」). 첫 번째만
+       * 길게 말하고 그다음부터 짧게 간다. 같은 말을 매번 길게 되풀이하면
+       * 다음부터 읽지 않는다.
+       */
+      setScript((current) => startScript(current, next.length === 1 ? "firstFriend" : "friend"));
       /*
        * 저장에서 만들어 더한다 — 확인 지점의 빈 목록으로 덮으면 수집이 사라진다.
        *
@@ -701,6 +735,7 @@ export function PlayClient() {
         stats={stats}
         questView={questView}
         talkView={talkView}
+        scriptLine={currentLine(script)}
         discovery={discoveryView}
         nickname={nickname}
         foundClues={foundClues}
