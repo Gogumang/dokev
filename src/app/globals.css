@@ -1,26 +1,149 @@
 @import "tailwindcss";
 
+/*
+ * 디자인 토큰 — DESIGN_GUIDE.md 5.2의 토큰 이름을 그대로 CSS 변수로 옮긴다.
+ * Figma 변수명과 1:1로 유지해야 하므로 여기서 이름을 임의로 바꾸지 않는다.
+ * 컴포넌트에서 색상/여백 리터럴을 직접 쓰지 않고 반드시 이 변수를 경유한다.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* color.bg */
+  --color-bg-canvas: #14101c;
+  --color-bg-surface: #1f1a2b;
+  /*
+   * 패널 바탕. **월드 위에 뜨므로 뒤가 무엇이든 글자가 읽혀야 한다.**
+   *
+   * 0.72였을 때, 흰 간판(#f6f3e9) 앞에서 도감을 열면 보조 글자의 대비가
+   * 3.93까지 떨어졌다 — AA(4.5) 아래다. 하늘 위에서만 재고 있었고
+   * 하늘로는 최저 4.89라 통과했다. 실제로 뒤에 오는 것은 간판이다.
+   *
+   * 0.80이면 흰 간판 앞에서도 5.31이다. 0.76은 4.55로 아슬아슬해 쓰지 않았다.
+   */
+  --color-bg-overlay: rgb(10 7 16 / 0.8);
+
+  /* color.text */
+  --color-text-primary: #f6f2ff;
+  --color-text-secondary: #b6acd0;
+  --color-text-inverse: #14101c;
+
+  /* color.action — 청록 포인트 (PROJECT_PLAN 「비주얼 키워드」 비주얼 키워드) */
+  --color-action-primary: #2fd4c4;
+  --color-action-primary-hover: #55e5d7;
+
+  /* color.status */
+  --color-status-success: #4ade80;
+  --color-status-warning: #fbbf24;
+  --color-status-danger: #fb7185;
+
+  /* 브랜드 포인트 — 기능 상태 색과 분리 (DESIGN_GUIDE 5.3) */
+  --color-brand-sunset: #ff8a3d;
+  --color-brand-violet: #a97bff;
+
+  /* space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-round: 999px;
+
+  /* motion */
+  --motion-fast: 120ms;
+  --motion-normal: 200ms;
+  --motion-slow: 320ms;
+
+  /* safe area — HUD는 화면 모서리가 아니라 이 토큰 기준으로 배치 (DESIGN_GUIDE 「레이아웃 규칙」) */
+  --safe-top: max(var(--space-4), env(safe-area-inset-top));
+  --safe-right: max(var(--space-4), env(safe-area-inset-right));
+  --safe-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  --safe-left: max(var(--space-4), env(safe-area-inset-left));
+
+  /* 최소 터치 타깃 (DESIGN_GUIDE 「레이아웃 규칙」) */
+  --touch-min: 44px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas: var(--color-bg-canvas);
+  --color-surface: var(--color-bg-surface);
+  --color-overlay: var(--color-bg-overlay);
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-action: var(--color-action-primary);
+  --color-action-hover: var(--color-action-primary-hover);
+  --color-sunset: var(--color-brand-sunset);
+  --color-violet: var(--color-brand-violet);
+  --radius-token-sm: var(--radius-sm);
+  --radius-token-md: var(--radius-md);
+  --radius-token-lg: var(--radius-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/*
+ * 웹폰트를 싣지 않는다. 초기 다운로드 예산(PROJECT_PLAN 「성능 예산」)에서 폰트가
+ * 차지할 자리가 없고, 한국어 웹폰트는 서브셋을 해도 수백 KB 단위다.
+ * 시스템 한국어 스택으로 시작하고, 브랜드 폰트 도입은 예산 재측정 후 결정한다.
+ */
+html {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+    "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  overscroll-behavior: none;
+
+  /*
+   * 한국어를 어절 단위로 끊는다.
+   *
+   * 브라우저 기본값은 한글을 **글자 아무 데서나** 자른다. 랜딩에서
+   * 「숨어 있던 도깨비/와 친구가 되는」, 「광장에서 시작합니/다.」처럼
+   * 나왔다 — 읽다가 걸린다. 화면 전체가 한국어이므로 전역에서 정한다.
+   *
+   * 짝인 `overflow-wrap`이 없으면 반대 사고가 난다: 띄어쓰기 없는 긴
+   * 문자열(파일 이름, URL)이 끊길 데가 없어 상자를 뚫고 나간다.
+   */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 포커스는 항상 보이게 (DESIGN_GUIDE 10절 접근성 기준) */
+:focus-visible {
+  outline: 3px solid var(--color-action-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 저감 모션이 기본 적용되어야 한다 (DESIGN_GUIDE 「2.4 즐거움은 선택 가능해야 함」) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* 3D 캔버스 위 텍스트의 대비 보호 레이어 (DESIGN_GUIDE 「2.1 세계가 먼저, UI는 나중에」) */
+.hud-scrim {
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
