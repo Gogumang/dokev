@@ -1,191 +1,251 @@
-# 에셋 제작 계획 — 생성 도구(Meshy 등)로 무엇을 만들 것인가
+# 에셋 제작 계획 — 시작 화면 그림에 맞춰 도시와 캐릭터를 다시 만든다
 
-> 작성일: 2026-08-25
-> 대상: `assets/concepts/`에 이미 있는 결과물(아이 캐릭터 3안, 보드 1안)의 다음 단계
-> 근거: 코드의 실제 상태(PROJECT_PLAN 「18. 구현 현황」)와 프레임 관찰
+> 갱신: 2026-08-25
+> 기준: `public/title-street.webp` (시작 화면 그림). 이 문서의 모든 색과 형태
+> 규칙은 그 한 장에서 **실측해서** 뽑았다.
 
-## 1. 먼저 정하고 시작하는 것
+## 1. 왜 다시 쓰는가
 
-### 1.1 남의 것을 만들지 않는다
+시작 화면을 그림 한 장으로 바꾸면서 **화면과 게임이 다른 말을 하기 시작했다.**
 
-원작 캐릭터의 외형·이름·로고를 그대로 만들지 않는다. 우리가 쫓는 것은 **인상**이지
-그 제품이 아니다 — 생성 도구를 쓴다고 달라지지 않는다.
+- 그림 속 동료는 로봇·검은 고양이·버섯·곰인데, 코드의 도깨비는 초롱·그을음·
+  물비늘·자정이다. 들어가면 다른 것이 나온다.
+- 그림의 도시는 민트·크림·따뜻한 회녹색인데, 우리 도시는 회색이다.
 
-프롬프트에 **원작 게임 이름이나 캐릭터 이름을 넣지 않는다.** 넣으면 학습된 그 외형이
-그대로 나오고, 그건 우리 것이 아니다.
+이 문서는 그 간극을 메우는 목록이다.
 
-### 1.2 예산이 규칙을 정한다
+## 2. 그림에서 잰 것 (추측 아님)
 
-지금 외부 에셋은 **둘**이다 — `public/character.glb`(1.1MB)와 시작 화면 그림
-`public/title-street.webp`(137KB). 그 제약이 이 프로젝트의
-구조를 만들었다(런타임 캔버스 텍스처, Web Audio 합성, 프리미티브 도시). 도구가 생겼다고
-제약을 버리는 것이 아니라 **예산 안에서 다시 여는 것**이다.
+`public/title-street.webp`를 300×168로 줄여 픽셀을 셌다.
 
-| 항목 | 지금 | 새 상한(제안) |
+### 2.1 채도 분포 — 뜻밖의 결과
+
+| 채도 구간 | 시작 화면 그림 | 우리 도시(달빛 광장 실측) |
 |---|---|---|
-| 초기 다운로드(공통 번들) | 128KB gzip | **그대로.** 새 GLB는 하나도 여기 들어가지 않는다 |
-| GLB 총합 | 1.1MB | **4MB.** 넘으면 첫 진입이 눈에 띄게 느려진다 |
-| 에셋 하나 | — | **600KB 이하**(압축 후) |
+| 고채도 (>60%) | 11.0% | **14.7%** |
+| 40~60% | 19.4% | 5.0% |
+| 25~40% | 22.8% | 7.9% |
+| 10~25% | **37.2%** | 15.0% |
+| 거의 무채색 (<10%) | 9.6% | **57.4%** |
+| 평균 채도 | 0.316 | 0.230 |
 
-**전부 지연 로드다.** 도깨비 넷을 한꺼번에 받지 않는다 — 만난 도깨비만 받는다.
+**우리 도시가 오히려 원색이 더 많다.** 차이는 원색이 아니라 **바탕**이다.
 
-### 1.3 형식과 폴리 예산
+그림에는 **순수한 회색이 거의 없다**(<10%가 9.6%뿐). 아스팔트도 벽도 옅게
+색을 띤다. 우리 도시는 절반 넘게 진짜 회색이다.
 
-셀 셰이딩(`ToonMaterial`)이라 **노멀맵·러프니스맵이 필요 없다.** 알베도 한 장이면 된다.
-생성 도구는 기본으로 PBR 네 장을 뱉으므로 **반입할 때 버린다.**
+**그래서 A-1(원색을 악센트로 가두기)을 풀 필요가 없다.** 고채도 예산은 이미
+우리가 더 쓰고 있다. 고칠 것은 **바탕을 물들이는 것**이다 — 회색을 10~25%
+채도의 색으로 옮긴다.
 
-| 종류 | 삼각형 | 텍스처 | 비고 |
+### 2.2 대표색
+
+| 역할 | 색 | 비중 |
+|---|---|---|
+| 바탕 그늘 | `#505050` `#303030` `#707070` | 15% |
+| 바탕 — 따뜻한 회녹색 | `#707050` `#505030` | 9% |
+| 바탕 — 따뜻한 회분홍 | `#705050` `#907070` | 8% |
+| 하이라이트 크림 | `#f0d0d0` `#f0d0b0` `#f0f0d0` | 10% |
+| 악센트 — 청록 | `#103030` `#305050` | 7% |
+
+읽는 법: **바탕은 회색이 아니라 「따뜻한 회녹색」과 「따뜻한 회분홍」**이고,
+밝은 면은 흰색이 아니라 **크림**이다. 청록이 유일한 확실한 악센트다.
+
+### 2.3 형태 규칙
+
+- 모서리가 둥글다. 날카로운 각이 거의 없다.
+- 덩어리가 굵고 단순하다. 잔디테일 대신 큰 면 몇 개.
+- 외곽선이 있다(어두운 갈색 계열, 검정 아님).
+- 그늘이 **두 단계**다 — 본색 + 아래쪽 어두운 색. 그라디언트가 아니다.
+
+## 3. 먼저 정할 것 둘
+
+이걸 정하지 않으면 만든 것이 서로 안 맞는다.
+
+### 3.1 동료의 정체 — **정해 주셔야 합니다**
+
+| 안 | 내용 | 대가 |
+|---|---|---|
+| **A. 동료를 생물로 바꾼다** | 도깨비 넷을 그림처럼 동물·사물 캐릭터로 다시 설계 | `roster.ts`의 사연·능력 글을 다시 씀. 시작 화면과 게임이 같아짐 |
+| B. 그림을 도깨비에 맞춘다 | 그림을 다시 생성해 등불·연기·물웅덩이 정령으로 | 지금 그림을 버림 |
+
+**A를 권한다.** 그림이 이미 마음에 드신 쪽이고, 「도깨비」라는 이름은 유지하면서
+생김새만 생물 쪽으로 옮기면 된다 — 한국 설화의 도깨비도 원래 사물에 깃든다.
+
+### 3.2 도시를 어디까지 바꾸는가
+
+건물은 **모델로 만들지 않는다.** 절차적 생성이 구역마다 다른 도시를 만드는데,
+모델로 바꾸면 그 다양성이 죽는다. 도시는 **다시 칠하는** 것이지 다시 만드는
+것이 아니다 (6절).
+
+## 4. 예산
+
+지금 외부 에셋은 둘이다 — `character.glb`(1.1MB), `title-street.webp`(137KB).
+
+| 항목 | 지금 | 상한 |
+|---|---|---|
+| 초기 다운로드(공통 번들) | 128KB gzip | **그대로.** 새 GLB는 하나도 안 들어간다 |
+| GLB 총합 | 1.1MB | **5MB** |
+| GLB 하나 | 1.1MB | **600KB**(압축 후) |
+
+**전부 지연 로드.** 도깨비는 만난 뒤에 받는다.
+
+셀 셰이딩이라 **노멀·러프니스맵이 필요 없다.** 알베도 한 장만 남기고 버린다.
+
+## 5. 무엇을 만들 것인가 — 코드의 어디를 바꾸는가
+
+값이 큰 순서. 각 줄의 「지금」은 실제 파일이다.
+
+| 순위 | 대상 | 지금 (프리미티브) | 삼각형 / 텍스처 |
 |---|---|---|---|
-| 도깨비 동료 | 3~6k | 512² | 넷 |
-| 적 로봇 | 2~3k | 512² | **최대 24기 인스턴싱** — 이 수를 못 지키면 프레임이 무너진다 |
-| 미니 보스 | 6~10k | 512² | 한 기뿐 |
-| 조랑말 | 4~6k | 512² | 다리 뼈 넷이면 지금 걸음 코드가 그대로 붙는다 |
-| 탈것 | 400~900 | 256² | 킥보드·자전거·장난감차 |
-| 도시 소품 | 300~1500 | 512² 아틀라스 | 여러 개를 **한 장에 모아** 받는다 |
+| 1 | **동료 4종** | `dokebi/` + 캡슐·구 조합 | 3~6k / 512² |
+| 2 | **플레이어** | `public/character.glb` (교체) | 8~15k / 1024² |
+| 3 | 적 로봇 2종 | `combat/enemyBody.ts`, `Enemies.tsx` | 2~3k / 512² **공유 머티리얼** |
+| 4 | 미니 보스 | `combat/bossBody.ts`, `Boss.tsx` | 6~10k / 512² |
+| 5 | 탈것 5종 | `player/RiddenVehicle.tsx` | 400~900 / 256² |
+| 6 | 버스·승용차 | `world/Traffic.tsx` | 800~1500 / 512² 아틀라스 |
+| 7 | 거리 소품 | `world/City.tsx`, `FacadeGroup.tsx` | 300~1500 / 512² **한 장에 모아서** |
+| 8 | 보행자 | `world/Crowd.tsx` (인스턴싱 24기+) | 1~2k / 512² 공유 |
 
-## 2. 무엇을 만들 것인가 — 값이 큰 순서
+**로봇 둘과 보행자는 반드시 머티리얼 하나를 공유해야 한다.** 인스턴싱이 깨지면
+드로우콜이 수십 개 늘고 프레임이 무너진다(현재 드로우콜 73).
 
-### 2.1 도깨비 동료 넷 — 가장 값이 크다
+### 만들지 않는 것
 
-지금은 캡슐과 구를 합친 프리미티브다. **화면에서 가장 오래, 가장 가까이 보이는 것**이고
-도감·대사·능력·사연이 전부 이 넷에 걸려 있다.
+- **건물** — 절차적 생성의 다양성이 죽는다
+- **지형·수면** — 이미 있고 예산을 통째로 먹는다
+- **부두·찌·물고기** — 상자와 이름으로 족하다
 
-넷의 성격이 실루엣으로 갈려야 한다 — 이름만 다르고 덩어리가 같으면 모을 이유가 없다:
+## 6. 도시는 모델이 아니라 색을 바꾼다
 
-- **초롱** — 골목 가로등에서 나온 작은 등불. 둥글고 위가 밝다.
-- **그을음** — 굴뚝 그림자 덩어리. 윤곽이 흐리고 아래가 무겁다.
-- **물비늘** — 빗물받이에 고인 하늘 한 조각. 납작하고 결이 있다.
-- **자정** — 간판이 꺼진 새벽의 조용함. 길고 가늘며 반쯤 잠겨 있다.
+2.1절의 결론대로 **바탕을 물들인다.** 정본은 `src/game/world/cityPalettes.ts`다.
 
-### 2.2 고물 로봇 둘(근접·사수)
+| 상수 | 지금 | 어디로 |
+|---|---|---|
+| `ROAD_SURFACE_COLOR` | `#d6d4da` (거의 무채색) | 따뜻한 회녹색 쪽 — 채도 10~25% |
+| `SHOPFRONT_PALETTE` | `#efe6d6` | 크림 (`#f0d0b0` 계열) |
+| `ROOFTOP_PALETTE` | `#9aa3ad` `#6f6a7d` | 청록 섞인 회색 |
+| `HILLSIDE_PALETTE` | `#bab4a6` `#a29b8d` | 따뜻한 회분홍 쪽 |
+| `ROCK_PALETTE` | `#7d8378` `#8f8b80` | 그대로 두어도 된다 (이미 색이 있다) |
 
-상자 조합이다. **가슴의 점**(안에 갇힌 빛)이 이 로봇의 정체를 말하는 유일한 조형이므로
-모델에도 **가슴 한가운데 파인 자리**가 있어야 한다. 사수는 멀리서도 구분되어야 한다.
-인스턴싱을 지키려면 **둘이 같은 머티리얼 한 장**을 써야 한다.
+**검사가 막는다.** `tests/paletteRestraint.test.ts`가 「어디에나 있는 색은 채도가
+낮다」와 「고채도가 3분의 1을 넘지 않는다」를 지킨다. 바탕을 10~25%로 옮기는 것은
+그 규칙 **안에서** 하는 일이라 통과해야 정상이다 — 통과 못 하면 너무 올린 것이다.
 
-### 2.3 미니 보스 「고물 대장」
+## 7. Meshy 프롬프트
 
-절정의 얼굴인데 지금은 큰 상자다. 예고·비틀거림·빈틈이라는 리듬이 이미 있으니
-**팔을 드는 동작이 읽히는 실루엣**이면 된다.
+영어로 쓴다. **원작 게임 이름이나 캐릭터 이름을 넣지 않는다** — 넣으면 학습된
+그 외형이 나오고, 그건 우리 것이 아니다.
 
-### 2.4 조랑말
-
-살아 있는 탈것이라 실루엣이 특히 중요하다. 다리 뼈 넷만 있으면 지금 코드의 대각선
-걸음이 그대로 붙는다.
-
-### 2.5 탈것 셋(킥보드·자전거·장난감 자동차)
-
-작고 자주 보인다. 저폴리로 충분하되 셋의 실루엣이 확실히 달라야 한다 — 속도와 조작감이
-이미 다르다.
-
-### 2.6 도시 소품 아틀라스
-
-자판기·차양·벤치·라바콘·벽화판. 프레임에서 **실사 배경과 만화 캐릭터를 잇는 「평면 원색
-그래픽 한 겹」**으로 확인된 층이다. 개별 GLB가 아니라 한 장에 모아 받아 인스턴싱한다.
-
-### 2.7 만들지 않는 것
-
-- **건물** — 절차적 생성이 구역마다 다른 도시를 만든다. 모델로 바꾸면 그 다양성이 죽는다.
-- **지형·수면** — 이미 있고 크기가 커서 예산을 통째로 먹는다.
-- **부두·찌·물고기** — 상자와 이름으로 족하다.
-
-## 3. 프롬프트 — 그대로 붙여넣는 것
-
-영어로 쓴다. **실루엣 → 재질 → 스타일 → 금지** 순서이고, 원작 이름은 넣지 않는다.
-
-### 3.1 공통 접미(모든 프롬프트 뒤에)
+### 7.1 공통 접미 (모든 프롬프트 뒤에)
 
 ```
-stylized game asset, clean topology, single material, flat matte colors,
-soft cel-shaded look, no text, T-pose neutral, game-ready low poly
+stylized game asset, chunky rounded forms, thick dark-brown outlines,
+two-step flat shading (base color plus one darker underside), single material,
+soft matte finish, cream highlights, muted warm-grey base with a slight tint,
+teal accent, game-ready low poly, clean topology, T-pose neutral
 ```
 
 ```
-negative: photorealistic, PBR metal roughness, heavy normal detail,
-text, watermark, brand logo, realistic human proportions
+negative: photorealistic, PBR metal roughness, heavy normal detail, sharp edges,
+gradient shading, pure grey, pure white, text, watermark, brand logo,
+realistic human proportions
 ```
 
-### 3.2 도깨비 동료
+### 7.2 동료 넷 (3.1의 A안 기준)
+
+이름은 유지하고 생김새만 생물 쪽으로 옮긴다.
 
 ```
-chorong   — a small lantern spirit the size of a cat, rounded body, glowing paper-lamp head,
-            two stubby arms, warm light from the top, eager posture
-geueum    — a soot spirit, heavy bottom and blurred edges, like a small cloud of chimney smoke
-            that learned to stand, half-closed sleepy eyes, no limbs, dark charcoal body
-mulbineul — a puddle spirit, flat wide body like a shallow bowl of water, scale-like ripples
-            across the surface, pale sky blue, calm slow silhouette
-jajeong   — a midnight spirit, tall and thin, upper half fading into darkness,
-            faint cool glow at the core, quiet still posture
+chorong   — a small round lantern creature the size of a house cat, cream body,
+            a warm glowing dome on its head like a paper lamp, two stubby legs,
+            tiny curious eyes, eager forward-leaning posture
+
+geueum    — a soot creature, dark charcoal fur with a warm-grey tint, heavy
+            rounded bottom, sleepy half-closed eyes, no visible limbs, a small
+            teal spark at the chest
+
+mulbineul — a water creature, pale teal, flat wide body like a rounded shell,
+            scale-like ripples across its back, short legs, calm slow posture
+
+jajeong   — a night creature, deep muted purple-grey, tall and soft,
+            upper half fading darker, faint cream glow at the core, quiet
 ```
 
-### 3.3 적과 대장
+### 7.3 플레이어
 
 ```
-scrap robot (melee)  — knee-high junk robot built from mismatched household parts, boxy torso,
-                       one dented socket at the center of the chest, short stubby arms,
-                       dull grey painted metal, comic proportions, not menacing
-scrap robot (gunner) — same family as the melee robot but with a wide barrel replacing one
-                       forearm and a taller head, clearly readable from far away
-scrap boss           — a junk robot twice a child's height, heavy shoulders, long arms that can
-                       be raised overhead, deep socket at the chest, patched plates
+child adventurer — a cheerful kid around ten years old, chunky rounded proportions,
+big head, cream and warm-grey clothes with one teal accent (cap or bag),
+round glasses, a small backpack, sneakers, side-walking friendly pose
 ```
 
-### 3.4 탈것과 짐승
+### 7.4 적과 보스
 
 ```
-jeju pony    — small stocky pony, short legs, thick mane, gentle face, rideable by a child,
-               simple four-leg rig
-kick scooter — city share scooter, narrow deck, single front post, small wheels
-city bike    — simple upright city bicycle, no branding
-toy car      — child-sized open toy car, rounded body, four fat wheels, one bright color
+scrap robot (melee)  — knee-high junk robot from mismatched household parts,
+                       rounded boxy torso, one dented socket at the chest center,
+                       short stubby arms, warm-grey painted metal, comic, not scary
+scrap robot (gunner) — same family, one forearm replaced by a wide barrel,
+                       taller head, readable from far away
+scrap boss           — a junk robot twice a child's height, heavy rounded shoulders,
+                       long arms that can raise overhead, deep chest socket
 ```
 
-### 3.5 소품 아틀라스
+### 7.5 탈것·짐승·차량
 
 ```
-korean street prop set — vending machine, striped shop awning, painted wall mural panel,
-traffic cone, park bench, one scene, uniform scale, shared palette
+kick scooter — city scooter, narrow deck, single front post, small fat wheels
+city bike    — upright city bicycle, rounded frame, no branding
+skateboard   — simple deck with fat wheels, one bright accent color
+toy car      — child-sized open toy car, rounded body, four fat wheels
+jeju pony    — small stocky pony, short legs, thick mane, gentle face,
+               simple four-leg rig for a walk cycle
+city minibus — rounded cream and teal minibus, big front window, small wheels
 ```
 
-### 3.6 컨셉 이미지(이미지 도구용)
+### 7.6 거리 소품 (한 장에 모아서)
 
 ```
-character sheet, four orthographic views (front / side / back / three-quarter),
-neutral grey background, even flat lighting, no shadows, no perspective,
-full body visible, consistent scale across views, flat color blocks
+korean street prop set — vending machine, striped shop awning, painted wall panel,
+traffic cone, park bench, bollard, tactile paving block, storm drain,
+all in one scene, uniform scale, shared palette of cream / warm grey / teal
 ```
 
-실루엣이 먼저다 — 색을 고르기 전에 **검은 실루엣만으로 넷이 구분되는지** 본다.
+## 8. 반입 절차
 
-## 4. 반입 절차 — 이대로 하지 않으면 예산이 깨진다
-
-1. **받기** — glb로 내보낸다.
-2. **줄이기**
+1. **glb로 내보낸다** (fbx 아님)
+2. **줄인다**
    ```
    npx @gltf-transform/cli optimize in.glb out.glb \
      --texture-compress webp --texture-size 512 --simplify --compress draco
    ```
-3. **버리기** — 노멀·러프니스·메탈릭 맵을 지운다. 툰 셰이딩은 알베도만 쓴다.
-4. **재기** — 압축 후 600KB를 넘으면 폴리나 텍스처를 더 줄인다.
-5. **두기** — `public/models/`.
-6. **검사 갱신** — 두 곳이 막는다. 갱신하지 않으면 통과하지 못한다:
-   - `tests/forbiddenApis.test.ts`의 에셋 허용 목록(지금은 `public/character.glb` 하나)
-   - `tests/bundleBudget.test.ts`와 문서의 크기 수치
-7. **지연 로드** — `/play`에서, 그것도 필요할 때. 도깨비는 만난 뒤에 받는다.
-8. **실측 기록** — 드로우콜·삼각형·힙을 재서 PROJECT_PLAN 18절에 적는다.
+3. **버린다** — 노멀·러프니스·메탈릭 맵. 툰 셰이딩은 알베도만 쓴다
+4. **잰다** — 600KB를 넘으면 폴리나 텍스처를 더 줄인다
+5. **둔다** — `public/models/`
+6. **검사를 연다** — 이유와 **새 상한**을 함께 적는다:
+   - `tests/forbiddenApis.test.ts` 허용 목록 + 파일 수 상한 + **개별 크기 자**
+   - `tests/projectStructure.test.ts`의 무거운 파일 예외
+   - `tests/bundleBudget.test.ts`와 문서의 수치
+7. **지연 로드** — `/play`에서, 그것도 필요할 때
+8. **실측 기록** — 드로우콜·삼각형·힙을 재서 PROJECT_PLAN 18절에 적는다
+   (현재 드로우콜 73 / 삼각형 209,324 / 힙 51MB)
 
-## 5. 하지 말 것
+## 9. 하지 말 것
 
-- **초기 번들에 넣기.** 랜딩은 3D를 하나도 싣지 않는다 — 검사가 막는다.
-- **에셋마다 다른 머티리얼.** 인스턴싱이 깨져 드로우콜이 수십 개 는다.
-- **리깅 없는 모델에 애니메이션 기대하기.** 조랑말은 다리 뼈가 있어야 걷는다.
-- **4k 텍스처.** 이 화면 크기에서 512²와 구분되지 않고 메모리만 먹는다.
-- **한 번에 다 만들기.** 하나를 끝까지 해 보고 나머지를 정한다.
+- **초기 번들에 넣기** — 랜딩은 3D를 하나도 싣지 않는다
+- **에셋마다 다른 머티리얼** — 인스턴싱이 깨진다
+- **리깅 없는 모델에 애니메이션 기대하기** — 조랑말은 다리 뼈가 있어야 걷는다
+- **4k 텍스처** — 이 화면 크기에서 512²와 구분되지 않는다
+- **한 번에 다 만들기** — 첫 하나에서 나온 문제가 나머지에 그대로 있다
 
-## 6. 순서 제안
+## 10. 순서
 
-1. **초롱 하나**를 끝까지 — 생성부터 화면에 서기까지. 여기서 압축 설정과 크기가 정해진다.
-2. 나온 수치로 나머지 셋의 예산을 확정한다.
-3. 로봇 둘(같은 머티리얼) → 대장 → 조랑말 → 탈것 → 소품 아틀라스.
-4. 단계마다 `pnpm test`·`pnpm build`와 **화면 확인**을 함께 한다. 이 프로젝트에서 가장
-   자주 난 사고는 「값은 맞는데 화면에서는 아무 일도 안 일어남」이었다.
+1. **3.1을 정한다** (동료의 정체). 이게 안 정해지면 1순위를 못 만든다
+2. **초롱 하나**를 끝까지 — 생성 → 압축 → 반입 → 화면. 여기서 압축 설정과
+   실제 크기가 정해지고, 나머지 셋의 예산이 그 수치로 확정된다
+3. **도시 다시 칠하기**(6절)를 병행한다. 모델이 없어도 지금 바로 할 수 있고,
+   화면 인상이 가장 크게 바뀌는 작업이다
+4. 로봇 둘(공유 머티리얼) → 보스 → 탈것 → 차량 → 소품 → 보행자
+5. 단계마다 `pnpm test`·`pnpm build`와 **화면 확인**을 함께 한다. 이 저장소에서
+   가장 자주 난 사고는 「값은 맞는데 화면에서는 아무 일도 안 일어남」이었다
