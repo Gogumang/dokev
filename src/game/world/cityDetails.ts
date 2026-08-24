@@ -634,7 +634,7 @@ export function buildCityDetails(layout: CityLayout): CityDetails {
     propPanels: [],
     streetFixtures: [],
     vendingMachines: [],
-    vehicleStands: buildVehicleStands(),
+    vehicleStands: buildVehicleStands(layout.halfExtent),
   };
 
   for (const building of layout.buildings) {

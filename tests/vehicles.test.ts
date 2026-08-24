@@ -4,7 +4,9 @@ import { bothWays, describeSplit } from "./support/bothWays";
 
 import {
   CARRIED_VEHICLE,
+  isWaterVehicle,
   PASTURE_VEHICLES,
+  SHORE_VEHICLES,
   isVehicle,
   LOCOMOTION,
   STAND_VEHICLES,
@@ -16,7 +18,7 @@ import {
 import { clipFor, freezes, CLIP, type ClipInput } from "@/game/player/characterClips";
 import { createEmoteState } from "@/game/player/emote";
 import { resolveMode, type MoveInput } from "@/game/player/locomotion";
-import { blockCenter, CITY } from "@/game/world/cityLayout";
+import { blockCenter, buildCityLayout, CITY } from "@/game/world/cityLayout";
 import { isUrbanBlock } from "@/game/world/zones";
 import { terrainHeight } from "@/game/world/terrain";
 import { CURB_EDGE } from "@/game/world/sidewalks";
@@ -35,7 +37,10 @@ import {
  * 셋이면 아무도 눈치채지 못한 채 하나짜리로 남는다.
  */
 
-const stands = buildVehicleStands();
+/** 도시 반경. 실제 배치와 같은 값을 쓴다 — 물가 자리가 부두 위치를 따라간다 */
+const HALF_EXTENT = buildCityLayout().halfExtent;
+
+const stands = buildVehicleStands(HALF_EXTENT);
 
 function moving(overrides: Partial<MoveInput> = {}): MoveInput {
   return {
@@ -64,8 +69,8 @@ function riding(mode: ClipInput["mode"]): ClipInput {
 }
 
 describe("탈것이 실제로 다른가", () => {
-  it("다섯 종류다 — 거치대 셋, 들고 다니는 것 하나, 풀밭 하나", () => {
-    expect(VEHICLE_KINDS.length, `탈것: ${VEHICLE_KINDS.join(", ")}`).toBe(5);
+  it("여섯 종류다 — 거치대 셋, 들고 다니는 것 하나, 풀밭 하나, 물가 하나", () => {
+    expect(VEHICLE_KINDS.length, `탈것: ${VEHICLE_KINDS.join(", ")}`).toBe(6);
   });
 
   it("최고 속도가 전부 다르다 — 같으면 이름만 여럿이다", () => {
@@ -104,8 +109,17 @@ describe("탈것이 실제로 다른가", () => {
     const nimblest = VEHICLE_KINDS.reduce((a, b) =>
       LOCOMOTION[a].turnRate > LOCOMOTION[b].turnRate ? a : b,
     );
-    expect(fastest, `가장 빠른 것: ${fastest}`).toBe("bike");
+    /*
+     * 물 탈것은 뺀다. 제트스키는 바다 전용이라 「자전거보다 빠르다」가 뭍의
+     * 균형을 흔들지 않는다 — 골목에서는 저 조향(1.5)으로 아무 데도 못 간다.
+     */
+    const landKinds = VEHICLE_KINDS.filter((kind) => !isWaterVehicle(kind));
+    const fastestLand = landKinds.reduce((a, b) =>
+      LOCOMOTION[a].maxSpeed > LOCOMOTION[b].maxSpeed ? a : b,
+    );
+    expect(fastestLand, `뭍에서 가장 빠른 것: ${fastestLand}`).toBe("bike");
     expect(nimblest, `가장 민첩한 것: ${nimblest}`).toBe("kickboard");
+    expect(fastest, `가장 빠른 것: ${fastest}`).toBe("jetski");
     expect(fastest, "가장 빠른 것이 가장 민첩하기까지 하면 나머지를 탈 이유가 없다").not.toBe(
       nimblest,
     );
@@ -132,6 +146,7 @@ describe("거리에 선 것과 들고 다니는 것", () => {
     const reachable = new Set<VehicleKind>([
       ...STAND_VEHICLES,
       ...PASTURE_VEHICLES,
+      ...SHORE_VEHICLES,
       CARRIED_VEHICLE,
     ]);
     expect([...reachable].sort(), `탈 수 있는 것: ${[...reachable].join(", ")}`).toEqual(
@@ -244,7 +259,7 @@ describe("거치대 자리", () => {
   });
 
   it("두 번 만들어도 같다", () => {
-    expect(buildVehicleStands()).toEqual(stands);
+    expect(buildVehicleStands(HALF_EXTENT)).toEqual(stands);
   });
 });
 

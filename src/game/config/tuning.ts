@@ -15,7 +15,7 @@
  * 모양이 아니라 **손맛**이다 — 셋이 같은 수치를 쓰면 모델만 바뀐 것이고,
  * 그러면 굳이 셋일 이유가 없다.
  */
-export type VehicleKind = "kickboard" | "bike" | "skateboard" | "toycar" | "pony";
+export type VehicleKind = "kickboard" | "bike" | "skateboard" | "toycar" | "pony" | "jetski";
 
 /**
  * 탈것 목록.
@@ -30,6 +30,7 @@ export const VEHICLE_KINDS: readonly VehicleKind[] = [
   "skateboard",
   "toycar",
   "pony",
+  "jetski",
 ];
 
 /**
@@ -54,6 +55,31 @@ export const STAND_VEHICLES: readonly VehicleKind[] = ["kickboard", "bike", "toy
  * 주석). 풀밭에는 풀을 뜯는 것이 서 있으면 된다.
  */
 export const PASTURE_VEHICLES: readonly VehicleKind[] = ["pony"];
+
+/**
+ * 물 위를 달릴 수 있는 것.
+ *
+ * 지금까지 **아무거나 타면 바다로 나갈 수 있었다**(`rideSurfaceHeight`가
+ * 「타고 있는가」만 봤다). 조랑말이 수면 위를 걷고 자전거가 파도를 탔다 —
+ * 바다에 나가는 방법을 만들면서 「탈것」을 한 덩어리로 본 결과다.
+ *
+ * 물에서만 값을 하는 것을 하나 두고, 나머지는 물가에서 멈춘다. 그래야
+ * 부두까지 자전거로 달려와 갈아타는 동선이 생긴다.
+ */
+export const WATER_VEHICLES: readonly VehicleKind[] = ["jetski"];
+
+/** 물 위를 달릴 수 있는가. 두 발이면 `null`이 들어온다 */
+export function isWaterVehicle(kind: VehicleKind | LocomotionMode | null): boolean {
+  return kind !== null && (WATER_VEHICLES as readonly string[]).includes(kind);
+}
+
+/**
+ * 물가에 세워져 있는 탈것 — 제트스키.
+ *
+ * 거치대(인도)나 목장(풀밭)이 아니라 **부두 앞**이다. 거기 있어야 「바다로
+ * 나가려면 저기로 간다」가 지도를 안 보고도 읽힌다.
+ */
+export const SHORE_VEHICLES: readonly VehicleKind[] = ["jetski"];
 
 /**
  * 늘 들고 다니는 탈것.
@@ -108,6 +134,16 @@ export const LOCOMOTION: Record<LocomotionMode, LocomotionTuning> = {
    */
   toycar: { maxSpeed: 13.5, accel: 10, decel: 3.2, turnRate: 2.2 },
   pony: { maxSpeed: 10.5, accel: 9, decel: 6, turnRate: 3.4 },
+  /*
+   * - **제트스키**: 제일 빠르고 제일 안 선다. 물에는 붙잡을 것이 없다 —
+   *   감속이 자전거의 절반이라 놓으면 한참 미끄러지고, 크게 돌면서 뒤가
+   *   흘러 나간다. 바다는 넓어서 그래도 된다.
+   *
+   *   뭍에서도 굴러가기는 한다. 막지 않은 이유: 막으면 물가에서 내려야만
+   *   하는데, 「왜 안 나가지」를 화면이 설명해 줄 방법이 없다. 대신 저
+   *   조향으로는 골목을 못 지나가므로 저절로 물로 돌아간다.
+   */
+  jetski: { maxSpeed: 21, accel: 8, decel: 0.9, turnRate: 1.5 },
 };
 
 /**

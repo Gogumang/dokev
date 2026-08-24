@@ -12,6 +12,7 @@
 
 import {
   PASTURE_VEHICLES,
+  SHORE_VEHICLES,
   STAND_VEHICLES,
   VEHICLE_KINDS,
   type VehicleKind,
@@ -20,6 +21,7 @@ import { blockCenter, CITY } from "@/game/world/cityLayout";
 import { isUrbanBlock } from "@/game/world/zones";
 import { terrainHeight } from "@/game/world/terrain";
 import { CURB_EDGE } from "@/game/world/sidewalks";
+import { shoreFacing, shoreLanding } from "@/game/world/waterRide";
 
 import type { DetailInstance } from "@/game/world/cityDetails";
 
@@ -59,6 +61,19 @@ const PASTURE_COUNT = 2;
 /** 구역 한복판에서 이만큼 벌려 세운다(m). 나무와 겹치지 않을 만큼만 */
 const PASTURE_RADIUS = 9;
 
+/**
+ * 물가에 대어 둔 제트스키 수.
+ *
+ * 부두 하나에 둘. 하나면 「그 자리에 있는 것」이고 둘이면 「대어 둔 것」으로
+ * 읽힌다 — 셋 이상은 대여점이 되어 동네 풍경에서 벗어난다.
+ */
+const SHORE_COUNT = 2;
+
+/** 부두 옆으로 벌려 대는 간격(m) */
+const SHORE_PITCH = 2.6;
+
+
+
 /** 줄지어 선 간격(m) */
 const ROW_PITCH = 0.75;
 
@@ -75,9 +90,33 @@ const SIDES = [0, Math.PI / 2, Math.PI, -Math.PI / 2] as const;
  * 구역 번호로 변을 고른다 — 난수를 쓰지 않아도 이웃한 구역끼리 다른 변에
  * 서고, 저장·복원과 무관하게 늘 같은 자리다.
  */
-export function buildVehicleStands(): VehicleStand[] {
+export function buildVehicleStands(halfExtent: number): VehicleStand[] {
   const radius = CURB_EDGE - STAND_INSET;
   const stands: VehicleStand[] = [];
+
+  /*
+   * 물가의 제트스키 — 경계에서 **지형이 가장 낮은 곳**에 대어 둔다.
+   *
+   * 거치대(인도)도 목장(풀밭)도 아닌 셋째 자리다. 좌표를 손으로 적지 않고
+   * 찾는 이유는 `shoreLanding` 주석에 있다 — 적어 두면 언덕 수치를 만질
+   * 때마다 제트스키가 절벽 위나 바닷속으로 간다.
+   */
+  const landing = shoreLanding(halfExtent);
+  const alongX = Math.abs(landing.x) > Math.abs(landing.z);
+  SHORE_VEHICLES.forEach((kind, slot) => {
+    for (let i = 0; i < SHORE_COUNT; i += 1) {
+      const offset = (i - (SHORE_COUNT - 1) / 2) * SHORE_PITCH + slot * SHORE_PITCH * SHORE_COUNT;
+      stands.push({
+        // 물가를 **따라** 벌려 세운다 — 바다 쪽으로 벌리면 하나가 물에 잠긴다
+        x: landing.x + (alongX ? 0 : offset),
+        z: landing.z + (alongX ? offset : 0),
+        cell: VEHICLE_KINDS.indexOf(kind),
+        // 뱃머리가 바다를 본다 — 타면 곧장 나갈 방향이다
+        rotationY: shoreFacing(landing.x, landing.z),
+        blockIndex: -1,
+      });
+    }
+  });
 
   for (let index = 0; index < CITY.gridSize * CITY.gridSize; index += 1) {
     /*
@@ -193,6 +232,20 @@ const PARKED: Record<number, readonly { dx: number; dy: number; dz: number; w: n
     // 갈기가 있는 목만 어둡다 — 몸과 같은 색이면 덩어리 하나로 보인다
     { dx: 0, dy: 1.28, dz: 0.52, w: 0.26, h: 0.5, d: 0.26, tone: "metal" },
     { dx: 0, dy: 1.48, dz: 0.72, w: 0.24, h: 0.26, d: 0.42, tone: "coat" },
+  ],
+  /*
+   * 제트스키(5) — 낮고 긴 선체에 뒤로 솟은 안장, 앞의 손잡이.
+   *
+   * 다른 것들과 실루엣이 갈리는 지점은 **바닥에 붙어 있다**는 것이다.
+   * 바퀴가 없으니 몸통이 지면에서 시작하고, 그래서 옆에서 보면 쐐기다.
+   */
+  5: [
+    { dx: 0, dy: 0.26, dz: 0, w: 0.62, h: 0.4, d: 1.95, tone: "coat" },
+    // 뱃머리 — 앞으로 갈수록 좁고 낮다. 한 칸으로 흉내 낸다
+    { dx: 0, dy: 0.44, dz: -0.82, w: 0.38, h: 0.22, d: 0.5, tone: "coat" },
+    { dx: 0, dy: 0.58, dz: 0.3, w: 0.44, h: 0.24, d: 0.8, tone: "frame" },
+    { dx: 0, dy: 0.78, dz: -0.32, w: 0.16, h: 0.34, d: 0.16, tone: "metal" },
+    { dx: 0, dy: 0.94, dz: -0.32, w: 0.5, h: 0.06, d: 0.06, tone: "metal" },
   ],
   // 자전거 — 큰 바퀴 둘에 가로대와 손잡이. 옆에서 보면 실루엣이 바로 읽힌다
   1: [

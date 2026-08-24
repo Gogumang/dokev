@@ -98,4 +98,26 @@ export const VEHICLE_BODY = {
   ponyHeadWidth: 0.24,
   ponyHeadHeight: 0.26,
   ponyHeadLength: 0.42,
+  /*
+   * 제트스키 — 물에 뜨는 것이라 바퀴가 없다. 몸통이 바닥에서 시작한다.
+   *
+   * 길이 1.95m는 다른 탈것보다 확실히 길다(자전거 1.7m 남짓). 실루엣이
+   * 갈려야 물 위의 점 하나가 무엇인지 멀리서도 읽힌다.
+   */
+  skiHullWidth: 0.62,
+  skiHullHeight: 0.4,
+  skiHullLength: 1.95,
+  /** 뱃머리 — 앞으로 갈수록 좁고 낮다. 한 칸으로 흉내 낸다 */
+  skiBowWidth: 0.38,
+  skiBowHeight: 0.22,
+  skiBowLength: 0.5,
+  /** 안장 — 뒤쪽에 얹혀 앉는 자리를 만든다 */
+  skiSeatWidth: 0.44,
+  skiSeatHeight: 0.24,
+  skiSeatLength: 0.8,
+  /** 손잡이 기둥과 가로대 */
+  skiPostSide: 0.16,
+  skiPostHeight: 0.34,
+  skiBarWidth: 0.5,
+  skiBarThickness: 0.06,
 } as const;

@@ -322,17 +322,17 @@ export function PlayerRig({
      * 몇 cm이고 화면에서는 보이지 않는다.
      */
     // 지형이 아니라 **딛는 면**이다 — 도시 구역에는 16cm 올라온 인도가 깔려 있다
-    const onRide = isVehicle(stats.mode);
+    const riding = isVehicle(stats.mode) ? stats.mode : null;
     const corrected = stepPlayerOnGround(locomotion.current, moveInput, simDt, {
       /*
        * 어느 자리든 같은 식으로 발밑을 잰다 — 이동 전과 이동 후를 두 번 잰다.
        * 두 곳에 손으로 적으면 한쪽만 고쳐질 자리가 하나 더 생긴다.
        */
-      sampleGround: (x, z) => rideSurfaceHeight(surfaceHeight(x, z), x, z, layout.halfExtent, onRide),
+      sampleGround: (x, z) => rideSurfaceHeight(surfaceHeight(x, z), x, z, layout.halfExtent, riding),
       colliders,
       grappleAnchors,
       radius: PLAYER_RADIUS,
-      halfExtent: rideLimit(layout.halfExtent, onRide),
+      halfExtent: rideLimit(layout.halfExtent, riding),
     });
     locomotion.current = corrected;
 

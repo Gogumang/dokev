@@ -62,6 +62,7 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
   const skateboard = useRef<THREE.Group>(null);
   const toycar = useRef<THREE.Group>(null);
   const pony = useRef<THREE.Group>(null);
+  const jetski = useRef<THREE.Group>(null);
   /** 조랑말 다리 넷. 걸음을 만들려면 개별로 돌려야 한다 */
   const ponyLegs = useRef<(THREE.Mesh | null)[]>([]);
 
@@ -84,6 +85,11 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
       ponyLeg: new THREE.BoxGeometry(V.ponyLegSide, V.ponyLegHeight, V.ponyLegSide),
       ponyNeck: new THREE.BoxGeometry(V.ponyNeckSide, V.ponyNeckHeight, V.ponyNeckSide),
       ponyHead: new THREE.BoxGeometry(V.ponyHeadWidth, V.ponyHeadHeight, V.ponyHeadLength),
+      skiHull: new THREE.BoxGeometry(V.skiHullWidth, V.skiHullHeight, V.skiHullLength),
+      skiBow: new THREE.BoxGeometry(V.skiBowWidth, V.skiBowHeight, V.skiBowLength),
+      skiSeat: new THREE.BoxGeometry(V.skiSeatWidth, V.skiSeatHeight, V.skiSeatLength),
+      skiPost: new THREE.BoxGeometry(V.skiPostSide, V.skiPostHeight, V.skiPostSide),
+      skiBar: new THREE.BoxGeometry(V.skiBarWidth, V.skiBarThickness, V.skiBarThickness),
     }),
     [],
   );
@@ -109,6 +115,11 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
       geometry.ponyLeg.dispose();
       geometry.ponyNeck.dispose();
       geometry.ponyHead.dispose();
+      geometry.skiHull.dispose();
+      geometry.skiBow.dispose();
+      geometry.skiSeat.dispose();
+      geometry.skiPost.dispose();
+      geometry.skiBar.dispose();
     },
     [geometry],
   );
@@ -124,6 +135,7 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
     if (skateboard.current) skateboard.current.visible = mode === "skateboard";
     if (toycar.current) toycar.current.visible = mode === "toycar";
     if (pony.current) pony.current.visible = mode === "pony";
+    if (jetski.current) jetski.current.visible = mode === "jetski";
 
     /*
      * 조랑말 걸음.
@@ -286,6 +298,46 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
           position={[0, V.ponyLegHeight + V.ponyBodyHeight + 0.3, 0.72]}
         >
           <ToonMaterial color={PONY_COAT} />
+        </mesh>
+      </group>
+
+      {/*
+        제트스키 — 바퀴가 없어 몸통이 바닥에서 시작한다. 물 위에서만 값을
+        하는 탈것이고(`WATER_VEHICLES`), 부두 앞에 대어 둔 것을 탄다.
+
+        앞쪽(-z)이 뱃머리다. 다른 탈것과 앞뒤가 같아야 조향이 뒤집히지 않는다.
+      */}
+      <group ref={jetski} visible={riding && motion.mode === "jetski"}>
+        <mesh castShadow geometry={geometry.skiHull} position={[0, V.skiHullHeight / 2 + 0.06, 0]}>
+          <ToonMaterial color={DECK} />
+        </mesh>
+        <mesh
+          castShadow
+          geometry={geometry.skiBow}
+          position={[0, V.skiHullHeight + 0.14, -(V.skiHullLength / 2 - V.skiBowLength / 2 + 0.06)]}
+        >
+          <ToonMaterial color={DECK} />
+        </mesh>
+        <mesh
+          castShadow
+          geometry={geometry.skiSeat}
+          position={[0, V.skiHullHeight + V.skiSeatHeight / 2 + 0.06, 0.3]}
+        >
+          <ToonMaterial color={RUBBER} />
+        </mesh>
+        <mesh
+          castShadow
+          geometry={geometry.skiPost}
+          position={[0, V.skiHullHeight + V.skiPostHeight / 2 + 0.2, -0.32]}
+        >
+          <ToonMaterial color={METAL} />
+        </mesh>
+        <mesh
+          castShadow
+          geometry={geometry.skiBar}
+          position={[0, V.skiHullHeight + V.skiPostHeight + 0.24, -0.32]}
+        >
+          <ToonMaterial color={METAL} />
         </mesh>
       </group>
     </group>
