@@ -25,17 +25,16 @@ import * as THREE from "three";
 import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, CAMERA_COLLIDER_RADIUS, CAMERA_GROUND_CLEARANCE, CHARACTER_FADE, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
 import { clamp, damp } from "@/game/core/mathx";
 import {
-  clampToBounds,
   createLocomotionState,
   findGrappleTarget,
   horizontalSpeed,
   resolveHorizontalCollisions,
   resolveMode,
-  stepLocomotion,
   type LocomotionState,
   type MoveInput,
   projectMotionView,
 } from "@/game/player/locomotion";
+import { stepPlayerOnGround } from "@/game/player/groundStep";
 import {
   consumeGrapple,
   consumeJump,
@@ -329,23 +328,17 @@ export function PlayerRig({
      */
     // 지형이 아니라 **딛는 면**이다 — 도시 구역에는 16cm 올라온 인도가 깔려 있다
     const onRide = isVehicle(stats.mode);
-    const groundHeight = rideSurfaceHeight(surfaceHeight(locomotion.current.position.x, locomotion.current.position.z), locomotion.current.position.x, locomotion.current.position.z, layout.halfExtent, onRide);
-
-    const stepped = stepLocomotion(
-      locomotion.current,
-      moveInput,
-      photoMode ? 0 : dt,
-      groundHeight,
+    const corrected = stepPlayerOnGround(locomotion.current, moveInput, photoMode ? 0 : dt, {
+      /*
+       * 어느 자리든 같은 식으로 발밑을 잰다 — 이동 전과 이동 후를 두 번 잰다.
+       * 두 곳에 손으로 적으면 한쪽만 고쳐질 자리가 하나 더 생긴다.
+       */
+      sampleGround: (x, z) => rideSurfaceHeight(surfaceHeight(x, z), x, z, layout.halfExtent, onRide),
+      colliders,
       grappleAnchors,
-    );
-    const corrected: LocomotionState = {
-      ...stepped,
-      position: clampToBounds(
-        resolveHorizontalCollisions(stepped.position, PLAYER_RADIUS, colliders),
-        rideLimit(layout.halfExtent, onRide),
-        PLAYER_RADIUS,
-      ),
-    };
+      radius: PLAYER_RADIUS,
+      halfExtent: rideLimit(layout.halfExtent, onRide),
+    });
     locomotion.current = corrected;
 
     const speed = horizontalSpeed(corrected.velocity);

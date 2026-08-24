@@ -18,7 +18,7 @@
  * 배치 코드를 고쳐야 한다 (cityDetails의 FIXTURE_TONE 주석 참조).
  * ------------------------------------------------------------------ */
 export const PROP_PALETTE = ["#2e2a3a", "#5f7f63", "#c8b39a"];
-export const SHOPFRONT_PALETTE = ["#efe6d6"];
+export const SHOPFRONT_PALETTE = ["#e8d5c2"];
 /*
  * 옥상. 물탱크·실외기·난간 순서로 tone 0·1·2를 쓴다.
  *
@@ -27,7 +27,7 @@ export const SHOPFRONT_PALETTE = ["#efe6d6"];
  * 페인트를 난간에 주면 색으로 갈라지고, 실제 도시에서 위를 올려다볼 때
  * 보이는 것과도 맞는다.
  */
-export const ROOFTOP_PALETTE = ["#9aa3ad", "#6f6a7d", "#4fae7a"];
+export const ROOFTOP_PALETTE = ["#8fa6a2", "#756f7a", "#4f9b7d"];
 /** ROAD_MARK_TONE 순서와 맞춘다: 흰색·황색·짙은 금속·자전거 붉은색·버스 파란색 */
 /**
  * 차도 바닥 색.
@@ -42,7 +42,7 @@ export const ROOFTOP_PALETTE = ["#9aa3ad", "#6f6a7d", "#4fae7a"];
  * 색을 얼마나 남길까」로 고른다. 도로가 인도보다 어두운 것은 이 값이 아니라
  * **텍스처가** 맡는다.
  */
-export const ROAD_SURFACE_COLOR = "#d6d4da";
+export const ROAD_SURFACE_COLOR = "#d8d8c8";
 
 /*
  * 황색 중앙선을 눌렀다(0.72 → 0.52). 도로는 도시에서 가장 넓은 면이고 그 위의
@@ -99,7 +99,7 @@ export const OLD_TOWN_PALETTE = [
  * 난간은 청록으로 칠한다. 한국 골목 난간이 실제로 칠해져 있기도 하고, 이 동네는
  * 회갈색 일색이라 자연에 없는 색이어야 눈에 걸린다(공원 놀이기구와 같은 이유).
  */
-export const HILLSIDE_PALETTE = ["#bab4a6", "#a29b8d", "#3f8f8a"];
+export const HILLSIDE_PALETTE = ["#c5b2ad", "#ad9995", "#478d89"];
 /**
  * 담 아래 화분.
  *

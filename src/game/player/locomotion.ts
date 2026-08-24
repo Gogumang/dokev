@@ -498,6 +498,106 @@ export function resolveHorizontalCollisions(
   return { x, y: position.y, z };
 }
 
+/* ------------------------------------------------------------------ */
+/* 지면 정착                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 걷는 중에 지면을 놓치지 않고 따라 내려가는 최대 낙차(m).
+ *
+ * 인도 연석이 16cm다. 그보다 넉넉해야 연석을 내려설 때마다 공중 판정이
+ * 되지 않는다. 대신 너무 키우면 **일부러 뛰어내린 턱에서도 발이 붙어**
+ * 내려가는 느낌이 사라진다.
+ */
+const GROUND_SNAP_BASE = 0.24;
+
+/**
+ * 속도에 비례해 늘어나는 몫.
+ *
+ * 낙차는 「그 프레임에 지나간 수평 거리 × 비탈 기울기」다. 기울기 상한은
+ * 지형 세 겹을 합쳐 0.14 남짓이고, 여기에 여유 배수를 곱한다. 고정값
+ * 하나로 두면 걷기에 맞춘 값이 자전거 속도에서 모자라고(내리막마다 뜬다),
+ * 자전거에 맞춘 값은 걷기에서 과하다(턱에서 안 떨어진다).
+ */
+const GROUND_SNAP_PER_METER = 0.75;
+
+/**
+ * 이동이 **끝난 자리**에서 지면을 다시 재고 발을 붙인다.
+ *
+ * `stepLocomotion`은 이동 전 위치의 지면 높이를 받는다. 한 프레임 어긋나는
+ * 정도는 걸음 속도에서 몇 cm라 눈에 띄지 않지만, 두 가지가 겹치면 화면에서
+ * 곧바로 보인다:
+ *
+ *   - 수평 충돌 보정이 몸을 **옆으로 더 밀어낸다.** 밀려간 자리가 언덕
+ *     비탈이면 그 자리의 지면은 완전히 다른 높이다 — 벽에 붙어 걷다가
+ *     지형 속으로 들어가던 것이 이것이다.
+ *   - 탈것 속도(18m/s)에서는 한 프레임에 0.6m를 지나간다. 오르막이면 그만큼
+ *     묻히고, 내리막이면 그만큼 떠서 **매 프레임 뜨고 착지하기를 반복한다.**
+ *     발소리가 연달아 터지고 카메라가 계속 흔들린다.
+ *
+ * 그래서 「끌어올리기」와 「따라 내려가기」를 나눠 다룬다. 끌어올리기는 조건이
+ * 없다 — 땅속은 어떤 경우에도 있으면 안 되는 자리다. 따라 내려가기는 **직전에
+ * 땅에 붙어 있었고 내려가는 중일 때만** 한다. 그러지 않으면 점프한 순간 다시
+ * 끌어내려지고, 낙하 중에 지붕을 스칠 때 공중에서 멈춘다.
+ */
+export function settleOnGround(
+  state: LocomotionState,
+  /** **이동이 끝난 자리**에서 잰 발밑 높이(m) */
+  groundHeight: number,
+  /** 이번 프레임 시작 시점에 땅에 붙어 있었는가 */
+  wasGrounded: boolean,
+  dt: number,
+): LocomotionState {
+  const gap = state.position.y - groundHeight;
+
+  // 땅속 — 조건 없이 끌어올린다.
+  if (gap <= 0) {
+    const impact = !wasGrounded && state.velocity.y < 0 ? -state.velocity.y : 0;
+    return {
+      ...state,
+      position: { ...state.position, y: groundHeight },
+      velocity: { ...state.velocity, y: 0 },
+      grounded: true,
+      coyoteRemaining: COYOTE_TIME_SECONDS,
+      airJumpsUsed: 0,
+      gliding: false,
+      landingImpact: Math.max(state.landingImpact, impact),
+    };
+  }
+
+  /*
+   * 발이 땅에서 떨어졌다.
+   *
+   * `grounded`를 반드시 내려야 한다 — 앞 단계가 켜 둔 값을 그대로 두면
+   * **허공에 서서 걷는 자세**가 나오고, 코요테 타임이 끝나지 않아 공중에서
+   * 계속 점프할 수 있다.
+   */
+  const airborne: LocomotionState = { ...state, grounded: false };
+
+  // 이미 떠 있던 몸은 붙잡지 않는다. 올라가는 중이어도 마찬가지다.
+  if (!wasGrounded || state.velocity.y > 0) return airborne;
+
+  const horizontal = Math.hypot(state.velocity.x, state.velocity.z);
+  const snap = GROUND_SNAP_BASE + horizontal * dt * GROUND_SNAP_PER_METER;
+  if (gap > snap) return airborne;
+
+  /*
+   * 비탈을 따라 내려간다.
+   *
+   * 착지 충격을 새로 만들지 않는다 — 땅에서 떨어진 적이 없다. 여기서
+   * 충격을 넣으면 내리막을 달리는 내내 카메라가 흔들린다.
+   */
+  return {
+    ...state,
+    position: { ...state.position, y: groundHeight },
+    velocity: { ...state.velocity, y: 0 },
+    grounded: true,
+    coyoteRemaining: COYOTE_TIME_SECONDS,
+    airJumpsUsed: 0,
+    gliding: false,
+  };
+}
+
 /** 월드 경계 밖으로 나가지 못하게 가둔다. */
 export function clampToBounds(position: Vec3, halfExtent: number, radius: number): Vec3 {
   const limit = halfExtent - radius;

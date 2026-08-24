@@ -111,11 +111,18 @@ describe("카메라가 벽 안에 남지 않는다", () => {
      * 플레이어는 못 들어가는 자리에 **카메라만 들어가는 자리**가 생긴다.
      * 배선을 확인한다 — 함수만 있고 걸지 않으면 화면은 그대로다.
      */
-    const source = readFileSync("src/game/scene/PlayerRig.tsx", "utf8");
-    expect(source, "카메라를 밀어내지 않는다").toContain("CAMERA_COLLIDER_RADIUS");
-    const uses = source.match(/resolveHorizontalCollisions\(/g) ?? [];
-    expect(uses.length, `resolveHorizontalCollisions 호출 ${uses.length}회 — 플레이어와 카메라 둘이어야 한다`).toBe(
-      2,
-    );
+    const rig = readFileSync("src/game/scene/PlayerRig.tsx", "utf8");
+    const step = readFileSync("src/game/player/groundStep.ts", "utf8");
+    expect(rig, "카메라를 밀어내지 않는다").toContain("CAMERA_COLLIDER_RADIUS");
+
+    /*
+     * 플레이어 쪽은 `groundStep`으로 옮겼다 — 이동·밀어내기·발밑 정착이
+     * 순서대로 붙어 있어야 맞는 세 단계라, 프레임 루프에 늘어놓으면 순서가
+     * 코드로 드러나지 않는다. 카메라 쪽은 씬에 남는다(행렬을 직접 만진다).
+     */
+    const rigUses = (rig.match(/resolveHorizontalCollisions\(/g) ?? []).length;
+    const stepUses = (step.match(/resolveHorizontalCollisions\(/g) ?? []).length;
+    expect(rigUses, `카메라 밀어내기 ${rigUses}회 — 1회여야 한다`).toBe(1);
+    expect(stepUses, `플레이어 밀어내기 ${stepUses}회 — 1회여야 한다`).toBe(1);
   });
 });
