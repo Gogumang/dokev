@@ -208,6 +208,14 @@ export interface QuestView {
   counter: string;
   completed: boolean;
   /**
+   * 지금 몇 번째 단계인가.
+   *
+   * HUD는 이 값을 쓰지 않는다 — **씬이 쓴다.** 첫 여정 앞부분에서 로봇을
+   * 물려 두려면(`questContent.isCalmStep`) 지금이 몇 번째인지 알아야 하는데,
+   * 실행기만 아는 값이라 여기에 실어 보낸다.
+   */
+  stepIndex: number;
+  /**
    * **첫 여정**을 끝까지 마쳤는지. `completed`와 다르다.
    *
    * `completed`는 지금 보고 있는 여정의 상태다. 첫 여정을 마치면 다음 여정으로
@@ -234,6 +242,8 @@ export function toQuestView(quest: Quest, progress: QuestProgress): QuestView {
       ratio: 1,
       counter: "",
       completed: true,
+      // 다 끝났으면 마지막 단계 뒤다. 조용한 구간 판정에서 자연히 빠진다
+      stepIndex: quest.steps.length,
       // 실행기는 체인을 모른다 — 씬이 여정 id를 보고 덮어쓴다
       firstQuestDone: false,
     };
@@ -257,6 +267,7 @@ export function toQuestView(quest: Quest, progress: QuestProgress): QuestView {
     counter,
     completed: false,
     firstQuestDone: false,
+    stepIndex: progress.stepIndex,
     // 도달 목표일 때만 좌표를 넘긴다. 다른 목표에는 갈 곳이 없다.
     ...(step.objective.kind === "reach"
       ? { targetX: step.objective.x, targetZ: step.objective.z }
@@ -292,6 +303,8 @@ export function projectQuestView(
   view.ratio = next.ratio;
   view.counter = next.counter;
   view.completed = next.completed;
+  // 씬이 조용한 구간을 판단할 때 읽는다. 안 옮기면 영영 0번 단계로 남는다
+  view.stepIndex = next.stepIndex;
   view.firstQuestDone =
     quest.id !== firstQuestId || next.completed || view.firstQuestDone;
 }

@@ -9,7 +9,7 @@
 import type { CombatCues } from "@/game/systems/audio/combat";
 import type { CombatLink } from "@/game/combat/Enemies";
 import type { CompanionCommand, CompanionTarget } from "@/game/dokebi/companionMotion";
-import type { DokebiId } from "@/game/dokebi/roster";
+import type { DiscoveryView, DokebiId } from "@/game/dokebi/roster";
 import type { EmoteState } from "@/game/player/emote";
 import type { GrappleView } from "@/game/player/GrappleVisuals";
 import type { PhotoFilterId } from "@/game/systems/photoFilter";
@@ -230,7 +230,7 @@ export interface SceneProps {
    *
    * 씬은 저장을 모르고 PlayClient는 좌표를 모른다 — 둘 사이의 유일한 통로다.
    */
-  discoveryView: { pending: DokebiId | null };
+  discoveryView: DiscoveryView;
   /** 저장에서 이어할 지점. 없으면 처음부터 */
   resumeFrom: {
     questStepIndex: number;
@@ -277,6 +277,12 @@ export interface PlayerLink extends CompanionTarget, CombatLink, CompanionComman
   companionAbilityReady: boolean;
   /** 지금 동료 빛이 닿는 거리(m). 능력이 꺼져 있으면 0 */
   companionLightRange: number;
+  /**
+   * 대상 없이 눌린 상호작용. `interactionStep`이 세우고 **아는 쪽이 소비한다.**
+   *
+   * 지금은 부두 끝의 낚시가 유일한 소비자다.
+   */
+  interactPressed: boolean;
   /** 동료가 매 프레임 써 넣는 자기 위치. 미니맵이 읽는다 */
   companionX: number;
   companionZ: number;

@@ -32,6 +32,19 @@ function crossing(colIndex: number, rowIndex: number): { x: number; z: number } 
 export const DISCOVERY_RADIUS = 7;
 
 /**
+ * 도감이 보여 줄 사연. **아직 만나지 않았으면 빈 목록이다.**
+ *
+ * 가려서 그리는 것과 **안 넘기는 것**은 다르다. 화면 쪽에서 숨기면 문자열은
+ * 이미 그 자리에 있고, 나중에 누가 조건 하나를 잘못 고치면 안 만난 도깨비의
+ * 사연이 그대로 뜬다 — 이 저장소가 도감 조건에서 이미 한 번 겪은 종류다.
+ * 여기서 막으면 화면은 없는 것을 그릴 수 없다.
+ */
+export function storyFor(id: DokebiId, met: readonly DokebiId[]): readonly string[] {
+  if (!met.includes(id)) return [];
+  return DOKEBI[id].story;
+}
+
+/**
  * 능력을 쓰지 않을 때 동료의 빛이 닿는 거리(m).
  *
  * 도깨비의 `lightRangeScale`은 **이 값에 곱하는 배율**이다. 숫자가
@@ -69,6 +82,16 @@ export interface DokebiSpirit {
   name: string;
   /** 한 줄 소개 — 도감과 대화에서 재사용한다 */
   tagline: string;
+  /**
+   * 사연 — 도감에서 만난 뒤에만 읽을 수 있다.
+   *
+   * 한 줄 소개와 성격만 있을 때 도감은 **카탈로그**로 읽혔다. 모으고 싶은
+   * 대상이 되려면 그 자리에 왜 있었는지가 있어야 한다 — 이 도시의 어느
+   * 사물에서 나왔고 무엇을 하다 만났는지.
+   *
+   * 두세 줄로 끊는다. 길면 아무도 안 읽고, 안 읽히는 글은 없는 것과 같다.
+   */
+  story: readonly string[];
   personality: string;
   /** 능력 이름 */
   abilityName: string;
@@ -101,6 +124,10 @@ export const DOKEBI: Record<DokebiId, DokebiSpirit> = {
     id: "chorong",
     name: CHORONG.name,
     tagline: CHORONG.tagline,
+    story: [
+      "가로등이 나가던 골목에서 혼자 켜져 있었다.",
+      "누가 오면 앞장서서 걷는 버릇이 있다. 길을 아는 게 아니라, 앞이 어두운 걸 못 견딘다.",
+    ],
     personality: CHORONG.personality,
     abilityName: "반딧불",
     ability: CHORONG.ability,
@@ -125,6 +152,10 @@ export const DOKEBI: Record<DokebiId, DokebiSpirit> = {
     id: "geueum",
     name: "그을음",
     tagline: "굴뚝 그림자에서 떨어져 나온 검댕 덩어리",
+    story: [
+      "옛 마을 굴뚝이 마지막으로 연기를 낸 날, 그 그림자만 남아 마당을 굴러다녔다.",
+      "밝은 데를 싫어하는 게 아니라, 자기가 지운 자리에서 남이 편해지는 걸 좋아한다.",
+    ],
     personality: "느긋하고 말이 적다. 서두르는 법이 없어 늘 조금 늦게 도착한다.",
     abilityName: "잿불",
     ability: "연기로 몸을 감춰 로봇이 잘 알아보지 못한다",
@@ -153,6 +184,10 @@ export const DOKEBI: Record<DokebiId, DokebiSpirit> = {
     id: "mulbineul",
     name: "물비늘",
     tagline: "빗물받이에 고인 빛이 굳어 생긴 도깨비",
+    story: [
+      "비 갠 뒤 빗물받이마다 하늘이 한 조각씩 담긴다. 그중 하나가 떠내려가지 못했다.",
+      "다친 데를 보면 가만히 옆에 고인다. 고쳐 주는 게 아니라, 마르는 걸 늦춰 준다.",
+    ],
     personality: "조심스럽고 겁이 많다. 큰 소리가 나면 먼저 뒤로 물러선다.",
     abilityName: "물무늬",
     ability: "물무늬가 상처를 씻어 빠르게 아물게 한다",
@@ -185,6 +220,10 @@ export const DOKEBI: Record<DokebiId, DokebiSpirit> = {
     id: "jajeong",
     name: "자정",
     tagline: "가장 시끄럽던 것이 조용해진 자리에서 피어난 도깨비",
+    story: [
+      "번화가 간판이 전부 꺼진 첫 새벽, 그 조용함이 뭉쳐서 생겼다.",
+      "빛을 멀리까지 보내는 대신 자기는 늘 반쯤 잠겨 있다. 밤을 오래 봐 온 쪽은 서두르지 않는다.",
+    ],
     personality: "말수가 적고 뜸을 들인다. 대신 한 번 한 말은 오래 남는다.",
     abilityName: "먼 불빛",
     ability: "멀리까지 빛이 번져 골목 구석까지 한꺼번에 드러난다",
@@ -462,6 +501,14 @@ export function dokebiPreset(id: string): DokebiSpirit {
 /** 만남 알림을 기다리는 자리. `PlayClient`가 가져가고 비운다 */
 export interface DiscoveryView {
   pending: DokebiId | null;
+  /**
+   * 지금 **자리에 서 있는** 도깨비. 아직 만난 것은 아니다.
+   *
+   * 누르지 않으면 안 열리게 바꾸고 나니, 처음 오는 사람은 **무엇을 눌러야
+   * 할지 알 수 없었다** — 규칙만 지키고 안내가 없으면 그건 잠긴 문이다.
+   * 화면이 이 값을 보고 「손을 내밀라」를 띄운다.
+   */
+  nearby: DokebiId | null;
 }
 
 /**
@@ -482,10 +529,30 @@ export function projectDiscovery(
   z: number,
   progress: DokebiProgress,
   met: readonly DokebiId[],
+  /**
+   * 이번 프레임에 **손을 내밀었는지**.
+   *
+   * 반경에 들어가면 바로 해금됐다 — 걸어가기만 하면 끝이라 **만나는 순간에
+   * 아무 행동도 없었다.** 원작이 「잡기」가 아니라 「친해지기」인 이유가
+   * 그 한 번의 행동에 있다.
+   *
+   * 선택 값으로 두지 않는다. 빠뜨리면 조용히 예전으로 돌아가고, 그건 화면을
+   * 봐야만 아는 종류다.
+   */
+  reached: boolean,
 ): DokebiId | null {
-  if (view.pending !== null) return null;
   const found = discoverAt(x, z, progress, met);
+
+  /*
+   * **서 있다는 사실은 늘 알린다.** 아래 두 관문(대기 중·안 눌렀음)에 걸려
+   * 돌아가더라도 화면은 「여기 무언가 있다」를 말할 수 있어야 한다.
+   */
+  view.nearby = found;
+
+  if (view.pending !== null) return null;
   if (!found) return null;
+  // 자리에 서 있는 것과 손을 내미는 것은 다르다. 지나가기만 해서는 안 열린다
+  if (!reached) return null;
   view.pending = found;
   return found;
 }
@@ -506,7 +573,7 @@ export function projectDiscovery(
  * `consume`처럼 **하는 일을 말하는 동사**로 대상을 찾는다. 이름을 가족에 맞추면
  * 규칙이 저절로 따라온다.
  */
-export function consumeDiscovery(view: DiscoveryView): DokebiId | null {
+export function consumeDiscovery(view: { pending: DokebiId | null }): DokebiId | null {
   const found = view.pending;
   if (!found) return null;
   view.pending = null;

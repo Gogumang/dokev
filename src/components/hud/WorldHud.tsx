@@ -32,7 +32,7 @@ import type { GateView } from "@/game/world/SpiritGate";
 import { Minimap } from "@/components/hud/Minimap";
 import { TouchControls } from "@/components/hud/TouchControls";
 import { TouchMenu } from "@/components/hud/TouchMenu";
-import { pendingDiscoveries, type DokebiId } from "@/game/dokebi/roster";
+import { pendingDiscoveries, type DiscoveryView, type DokebiId } from "@/game/dokebi/roster";
 import { contextMessage, type ContextLossView } from "@/game/systems/contextLoss";
 
 import { SPEED_LINES } from "@/game/config/tuning";
@@ -73,6 +73,8 @@ interface WorldHudProps {
   talkView: { line: string | null; speaker: string; nearby: boolean };
   /** 문 앞인지와 빛이 얼마나 모자란지. 씬이 매 프레임 갱신한다 */
   gate: GateView;
+  /** 지금 도깨비 자리에 서 있는지. 「손을 내밀라」를 띄운다 */
+  discovery: DiscoveryView;
   /** 지금 구역 — 바뀔 때만 배너를 띄운다 */
   district: { id: string; name: string; subtitle: string };
   /** 현재 시간대 이름. 포토 모드 버튼에 그대로 쓴다 */
@@ -125,6 +127,7 @@ export function WorldHud({
   dialogue,
   talkView,
   gate,
+  discovery,
   nickname,
   foundClues,
   district,
@@ -397,6 +400,7 @@ export function WorldHud({
         {captureNotice && <CaptureNotice message={captureNotice} />}
         {/* 문 앞에서만 뜬다 — 빛이 모자라면 얼마나 모자란지까지 말한다 */}
         <GateNotice gate={gate} />
+        <ShrinePrompt discovery={discovery} />
         <UnlockNotice summary={summary} questView={questView} met={metDokebi} />
         <VendingPrompt vending={vending} />
         {/* 만나기 전 단계 — 자리가 드러났다는 것만 알린다 */}
@@ -655,6 +659,37 @@ function SpeedLines({ stats }: { stats: RuntimeStats }) {
           "radial-gradient(ellipse at center, transparent 30%, rgba(255,255,255,0.18) 72%, rgba(255,255,255,0.42) 100%)",
       }}
     />
+  );
+}
+
+/**
+ * 「손을 내밀라」.
+ *
+ * 누르지 않으면 안 열리게 바꾸고 나니(RALPH_BACKLOG 「10. 만나는 순간에 행동이
+ * 있다」) 처음 오는 사람은 **무엇을 눌러야 할지 알 수 없었다** — 규칙만 지키고
+ * 안내가 없으면 그건 잠긴 문이다.
+ *
+ * 이름은 밝히지 않는다. 아직 만나지 않은 도깨비이고, 누구인지는 만나서 알아야
+ * 한다 — 자리 알림(`ShrineNotice`)이 이미 같은 규칙을 쓴다.
+ */
+function ShrinePrompt({ discovery }: { discovery: DiscoveryView }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    // 매 프레임 바뀌는 값이라 자기 주기로 들여다본다 — 다른 알림들과 같은 방식이다
+    const id = window.setInterval(() => setVisible(discovery.nearby !== null), 150);
+    return () => window.clearInterval(id);
+  }, [discovery]);
+
+  if (!visible) return null;
+
+  return (
+    <div className="hud-scrim pointer-events-none rounded-[var(--radius-md)] px-4 py-2 text-center">
+      <div className="text-sm font-semibold">여기 무언가 있다</div>
+      <div className="text-xs text-[var(--color-text-secondary)]">
+        {keyLabel(CONTROL_CODES.talk)}로 손을 내밀어 보자
+      </div>
+    </div>
   );
 }
 

@@ -14,10 +14,55 @@ import type { Aabb, Vec3 } from "@/game/player/locomotion";
 export interface CameraTuning {
   distanceBase: number;
   distanceMax: number;
+  heightIdle: number;
+  heightRun: number;
+  combatLift: number;
+  combatPullback: number;
+  vistaBaseY: number;
+  vistaSpan: number;
+  vistaLift: number;
+  vistaPullback: number;
+  rideDrop: number;
+  ridePull: number;
   fovBase: number;
   fovMax: number;
   lookAheadMax: number;
   fovSpeedReference: number;
+}
+
+/**
+ * 착지 흔들림을 한 프레임 진행한다.
+ *
+ * `PlayerRig`의 프레임 루프 안에 손으로 적혀 있던 계산이다. 카메라를 흔드는
+ * 일이므로 여기가 제 자리이고, 무엇보다 **저기 있을 때는 잴 수가 없었다** —
+ * 「세게 떨어질수록 크게 흔들린다」와 「가만히 두면 멎는다」가 화면을 봐야만
+ * 확인되는 규칙이었다.
+ *
+ * 저감 모션이면 새 흔들림을 받지 않는다. 다만 **이미 흔들리던 것은 감쇠시킨다** —
+ * 도중에 설정을 켜면 흔들린 채로 굳는다.
+ */
+export function stepLandingShake(
+  current: number,
+  /** 이번 프레임의 착지 충돌 속도(m/s). 착지하지 않았으면 0 */
+  impact: number,
+  dt: number,
+  reducedMotion: boolean,
+  tuning: {
+    minImpactSpeed: number;
+    maxImpactSpeed: number;
+    maxAmplitude: number;
+    decayPerSecond: number;
+  },
+): number {
+  let next = current;
+
+  if (impact > tuning.minImpactSpeed && !reducedMotion) {
+    const strength = inverseLerpClamped(tuning.minImpactSpeed, tuning.maxImpactSpeed, impact);
+    next = Math.max(next, strength * tuning.maxAmplitude);
+  }
+
+  // 비율 감쇠라 0에 점근한다. 음수로 내려가지 않게 바닥을 둔다
+  return Math.max(0, next - tuning.decayPerSecond * next * dt);
 }
 
 /** 속도를 0~1로 편 값. 거리·시야각·시선 선행이 모두 이 하나를 쓴다 */
@@ -32,12 +77,85 @@ export function speedRatio(speed: number, reference: number): number {
  * 잡을 수 없다.
  */
 export function followDistance(
-  tuning: Pick<CameraTuning, "distanceBase" | "distanceMax">,
+  tuning: Pick<
+    CameraTuning,
+    | "distanceBase"
+    | "distanceMax"
+    | "combatPullback"
+    | "vistaBaseY"
+    | "vistaSpan"
+    | "vistaPullback"
+    | "ridePull"
+  >,
   speed01: number,
   photoMode: boolean,
   photoDistance: number,
+  /**
+   * 전투 압력 0~1. 로봇이 붙을수록 1에 가깝다.
+   *
+   * 안 넘기면 **전투에서 카메라가 그대로 붙어 있어** 무엇이 다가오는지 보이지
+   * 않는다. `tests/silentDefaults.test.ts`가 제품 호출을 본다.
+   */
+  combat01: number,
+  /** 플레이어의 월드 높이(m). 언덕 마루에서는 더 물러나 도시가 보인다 */
+  playerY: number,
+  /** 무언가를 타고 있는지. 타면 조금 붙어 차체가 커 보인다 */
+  riding: boolean,
 ): number {
-  return photoMode ? photoDistance : lerp(tuning.distanceBase, tuning.distanceMax, speed01);
+  if (photoMode) return photoDistance;
+  return (
+    lerp(tuning.distanceBase, tuning.distanceMax, speed01) +
+    tuning.combatPullback * combat01 +
+    tuning.vistaPullback * vistaOpenness(playerY, tuning) -
+    (riding ? tuning.ridePull : 0)
+  );
+}
+
+/**
+ * 지금 얼마나 트인 곳에 서 있는가 (0~1).
+ *
+ * 높이 하나로 잰다. 「전망대」를 따로 배치하지 않는 이유는 **이 도시의 언덕이
+ * 이미 그 자리**이기 때문이다 — 배치를 새로 두면 지형과 어긋날 자리가 하나 더
+ * 생기고, 어긋나면 아무것도 없는 허공에서 카메라만 물러난다.
+ */
+export function vistaOpenness(
+  playerY: number,
+  tuning: Pick<CameraTuning, "vistaBaseY" | "vistaSpan">,
+): number {
+  if (tuning.vistaSpan <= 0) return 0;
+  return inverseLerpClamped(tuning.vistaBaseY, tuning.vistaBaseY + tuning.vistaSpan, playerY);
+}
+
+/**
+ * 카메라가 플레이어 발밑에서 얼마나 위에 있을지(m).
+ *
+ * 멈추면 낮아 아이와 눈높이가 가깝고, 달리면 올라가 앞이 보이고, 전투에서는
+ * 더 올라가 전장이 보인다. 포토 모드는 자유 카메라라 이 값을 쓰지 않는다.
+ */
+export function followHeight(
+  tuning: Pick<
+    CameraTuning,
+    | "heightIdle"
+    | "heightRun"
+    | "combatLift"
+    | "vistaBaseY"
+    | "vistaSpan"
+    | "vistaLift"
+    | "rideDrop"
+  >,
+  speed01: number,
+  combat01: number,
+  /** 플레이어의 월드 높이(m). 트인 곳에서는 시야가 열려야 한다 */
+  playerY: number,
+  /** 무언가를 타고 있는지. 타면 낮아져 차체가 화면 아래에 들어온다 */
+  riding: boolean,
+): number {
+  return (
+    lerp(tuning.heightIdle, tuning.heightRun, speed01) +
+    tuning.combatLift * combat01 +
+    tuning.vistaLift * vistaOpenness(playerY, tuning) -
+    (riding ? tuning.rideDrop : 0)
+  );
 }
 
 /**

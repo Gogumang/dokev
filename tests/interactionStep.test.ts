@@ -31,7 +31,7 @@ function makeFrame(overrides: Partial<InteractionFrame> = {}): InteractionFrame 
     input: { talkQueued: false },
     talkView: { line: null, speaker: "", remaining: 0, nearby: false },
     clueView: { found: [] },
-    playerLink: { cluesFound: 0 },
+    playerLink: { cluesFound: 0, interactPressed: false },
     // 실제 호출부는 **늘 객체를 넘긴다** — 멀리 있으면 거리로 걸러진다.
     // null로 두면 실제와 다른 모양을 검사하게 된다.
     residentCandidate: { index: 0, distanceSquared: 10_000 },
@@ -66,7 +66,7 @@ describe("흔적 조사", () => {
 
   it("여러 개를 찾아도 수가 따라간다", () => {
     const found: string[] = [];
-    const link = { cluesFound: 0 };
+    const link = { cluesFound: 0, interactPressed: false };
     for (const clue of CLUES) {
       stepInteraction(
         makeFrame({
@@ -87,7 +87,7 @@ describe("흔적 조사", () => {
     const frame = makeFrame({
       input: { talkQueued: true },
       clueView: { found },
-      playerLink: { cluesFound: 1 },
+      playerLink: { cluesFound: 1, interactPressed: false },
     });
     stepInteraction(frame);
     expect(found.length, `기록 ${found.join(", ")}`).toBe(1);

@@ -20,7 +20,8 @@ import * as THREE from "three";
 import { MAX_DELTA_SECONDS, PLAYER_HEIGHT, type VehicleKind } from "@/game/config/tuning";
 import type { Appearance } from "@/game/player/appearance";
 import { attackPose } from "@/game/player/attackPose";
-import { WEAPONS, type WeaponId } from "@/game/combat/weapons";
+import { WEAPON_ORDER, WEAPONS, type WeaponId } from "@/game/combat/weapons";
+import { swingTrail, trailHalfWidth } from "@/game/player/swingTrail";
 import { PLAYER_BODY } from "@/game/player/characterBody";
 import { emotePose, type EmoteState } from "@/game/player/emote";
 import type { PhotoPose } from "@/game/player/photoPose";
@@ -41,6 +42,31 @@ import {
  * 넘기면 초당 60번 리렌더가 필요해진다. 렌더 루프끼리 같은 객체를 공유하고
  * 각자 읽는 방식이 이 프로젝트의 성능 예산에 맞다.
  */
+/**
+ * 자국을 남기는 무기들.
+ *
+ * 원거리는 빠진다 — 탄이 이미 눈에 보이고, 부채꼴까지 그리면 **쏘지도 않은
+ * 근접 판정이 있는 것처럼** 읽힌다(`swingTrail`이 같은 규칙을 잰다).
+ */
+const MELEE_WEAPONS = WEAPON_ORDER.filter((id) => WEAPONS[id].bolt === null);
+
+/** 자국 안쪽 반지름 비율. 몸에서 조금 떨어져야 팔이 그린 길처럼 보인다 */
+const TRAIL_INNER_RATIO = 0.45;
+
+/** 부채꼴을 몇 조각으로 나눌지. 자국 하나뿐이라 넉넉히 줘도 싸다 */
+const TRAIL_SEGMENTS = 16;
+
+/** 자국 색. 불꽃이 아니라 **그림 도구**의 인상이어야 한다 */
+const TRAIL_COLOR = "#8ff2ff";
+
+/**
+ * 가장 진할 때의 불투명도.
+ *
+ * 1로 두면 바닥을 덮는 판이 되어 **캐릭터보다 자국이 주인공**이 된다. 프레임의
+ * 참격도 배경을 지우지 않고 위에 얹혀 있었다.
+ */
+const TRAIL_MAX_OPACITY = 0.5;
+
 export interface CharacterMotionSource {
   /** 현재 수평 속도(m/s) */
   speed: number;
@@ -103,6 +129,8 @@ export function Character({
   const rightLeg = useRef<THREE.Group>(null);
 
   const pose = useRef<PoseState>(createPoseState());
+  /** 무기마다 자국 링이 하나씩. 지금 든 것만 보인다 */
+  const trails = useRef<(THREE.Mesh | null)[]>([]);
 
   // 지오메트리는 한 번만 만든다. 매 렌더 새로 만들면 GPU 버퍼가 계속 쌓인다.
   const geometry = useMemo(
@@ -131,6 +159,39 @@ export function Character({
       for (const item of created) item.dispose();
     };
   }, [geometry]);
+
+  /*
+   * 휘두른 자국 링 — 무기마다 하나.
+   *
+   * 위 `geometry`에 넣지 않는다. 저쪽은 **값이 전부 지오메트리 하나**라는
+   * 전제로 해제되는데, 배열을 하나 끼우면 `dispose`가 없는 것에 대고 부른다.
+   *
+   * 각도를 지오메트리가 들고 있어 렌더는 돌리기만 한다 — 매 프레임 정점을 다시
+   * 만들면 GC가 프레임을 먹는다.
+   */
+  const trailRings = useMemo(
+    () =>
+      MELEE_WEAPONS.map((id) => {
+        const weapon = WEAPONS[id];
+        const halfWidth = trailHalfWidth(weapon);
+        return new THREE.RingGeometry(
+          weapon.reachMeters * TRAIL_INNER_RATIO,
+          weapon.reachMeters,
+          TRAIL_SEGMENTS,
+          1,
+          // 링의 0도는 +x다. 정면(+z)에 자국을 두려면 -90도에서 시작한다
+          -Math.PI / 2 - halfWidth,
+          halfWidth * 2,
+        );
+      }),
+    [],
+  );
+
+  useLayoutEffect(() => {
+    return () => {
+      for (const ring of trailRings) ring.dispose();
+    };
+  }, [trailRings]);
 
 
   useFrame((_, rawDelta) => {
@@ -168,6 +229,23 @@ export function Character({
         ? attackPose(motion.attackElapsed, WEAPONS[motion.weapon])
         : emotePose(motion.emote));
 
+    /*
+     * 휘두른 자국.
+     *
+     * 지금 든 무기의 링만 보인다. 매 프레임 `visible`만 건드린다 — 조건부
+     * 렌더로 바꾸면 휘두를 때마다 리렌더가 난다.
+     */
+    const trail = swingTrail(motion.attackElapsed, WEAPONS[motion.weapon]);
+    for (let index = 0; index < MELEE_WEAPONS.length; index += 1) {
+      const ring = trails.current[index];
+      if (!ring) continue;
+      const mine = MELEE_WEAPONS[index] === motion.weapon;
+      ring.visible = mine && trail.opacity > 0;
+      if (!ring.visible) continue;
+      ring.rotation.y = trail.centerAngle;
+      (ring.material as THREE.MeshBasicMaterial).opacity = trail.opacity * TRAIL_MAX_OPACITY;
+    }
+
     if (leftArm.current) {
       leftArm.current.rotation.x = appliedPose ? appliedPose.leftArmX : limbs.leftArm;
       // 포즈를 벗어나면 벌림을 0으로 되돌린다 — 남으면 걸을 때 팔이 벌어진 채다.
@@ -204,6 +282,25 @@ export function Character({
 
   return (
     <group>
+      {/*
+        휘두른 자국 — 발밑에 눕힌 부채꼴.
+        캐릭터 그룹 안에 두어 **몸이 도는 대로 함께 돈다.** 밖에 두면 방향을
+        따로 맞춰야 하고, 그러면 판정과 어긋날 자리가 하나 더 생긴다.
+      */}
+      {MELEE_WEAPONS.map((id, index) => (
+        <mesh
+          key={id}
+          ref={(mesh) => {
+            trails.current[index] = mesh;
+          }}
+          geometry={trailRings[index]}
+          visible={false}
+          position={[0, -PLAYER_HEIGHT * 0.32, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <meshBasicMaterial color={TRAIL_COLOR} transparent opacity={0} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
       {/* 스쿼시는 캐릭터 전체에 걸린다. 발이 지면을 뚫지 않도록 원점을 발밑에 둔다 */}
       <group ref={squashRef} position={[0, -PLAYER_HEIGHT / 2, 0]}>
         <group position={[0, PLAYER_HEIGHT / 2, 0]}>

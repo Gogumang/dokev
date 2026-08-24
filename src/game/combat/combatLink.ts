@@ -167,3 +167,43 @@ export function consumeRespawn(link: RespawnLink): boolean {
   link.respawnRequested = false;
   return true;
 }
+
+/* ------------------------------------------------------------------ *
+ * 전투가 얼마나 가까운가
+ *
+ * `cameraRig`에 있던 계산이다. 카메라만 쓰는 값일 때는 거기가 맞았는데, 군중도
+ * 같은 것을 알아야 하게 되면서 **장면 코드를 세계가 import하는** 모양이 됐다.
+ * 전투가 밖으로 내보내는 값이므로 이 파일이 제자리다.
+ * ------------------------------------------------------------------ */
+
+/**
+ * 지금 얼마나 전투 한복판인가 (0~1).
+ *
+ * 미니맵에 찍는 적 좌표를 그대로 읽는다 — 전투 쪽에서 이미 매 프레임 채우는
+ * 값이라 새 신호를 만들 이유가 없다. 대장은 저 목록에 없어서 따로 받는다.
+ *
+ * **버퍼 길이가 아니라 개수를 본다.** 미니맵 버퍼는 고정 길이라 쓰러진 적의
+ * 좌표가 뒤에 남는다 — 그것까지 세면 아무도 없는 자리에서 카메라가 물러난다.
+ */
+export function combatPressure(
+  blips: Float32Array,
+  count: number,
+  playerX: number,
+  playerZ: number,
+  bossEngaged: boolean,
+  radius: number,
+): number {
+  if (bossEngaged) return 1;
+
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < count; i += 1) {
+    const dx = blips[i * 2] - playerX;
+    const dz = blips[i * 2 + 1] - playerZ;
+    const distance = Math.hypot(dx, dz);
+    if (distance < nearest) nearest = distance;
+  }
+
+  if (!Number.isFinite(nearest) || nearest >= radius) return 0;
+  // 붙을수록 1에 가깝다. 반경 끝에서는 0이라 경계에서 툭 끊기지 않는다
+  return 1 - nearest / radius;
+}

@@ -412,6 +412,7 @@ describe("여정이 화면으로 나가는가", () => {
       hint: UNSET,
       ratio: -1,
       counter: UNSET,
+      stepIndex: -1,
       completed: true,
       firstQuestDone: false,
       targetX: -1,

@@ -11,6 +11,7 @@
 
 import { createSeededRandom, TAU } from "@/game/core/mathx";
 import { CITY } from "@/game/world/cityLayout";
+import type { TimeOfDayId } from "@/game/world/timeOfDay";
 
 /** 구역 중심 간 거리 — cityLayout과 같은 정의 */
 const blockPitch = CITY.blockSize + CITY.roadWidth;
@@ -40,6 +41,39 @@ export const CROWD = {
   halfRateDistance: 45,
   /** 모서리에서 방향이 튀지 않게 감쇠하는 계수 */
   turnLambda: 9,
+  /**
+   * 플레이어의 춤에 합류하는 거리(m).
+   *
+   * 트레일러의 인상은 **혼자 추는 춤이 번지는 것**이다. 우리 춤은 혼자 추고
+   * 끝났다 — 같은 동작인데 화면이 전혀 달랐던 이유가 이것이다.
+   *
+   * 컬링 거리(120m)보다 훨씬 좁게 둔다. 안 보이는 사람이 춤추는 것은 아무
+   * 의미가 없고, 넓으면 광장 하나가 통째로 흔들려 **내가 시작했다는 인과**가
+   * 사라진다.
+   */
+  danceRadius: 9,
+  /**
+   * 지나가는 나를 쳐다보는 거리(m).
+   *
+   * 원작 도시가 「살아 있다」고 읽히는 이유는 사람 **수**가 아니라 반응이다.
+   * 우리 보행자는 옆에서 로봇과 싸워도 앞만 보고 걸었다.
+   */
+  glanceRadius: 6,
+  /** 전투가 이 거리 안에서 벌어지면 물러선다(m) */
+  fleeRadius: 13,
+  /**
+   * 물러설 때의 속도 배율.
+   *
+   * 걸음보다 빨라야 「피한다」로 보이고, 너무 빠르면 도망 경주가 된다.
+   */
+  fleeSpeedScale: 1.7,
+  /**
+   * 이 압력부터 전투로 본다(0~1).
+   *
+   * 0으로 두면 인지 반경 끝에 로봇 하나만 있어도 온 동네가 물러선다 —
+   * 그건 반응이 아니라 소란이다.
+   */
+  fleeThreshold: 0.25,
 } as const;
 
 /**
@@ -84,6 +118,120 @@ export const PANTS_PALETTE = ["#3b4a6b", "#4a4451", "#7a6a58", "#2b2f3a"] as con
 
 export const SKIN_PALETTE = ["#f0c9a8", "#d8a67c", "#a97b55"] as const;
 
+/**
+ * 보행자가 하는 일.
+ *
+ * 트레일러 프레임에서 나온 규칙이다 — 원작 낮 거리에는 **걷기만 반복하는
+ * 인물이 사실상 없다.** 한 화면에 걷기·앉기·서서 대화가 동시에 있다. 우리는
+ * 전원이 같은 걸음으로 트랙을 돌았고, 그래서 수를 늘려도 인상이 그대로였다.
+ *
+ * 넷으로 나눈 기준은 **몸이 무엇을 하느냐**다. 이름만 다르고 화면이 같으면
+ * 늘린 값이 없다:
+ *
+ * - `walk` — 트랙을 돈다. 다수여야 한다. 다 서 있으면 도시가 멈춘다.
+ * - `talk` — **둘이 마주 본다.** 트랙 안팎에 하나씩 서서 서로를 향한다.
+ * - `sit` — 주저앉는다. 골반이 내려가고 다리가 접힌다.
+ * - `linger` — 그냥 서 있다. 걸음이 멎어 있을 뿐이라 가장 싸다.
+ */
+export const PEDESTRIAN_ACTIVITIES = ["walk", "talk", "sit", "linger"] as const;
+
+export type PedestrianActivity = (typeof PEDESTRIAN_ACTIVITIES)[number];
+
+/**
+ * 시간대별로 거리에 나와 있는 비율.
+ *
+ * 프레임에서 밤 구간은 인물이 **1명으로 뚝 떨어진다.** 북적임과 적막의 대비가
+ * 낮/밤 국면 전환 장치다 — 우리는 시간대를 넷 만들어 두고 군중은 그것을 몰랐다.
+ *
+ * 새 시간대를 넣고 여기를 빠뜨리면 그 시간대에 군중이 사라진다. 검사가 본다.
+ */
+const CROWD_PRESENCE: Record<TimeOfDayId, number> = {
+  dawn: 0.4,
+  noon: 1,
+  sunset: 0.8,
+  night: 0.25,
+};
+
+/**
+ * 이 시간대에 거리에 나와 있을 보행자 수.
+ *
+ * 배치를 다시 만들지 않는다 — 목록 앞에서부터 세는 것뿐이다. 시간대가 바뀔
+ * 때마다 새로 뽑으면 **같은 사람이 다른 자리에서 다시 나타난다.**
+ */
+export function crowdCountFor(total: number, timeOfDay: TimeOfDayId): number {
+  if (total <= 0) return 0;
+  // 밤에도 하나는 남긴다. 완전히 비면 유령 도시가 되고, 그건 다른 게임이다
+  return Math.max(1, Math.round(total * CROWD_PRESENCE[timeOfDay]));
+}
+
+/**
+ * 이 시민이 지금 플레이어의 춤에 합류하는가.
+ *
+ * 상태를 들고 있지 않다 — **추는 동안만 합류하고 멈추면 돌아간다.** 한 번
+ * 합류한 사람을 계속 춤추게 두면 도시가 서서히 멈춘다.
+ */
+export function joinsDance(
+  pedestrianX: number,
+  pedestrianZ: number,
+  playerX: number,
+  playerZ: number,
+  /** 플레이어가 춤추는 중인지. 손 흔들기·앉기에는 아무도 따라 하지 않는다 */
+  dancing: boolean,
+  radius: number,
+): boolean {
+  if (!dancing) return false;
+  return Math.hypot(pedestrianX - playerX, pedestrianZ - playerZ) <= radius;
+}
+
+/**
+ * 보행자가 지금 무엇에 반응하는가.
+ *
+ * 셋을 한 함수에서 정하는 이유: **동시에 일어날 수 없기 때문**이다. 물러서는
+ * 중에 고개를 돌리면 뒷걸음질 치며 쳐다보는 그림이 되고, 그건 사람이 아니라
+ * 게처럼 보인다.
+ */
+export type CrowdReaction = "none" | "glance" | "flee";
+
+/**
+ * 전투가 가까우면 물러서고, 가까이 지나가면 쳐다본다.
+ *
+ * 전투가 먼저다 — 로봇이 코앞인데 나를 구경하고 있으면 그건 반응이 아니라 배경이다.
+ */
+export function crowdReaction(
+  pedestrianX: number,
+  pedestrianZ: number,
+  playerX: number,
+  playerZ: number,
+  /** 지금 전투가 얼마나 가까운가 0~1 (`combatLink.combatPressure`) */
+  combat01: number,
+): CrowdReaction {
+  const distance = Math.hypot(pedestrianX - playerX, pedestrianZ - playerZ);
+  if (combat01 >= CROWD.fleeThreshold && distance <= CROWD.fleeRadius) return "flee";
+  if (distance <= CROWD.glanceRadius) return "glance";
+  return "none";
+}
+
+/**
+ * 물러설 때 트랙의 어느 쪽으로 갈지(+1 / -1).
+ *
+ * 트랙 위를 도는 사람이라 아무 데로나 갈 수 없다 — **두 방향 중 멀어지는 쪽**을
+ * 고른다. 방향을 안 고르면 절반은 전투 쪽으로 뛰어들고, 그건 도망이 아니다.
+ */
+export function fleeDirection(
+  pedestrianX: number,
+  pedestrianZ: number,
+  playerX: number,
+  playerZ: number,
+  /** 지금 서 있는 자리의 트랙 접선 방향(rad) */
+  trackYaw: number,
+): 1 | -1 {
+  const awayX = pedestrianX - playerX;
+  const awayZ = pedestrianZ - playerZ;
+  // 접선 방향과 「멀어지는 방향」의 내적. 양수면 그대로 가면 멀어진다
+  const along = Math.sin(trackYaw) * awayX + Math.cos(trackYaw) * awayZ;
+  return along >= 0 ? 1 : -1;
+}
+
 export interface PedestrianSpec {
   /** 순회하는 구역의 중심 */
   cx: number;
@@ -98,6 +246,15 @@ export interface PedestrianSpec {
   skinTone: number;
   /** 시작 걸음 위상. 전원이 같은 발을 내딛으면 군무처럼 보인다 */
   startPhase: number;
+  /** 무엇을 하고 있는지. `walk`가 아니면 자리에 머문다 */
+  activity: PedestrianActivity;
+  /**
+   * 트랙 접선에서 몸을 얼마나 틀지(rad).
+   *
+   * 대화하는 둘은 서로를 봐야 한다. 렌더가 「안쪽 트랙이면 바깥을 본다」처럼
+   * 추측하게 두지 않는다 — 배치가 정한 것을 그대로 넘긴다.
+   */
+  yawOffset: number;
 }
 
 export interface TrackSample {
@@ -175,6 +332,9 @@ export function buildPedestrians(budget: number): PedestrianSpec[] {
         cx,
         cz,
         trackRadius,
+        // 행동은 아래에서 구역 단위로 정한다 — 짝이 필요한 것이 있어서다
+        activity: "walk",
+        yawOffset: 0,
         direction,
         speed: CROWD.minSpeed + random() * (CROWD.maxSpeed - CROWD.minSpeed),
         startU: random() * trackPerimeter(trackRadius),
@@ -184,6 +344,55 @@ export function buildPedestrians(budget: number): PedestrianSpec[] {
         startPhase: random() * TAU,
       });
     }
+  }
+
+  return assignActivities(specs);
+}
+
+/**
+ * 같은 구역에 선 사람들에게 할 일을 나눠 준다.
+ *
+ * **뽑을 때가 아니라 뽑은 뒤에 정한다.** 대화는 둘이 필요한데, 예산이 중간에
+ * 끊기면 짝이 하나만 남는다 — 허공에 대고 서 있는 사람이 생긴다.
+ *
+ * 난수를 쓰지 않고 구역 순서로 가른다. 이웃한 구역이 서로 다른 일을 하게 되고,
+ * 무엇보다 **같은 시드에서 늘 같다.**
+ */
+function assignActivities(specs: PedestrianSpec[]): PedestrianSpec[] {
+  const byBlock = new Map<string, PedestrianSpec[]>();
+  for (const spec of specs) {
+    const key = `${spec.cx},${spec.cz}`;
+    const group = byBlock.get(key) ?? [];
+    group.push(spec);
+    byBlock.set(key, group);
+  }
+
+  let blockOrder = 0;
+  for (const group of byBlock.values()) {
+    const turn = blockOrder % 4;
+    blockOrder += 1;
+    // 혼자 있는 구역은 걷는다. 앉아 있기만 한 동네는 비어 보인다
+    if (group.length < 2) continue;
+
+    const [first, second] = group;
+    if (turn === 0) {
+      /*
+       * 마주 보고 선 둘. 트랙 안팎에 하나씩 세우고 같은 자리(u)에 둔다 —
+       * 인도 폭만큼 떨어져 서로를 본다.
+       */
+      first.activity = "talk";
+      second.activity = "talk";
+      second.startU = first.startU;
+      first.trackRadius = CROWD.outerTrackRadius;
+      second.trackRadius = CROWD.innerTrackRadius;
+      first.yawOffset = -Math.PI / 2;
+      second.yawOffset = Math.PI / 2;
+    } else if (turn === 1) {
+      second.activity = "sit";
+    } else if (turn === 3) {
+      second.activity = "linger";
+    }
+    // turn === 2는 둘 다 걷는다 — 걷는 사람이 다수여야 도시가 움직인다
   }
 
   return specs;

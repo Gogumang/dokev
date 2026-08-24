@@ -22,8 +22,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { CAMERA, CAMERA_COLLIDER_RADIUS, CAMERA_GROUND_CLEARANCE, CHARACTER_FADE, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
-import { clamp, damp, inverseLerpClamped } from "@/game/core/mathx";
+import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, CAMERA_COLLIDER_RADIUS, CAMERA_GROUND_CLEARANCE, CHARACTER_FADE, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
+import { clamp, damp } from "@/game/core/mathx";
 import {
   clampToBounds,
   createLocomotionState,
@@ -54,8 +54,8 @@ import {
   projectDistrictView,
   projectVendingView,
 } from "@/game/scene/hudProjection";
-import { consumeRespawn } from "@/game/combat/combatLink";
-import { downgrade } from "@/game/systems/quality";
+import { combatPressure, consumeRespawn } from "@/game/combat/combatLink";
+import { stepDowngradeWatch } from "@/game/systems/quality";
 import { projectDiscovery } from "@/game/dokebi/roster";
 import { fovPulse, FOV_PULSE_SECONDS } from "@/game/dokebi/discoveryEffect";
 import { createEmoteState, emoteCue, stepEmote, type EmoteState } from "@/game/player/emote";
@@ -69,6 +69,8 @@ import {
 } from "@/game/systems/vending";
 import {
   followDistance,
+  followHeight,
+  stepLandingShake,
   followFov,
   lookAheadDistance,
   orbitDirection,
@@ -91,6 +93,8 @@ import {
   createDialogueState,
   cueForStep,
   projectDialogue,
+  createRemarkMemory,
+  recordRemark,
   speak,
   stepDialogue,
   type DialogueState,
@@ -112,10 +116,11 @@ import { CharacterModel } from "@/game/player/CharacterModel";
 import { RiddenVehicle } from "@/game/player/RiddenVehicle";
 import { nearestStatic } from "@/game/world/interaction";
 import { standInReach } from "@/game/world/vehicleStands";
-import { stepInteraction } from "@/game/scene/interactionStep";
+import { consumeInteract, stepInteraction } from "@/game/scene/interactionStep";
 import { projectGrappleView } from "@/game/player/GrappleVisuals";
 import { surfaceHeight } from "@/game/world/sidewalks";
 import { terrainHeight } from "@/game/world/terrain";
+import { rideLimit, rideSurfaceHeight } from "@/game/world/waterRide";
 
 export function PlayerRig({
   colliders,
@@ -155,6 +160,7 @@ export function PlayerRig({
   // as const 때문에 리터럴 타입이 잡힌다 — 드래그로 바뀌는 값이므로 number로 연다
   const pitch = useRef<number>(CAMERA.pitchStart);
   const shake = useRef(0);
+  const combatEase = useRef(0); // 눅인 전투 압력. 날것으로 쓰면 카메라가 튄다
   const cameraPosition = useRef(new THREE.Vector3());
   /*
    * 캐릭터를 얼마나 진하게 그릴지. 매 프레임 setState를 하지 않으려고
@@ -173,8 +179,8 @@ export function PlayerRig({
   /** 만남 카메라 숨의 경과 시간. null이면 쉬고 있지 않다 */
   const discoveryPulse = useRef<number | null>(null);
   /** 보스의 예고를 처음 봤는지. 한 번만 알려 준다 */
-  const warnedAboutBoss = useRef(false);
-  const sawTelegraph = useRef(false);
+  /** 동료가 무엇을 이미 말했는지. 규칙은 quest/dialogue.ts에 있다 */
+  const remarks = useRef(createRemarkMemory());
   /*
    * 지금 진행 중인 여정. 완주하면 다음 여정으로 넘어간다 — 첫 여정을 마치고
    * 목표가 사라지면 도시가 그냥 넓기만 하다.
@@ -322,7 +328,8 @@ export function PlayerRig({
      * 몇 cm이고 화면에서는 보이지 않는다.
      */
     // 지형이 아니라 **딛는 면**이다 — 도시 구역에는 16cm 올라온 인도가 깔려 있다
-    const groundHeight = surfaceHeight(locomotion.current.position.x, locomotion.current.position.z);
+    const onRide = isVehicle(stats.mode);
+    const groundHeight = rideSurfaceHeight(surfaceHeight(locomotion.current.position.x, locomotion.current.position.z), locomotion.current.position.x, locomotion.current.position.z, layout.halfExtent, onRide);
 
     const stepped = stepLocomotion(
       locomotion.current,
@@ -335,7 +342,7 @@ export function PlayerRig({
       ...stepped,
       position: clampToBounds(
         resolveHorizontalCollisions(stepped.position, PLAYER_RADIUS, colliders),
-        layout.halfExtent,
+        rideLimit(layout.halfExtent, onRide),
         PLAYER_RADIUS,
       ),
     };
@@ -372,29 +379,25 @@ export function PlayerRig({
     );
 
     /* ---------------- 착지 충격 ---------------- */
-    if (corrected.landingImpact > LANDING_SHAKE.minImpactSpeed && !reducedMotion) {
-      const strength = inverseLerpClamped(
-        LANDING_SHAKE.minImpactSpeed,
-        LANDING_SHAKE.maxImpactSpeed,
-        corrected.landingImpact,
-      );
-      shake.current = Math.max(shake.current, strength * LANDING_SHAKE.maxAmplitude);
-    }
-    shake.current = Math.max(
-      0,
-      shake.current - LANDING_SHAKE.decayPerSecond * shake.current * dt,
+    shake.current = stepLandingShake(
+      shake.current,
+      corrected.landingImpact,
+      dt,
+      reducedMotion,
+      LANDING_SHAKE,
     );
 
     /* ---------------- 속도 연동 카메라 ---------------- */
     const speed01 = speedRatio(speed, CAMERA.fovSpeedReference);
-    const distance = followDistance(tuning, speed01, photoMode, photoDistance.current);
+    combatEase.current = damp(combatEase.current, combatPressure(playerLink.enemyBlips, playerLink.enemyBlipCount, corrected.position.x, corrected.position.z, bossView.engaged, CAMERA.combatRadius), CAMERA.followLambda, dt);
+    const distance = followDistance(tuning, speed01, photoMode, photoDistance.current, combatEase.current, corrected.position.y, isVehicle(stats.mode));
     const orbit = orbitDirection(yaw.current, pitch.current);
 
     scratch.direction.set(orbit.x, orbit.y, orbit.z).normalize();
 
     scratch.playerHead.set(
       corrected.position.x,
-      corrected.position.y + CAMERA.height,
+      corrected.position.y + followHeight(tuning, speed01, combatEase.current, corrected.position.y, isVehicle(stats.mode)),
       corrected.position.z,
     );
 
@@ -513,7 +516,7 @@ export function PlayerRig({
     frameCount.current += 1;
     elapsed.current += rawDelta;
 
-    if (elapsed.current >= 0.5) {
+    if (elapsed.current >= STATS_SAMPLE_SECONDS) {
       const fps = frameCount.current / elapsed.current;
       stats.fps = fps;
       stats.frameMs = (elapsed.current * 1000) / frameCount.current;
@@ -529,33 +532,24 @@ export function PlayerRig({
       frameCount.current = 0;
       elapsed.current = 0;
 
-      // 낮은 fps가 이어질 때만 강등한다. 로딩 직후 한두 프레임으로 판단하면 안 된다.
-      if (fps < DOWNGRADE_FPS_THRESHOLD) {
-        lowFpsElapsed.current += 0.5;
-        if (lowFpsElapsed.current >= DOWNGRADE_SAMPLE_SECONDS) {
-          lowFpsElapsed.current = 0;
-          const nextLevel = downgrade(quality.level);
-          if (nextLevel !== quality.level) onRequestDowngrade(nextLevel);
-        }
-      } else {
-        lowFpsElapsed.current = 0;
-      }
+      // 낮은 fps가 이어질 때만 강등한다. 규칙과 검사는 systems/quality.ts에 있다
+      const watch = stepDowngradeWatch(lowFpsElapsed.current, fps, STATS_SAMPLE_SECONDS, quality.level, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS);
+      lowFpsElapsed.current = watch.lowSeconds;
+      if (watch.next) onRequestDowngrade(watch.next);
     }
 
     projectMotionView(stats, corrected, speed, mode);
     /*
-     * 보스가 처음 내려치려 할 때 한 번만 알려 준다. 예고 링이 무엇인지
-     * 모르면 첫 싸움은 영문도 모르고 맞는 시간이 된다.
+     * 동료가 말할 거리가 생겼는지 묻는다. 「언제 말하나」는 순수 규칙이라
+     * `quest/dialogue.ts`가 들고 있고, 여기서는 결과만 흘려보낸다.
      */
-    if (bossView.telegraph && !sawTelegraph.current) {
-      sawTelegraph.current = true;
-      if (!warnedAboutBoss.current) {
-        warnedAboutBoss.current = true;
-        dialogueCounter.current += 1;
-        dialogue.current = speak(dialogue.current, "bossWarning", dialogueCounter.current);
-      }
-    } else if (!bossView.telegraph) {
-      sawTelegraph.current = false;
+    const remark = recordRemark(remarks.current, {
+      bossTelegraph: bossView.telegraph,
+      defeats: stats.combat.defeats,
+    });
+    if (remark) {
+      dialogueCounter.current += 1;
+      dialogue.current = speak(dialogue.current, remark, dialogueCounter.current);
     }
 
     /*
@@ -674,6 +668,8 @@ export function PlayerRig({
         bossDefeated: playerLink.bossDefeated,
       },
       metDokebi,
+      // 자리에 서서 **손을 내밀어야** 만난다. 지나가기만 해서는 안 열린다
+      consumeInteract(playerLink),
     );
     if (met) {
       // 카메라도 짧게 숨을 쉰다. 저감 모션이면 건너뛴다 — 시야각 변화가

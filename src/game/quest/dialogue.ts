@@ -23,6 +23,7 @@ export type DialogueCue =
   | "bossWarning"
   | "complete"
   | "completeBoss"
+  | "release"
   | "downed"
   | "dismissed"
   | "discovered"
@@ -78,6 +79,21 @@ export const LINES: Record<DialogueCue, readonly string[]> = {
    * 사건이 가장 작은 사건과 같은 무게로 끝났다.
    */
   completeBoss: ["저 덩치를 눕혔네. 동네가 조용해졌어.", "고물 대장이 누웠다. 이제 진짜 우리 동네야."],
+  /*
+   * 로봇을 눕힌 순간, 가슴에서 빛이 빠져나갈 때.
+   *
+   * 우리 로봇은 이유 없이 서 있었다 — 도깨비도 있고 로봇도 있는데 **둘을 잇는
+   * 문장이 하나도 없었다.** 가슴의 점(`emberRelease`)이 그 자리를 화면으로
+   * 메웠고, 이 한 줄이 그것을 말로 확인해 준다.
+   *
+   * 매번 나오면 시끄럽다 — 부르는 쪽이 처치 때마다가 아니라 **처음 몇 번만**
+   * 말하게 한다.
+   */
+  release: [
+    "봤어? 저 안에서 뭔가 빠져나갔어.",
+    "저 빛… 우리 쪽 아이 같은데.",
+    "가둬 놨던 거야. 저 안에.",
+  ],
   downed: ["아야… 괜찮아?", "일어나, 별거 아니야."],
   /*
    * C로 자주 누르는 자리다. 매번 같은 말이면 사람이 아니라 버튼처럼 들린다.
@@ -188,4 +204,67 @@ export interface DialogueView {
  */
 export function projectDialogue(view: DialogueView, state: DialogueState): void {
   view.line = state.line;
+}
+
+/* ------------------------------------------------------------------ *
+ * 언제 말하나
+ *
+ * 무엇을 말할지(위 표)와 **언제 말할지**는 다른 문제다. 「언제」가 프레임 루프
+ * 안에 손으로 적혀 있었고, 거기서는 잴 수가 없었다 — 「대장 예고는 처음 한 번만」
+ * 「빛 이야기는 처음 몇 번만」이 화면을 오래 보고 있어야만 확인되는 규칙이었다.
+ * ------------------------------------------------------------------ */
+
+/** 빠져나가는 빛을 몇 번까지 말할지. 그 뒤로는 화면만 말한다 */
+const LIGHT_REMARK_LIMIT = 3;
+
+/** 동료가 무엇을 이미 말했는지. 부르는 쪽이 들고 있다 */
+export interface RemarkMemory {
+  /** 지난 프레임에 예고 링이 떠 있었는지 */
+  sawTelegraph: boolean;
+  /** 대장 경고를 이미 했는지 */
+  warnedBoss: boolean;
+  /** 마지막으로 본 누적 처치 수 */
+  seenDefeats: number;
+  /** 빛 이야기를 몇 번 했는지 */
+  spokeOfLight: number;
+}
+
+export function createRemarkMemory(): RemarkMemory {
+  return { sawTelegraph: false, warnedBoss: false, seenDefeats: 0, spokeOfLight: 0 };
+}
+
+/**
+ * 이번 프레임에 무엇을 말할지 **정하고 기억한다.** 말할 것이 없으면 null.
+ *
+ * 이름이 `record`로 시작하는 이유: 넘겨받은 기억을 제자리에서 고치기 때문이다.
+ * 이 저장소는 그런 함수의 이름을 네 동사(project·record·reset·consume)로 묶어
+ * 두었다 — 배선을 읽을 때 「이게 무언가를 바꾸는가」가 이름에서 보여야 한다.
+ *
+ * **기억을 제자리에서 고친다.** 프레임마다 새 객체를 만들면 전투 중에 초당
+ * 60개가 쌓인다.
+ *
+ * 한 프레임에 하나만 돌려준다 — 대장이 팔을 드는 순간에 로봇도 눕으면 두 마디가
+ * 겹쳐 어느 쪽도 안 들린다. 대장 쪽이 먼저다(그쪽이 위험을 알리는 말이라서).
+ */
+export function recordRemark(
+  memory: RemarkMemory,
+  event: { bossTelegraph: boolean; defeats: number },
+): DialogueCue | null {
+  const rising = event.bossTelegraph && !memory.sawTelegraph;
+  memory.sawTelegraph = event.bossTelegraph;
+
+  if (rising && !memory.warnedBoss) {
+    memory.warnedBoss = true;
+    return "bossWarning";
+  }
+
+  if (event.defeats > memory.seenDefeats) {
+    memory.seenDefeats = event.defeats;
+    if (memory.spokeOfLight < LIGHT_REMARK_LIMIT) {
+      memory.spokeOfLight += 1;
+      return "release";
+    }
+  }
+
+  return null;
 }

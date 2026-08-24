@@ -15,6 +15,7 @@
  */
 
 import * as THREE from "three";
+import { buildGrain } from "@/game/world/grain";
 
 import { createSeededRandom } from "@/game/core/mathx";
 import { disposeSkyTextures } from "@/game/world/skyTexture";
@@ -155,6 +156,12 @@ function drawFacadeTile(tone: FacadeTone): HTMLCanvasElement {
 
   ctx.fillStyle = tone.wall;
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // 벽의 결. 규칙과 검사는 world/grain.ts에 있다 — 단색 면이면 캐릭터가 안 떠오른다
+  for (const mark of buildGrain(CANVAS_SIZE, tone.frame.charCodeAt(1) + tone.wall.charCodeAt(3))) {
+    ctx.fillStyle = `rgba(${mark.dark ? "0, 0, 0" : "255, 255, 255"}, ${mark.alpha})`;
+    ctx.fillRect(mark.x, mark.y, mark.width, mark.height);
+  }
 
   // 층 사이 띠 — 이것만 있어도 건물에 스케일 감각이 생긴다.
   ctx.fillStyle = tone.frame;

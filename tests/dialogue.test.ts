@@ -4,16 +4,18 @@ import { readCode } from "./support/source";
 
 import { BOSS_QUEST, FIRST_RUN_QUEST, QUEST_CHAIN } from "@/game/quest/questContent";
 import {
-  createDialogueState,
-  LINES,
-  cueForStep,
-  DIALOGUE_SECONDS,
-  pickLine,
-  projectDialogue,
-  speak,
-  stepDialogue,
   BOSS_QUEST_ID,
   completionCue,
+  createDialogueState,
+  createRemarkMemory,
+  cueForStep,
+  DIALOGUE_SECONDS,
+  LINES,
+  pickLine,
+  projectDialogue,
+  recordRemark,
+  speak,
+  stepDialogue,
 } from "@/game/quest/dialogue";
 
 describe("pickLine", () => {
@@ -227,13 +229,21 @@ describe("쓴 대사가 실제로 들리는가", () => {
   const rig = readCode("src/game/scene/PlayerRig.tsx");
 
   it("모든 상황이 어딘가에서 불린다", () => {
-    const silent: string[] = [];
+    // 정책 함수 본문만 본다. 주석은 `readCode`가 이미 걷어내므로 코드로 가른다
+  const policy = readCode("src/game/quest/dialogue.ts").split("export function recordRemark")[1] ?? "";
+  const silent: string[] = [];
     for (const cue of Object.keys(LINES)) {
       if (cue.startsWith("step:")) continue;
       // 여정 단계와 완주는 함수가 골라 준다
       if (cue === "complete" || cue === "completeBoss") continue;
       if (["dance", "wave", "sit"].includes(cue)) continue;
-      if (!rig.includes(`"${cue}"`)) silent.push(cue);
+      /*
+       * 부르는 곳이 리그만은 아니게 됐다. 「언제 말하나」가 프레임 루프 안에
+       * 있을 때는 잴 수 없어서 `dialogue.ts`의 정책 함수(`pickRemark`)로
+       * 옮겼고, 그 함수가 돌려주는 상황도 **들리는 대사**다.
+       */
+      const spokenSomewhere = rig.includes(`"${cue}"`) || policy.includes(`"${cue}"`);
+      if (!spokenSomewhere) silent.push(cue);
     }
     expect(silent, `아무도 못 듣는 대사:\n${silent.join(", ")}`).toEqual([]);
   });
@@ -324,5 +334,75 @@ describe("대사가 머무는 동안", () => {
     expect(later.remaining, `${spoken.remaining} → ${later.remaining}`).toBeLessThan(
       spoken.remaining,
     );
+  });
+});
+
+/*
+ * 언제 말하나.
+ *
+ * 이 규칙은 `PlayerRig`의 프레임 루프 안에 손으로 적혀 있었다 — 「대장 예고는
+ * 처음 한 번만」과 「빛 이야기는 처음 몇 번만」이 화면을 오래 보고 있어야만
+ * 확인되는 규칙이었고, 그래서 지워도 아무도 몰랐다.
+ */
+describe("recordRemark", () => {
+  const quiet = { bossTelegraph: false, defeats: 0 };
+
+  it("아무 일도 없으면 아무 말도 안 한다", () => {
+    const memory = createRemarkMemory();
+    expect(recordRemark(memory, quiet), "가만히 있는데 말한다").toBeNull();
+  });
+
+  it("예고가 처음 뜰 때 대장을 경고한다", () => {
+    const memory = createRemarkMemory();
+    expect(recordRemark(memory, { bossTelegraph: true, defeats: 0 })).toBe("bossWarning");
+  });
+
+  it("예고가 떠 있는 동안 계속 말하지 않는다 — 매 프레임 말하면 초당 60번이다", () => {
+    const memory = createRemarkMemory();
+    recordRemark(memory, { bossTelegraph: true, defeats: 0 });
+    expect(recordRemark(memory, { bossTelegraph: true, defeats: 0 }), "두 번째도 말했다").toBeNull();
+  });
+
+  it("한 판에 한 번뿐이다 — 링이 꺼졌다 다시 떠도 조용하다", () => {
+    const memory = createRemarkMemory();
+    recordRemark(memory, { bossTelegraph: true, defeats: 0 });
+    recordRemark(memory, quiet);
+    expect(recordRemark(memory, { bossTelegraph: true, defeats: 0 }), "잔소리가 된다").toBeNull();
+  });
+
+  it("로봇이 누우면 빠져나가는 빛을 말한다", () => {
+    const memory = createRemarkMemory();
+    expect(recordRemark(memory, { bossTelegraph: false, defeats: 1 })).toBe("release");
+  });
+
+  it("같은 처치 수로는 다시 말하지 않는다", () => {
+    const memory = createRemarkMemory();
+    recordRemark(memory, { bossTelegraph: false, defeats: 1 });
+    expect(recordRemark(memory, { bossTelegraph: false, defeats: 1 })).toBeNull();
+  });
+
+  it("몇 번 말하고 나면 화면에 맡긴다", () => {
+    /*
+     * 처치마다 말하면 시끄럽고, 시끄러우면 아무도 안 듣는다. 가슴의 빛은
+     * 계속 뜨므로 **말이 멎어도 장면은 남는다.**
+     */
+    const memory = createRemarkMemory();
+    let spoken = 0;
+    for (let defeats = 1; defeats <= 12; defeats += 1) {
+      if (recordRemark(memory, { bossTelegraph: false, defeats })) spoken += 1;
+    }
+    expect(spoken, `${spoken}번 말했다`).toBeGreaterThan(0);
+    expect(spoken, `${spoken}번 말했다 — 처치마다 말하고 있다`).toBeLessThan(12);
+  });
+
+  it("한 프레임에 하나만 말한다 — 겹치면 어느 쪽도 안 들린다", () => {
+    /*
+     * 대장이 팔을 드는 순간에 로봇도 눕는 일이 실제로 있다. 그때 두 마디가
+     * 겹치면 둘 다 흘려듣게 되므로, 위험을 알리는 쪽(대장)이 먼저다.
+     */
+    const memory = createRemarkMemory();
+    expect(recordRemark(memory, { bossTelegraph: true, defeats: 3 })).toBe("bossWarning");
+    // 처치는 기억되지 않았으므로 다음 프레임에 빛 이야기가 나온다
+    expect(recordRemark(memory, { bossTelegraph: true, defeats: 3 })).toBe("release");
   });
 });

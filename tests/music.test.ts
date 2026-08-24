@@ -1,8 +1,16 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { readCode } from "./support/source";
 
-import { chordRootForBar } from "@/game/systems/audio/music";
+import {
+  barPhase,
+  beatPhase,
+  beatPulse,
+  chordRootForBar,
+  MUSIC_TEMPO,
+} from "@/game/systems/audio/music";
 
 describe("chordRootForBar", () => {
   it("8마디마다 처음으로 돌아온다", () => {
@@ -120,5 +128,100 @@ describe("음악이 들리기는 하는가", () => {
     // 0이면 마디가 넘어가지 않아 같은 화음에 머문다
     const beats = value("BEATS_PER_BAR");
     expect(beats, `한 마디 ${beats}박`).toBeGreaterThan(1);
+  });
+});
+
+/*
+ * 박자가 화면으로 나가는가.
+ *
+ * 원작은 곡이 게임보다 먼저 나왔고 연출 타이밍이 곡 위에 있다. 우리 음악 모듈은
+ * BPM과 마디를 **이미 알고 있었는데** 화면이 그 값을 전혀 읽지 않았다.
+ *
+ * 가장 중요한 규칙은 **오디오와 묶이지 않는 것**이다. 소리를 끈 사람(`M`)이나
+ * 아직 소리를 켜지 않은 첫 화면에서도 맥동은 돌아야 한다. 이 검사 파일 자체가
+ * 그 증거다 — 여기에는 오디오 컨텍스트가 없는데 값이 나온다.
+ */
+describe("박자 위상", () => {
+  it("박 머리에서 0이다", () => {
+    expect(beatPhase(0), "0초에서 0이 아니다").toBeCloseTo(0, 6);
+    expect(beatPhase(MUSIC_TEMPO.secondsPerBeat), "한 박 뒤 0으로 안 돌아온다").toBeCloseTo(0, 6);
+  });
+
+  it("박 사이에서는 0과 1 사이를 지난다", () => {
+    const half = beatPhase(MUSIC_TEMPO.secondsPerBeat * 0.5);
+    expect(half, `반 박에서 ${half}`).toBeCloseTo(0.5, 6);
+  });
+
+  it("아무리 오래 돌아도 범위를 벗어나지 않는다", () => {
+    for (let t = 0; t < 600; t += 0.137) {
+      const phase = beatPhase(t);
+      expect(phase, `t=${t.toFixed(2)}에서 ${phase}`).toBeGreaterThanOrEqual(0);
+      expect(phase, `t=${t.toFixed(2)}에서 ${phase}`).toBeLessThan(1);
+    }
+  });
+
+  it("마디는 첫 박에서 0이다", () => {
+    const bar = MUSIC_TEMPO.secondsPerBeat * MUSIC_TEMPO.beatsPerBar;
+    expect(barPhase(0)).toBeCloseTo(0, 6);
+    expect(barPhase(bar), "한 마디 뒤 0으로 안 돌아온다").toBeCloseTo(0, 6);
+    expect(barPhase(bar * 0.5), "마디 한복판이 0.5가 아니다").toBeCloseTo(0.5, 6);
+  });
+
+  it("마디가 박보다 느리게 돈다 — 같으면 마디를 나눈 뜻이 없다", () => {
+    const quarter = MUSIC_TEMPO.secondsPerBeat;
+    expect(barPhase(quarter), `마디 ${barPhase(quarter)} vs 박 ${beatPhase(quarter)}`).not.toBeCloseTo(
+      beatPhase(quarter),
+      3,
+    );
+  });
+});
+
+describe("맥동", () => {
+  it("박 머리에서 가장 세다", () => {
+    const head = beatPulse(0.0001);
+    const tail = beatPulse(MUSIC_TEMPO.secondsPerBeat * 0.9);
+    expect(head, `머리 ${head.toFixed(2)} vs 꼬리 ${tail.toFixed(2)}`).toBeGreaterThan(tail);
+  });
+
+  it("치고 사라진다 — 오르내리면 울렁이는 것으로 보인다", () => {
+    // 한 박 안에서 단조 감소여야 한다
+    let previous = Infinity;
+    for (let t = 0.001; t < MUSIC_TEMPO.secondsPerBeat; t += 0.01) {
+      const pulse = beatPulse(t);
+      expect(pulse, `t=${t.toFixed(3)}에서 다시 세졌다`).toBeLessThan(previous);
+      previous = pulse;
+    }
+  });
+
+  it("0과 1 사이에 머문다 — 넘으면 블룸이 화면을 태운다", () => {
+    for (let t = 0; t < 60; t += 0.017) {
+      const pulse = beatPulse(t);
+      expect(pulse, `t=${t.toFixed(2)}`).toBeGreaterThanOrEqual(0);
+      expect(pulse, `t=${t.toFixed(2)}`).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe("화면이 실제로 읽는가", () => {
+  it("후처리와 군중이 곡의 박을 가져다 쓴다", () => {
+    /*
+     * 만들어 두고 아무도 안 부르면 없는 것과 같다 — 이 저장소에서 여러 번
+     * 겪은 실패다. 화면 쪽 두 파일이 음악 모듈에서 박을 가져오는지 본다.
+     */
+    const readers = ["src/game/scene/PostProcessing.tsx", "src/game/world/Crowd.tsx"];
+    for (const path of readers) {
+      const source = readFileSync(path, "utf8");
+      expect(source, `${path}가 박을 안 읽는다`).toMatch(/from "@\/game\/systems\/audio\/music"/);
+    }
+  });
+
+  it("맥동 계산이 오디오 객체를 만들지 않는다", () => {
+    /*
+     * 오디오 컨텍스트에 묶으면 **소리를 끈 사람의 화면이 멈춘다.** 위상 함수가
+     * 사는 파일에서 `AudioContext`를 새로 만드는 코드가 위상 근처에 없어야 한다.
+     */
+    const source = readFileSync("src/game/systems/audio/music.ts", "utf8");
+    const phaseBlock = source.slice(source.indexOf("export function beatPhase"), source.indexOf("export function beatPulse"));
+    expect(phaseBlock, "위상 계산이 오디오를 건드린다").not.toMatch(/AudioContext|currentTime/);
   });
 });

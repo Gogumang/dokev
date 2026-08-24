@@ -43,7 +43,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 
+import { GRADE, MAX_DELTA_SECONDS } from "@/game/config/tuning";
 import type { RuntimeStats } from "@/game/scene/sceneTypes";
+import { createFlare, recordFlare } from "@/game/scene/screenFlare";
+import { beatPulse } from "@/game/systems/audio/music";
+import type { TimeOfDayId } from "@/game/world/timeOfDay";
 
 /**
  * 블룸 버퍼 해상도 배율.
@@ -70,13 +74,35 @@ const BLOOM_KNEE = 0.2;
 const BLOOM_STRENGTH = 0.62;
 
 /**
+ * 박마다 블룸이 얼마나 더 세지는지(비율).
+ *
+ * 0.35다. 더 키우면 박마다 화면이 하얗게 뜨고, 그건 연출이 아니라 **깜빡임**이다.
+ */
+const BLOOM_PULSE = 0.35;
+
+/**
+ * 시간대별 맥동 세기.
+ *
+ * 밤에만 온전히 나온다. 낮에는 간판이 꺼져 있어 맥동할 것도 없다 —
+ * 그런데도 블룸만 오르내리면 노출이 흔들리는 것처럼 보인다.
+ */
+const PULSE_BY_TIME: Record<TimeOfDayId, number> = {
+  dawn: 0.35,
+  noon: 0,
+  sunset: 0.5,
+  night: 1,
+};
+
+/**
  * 색보정.
  *
  * 채도는 톤매핑을 끄면서 이미 살아났으므로 조금만 올린다. 대비는 1을 넘기면
  * 그늘이 검게 눌려, 애써 들어 올린 반사광(hemisphereGround)이 도로 사라진다.
  */
-const GRADE_SATURATION = 1.16;
-const GRADE_CONTRAST = 1.08;
+/*
+ * 색보정은 이제 상수가 아니다. 평상시와 절정은 `config/tuning.ts`의 `GRADE`에
+ * 있고, 그 사이 어디인지는 전투 사건이 정한다(`screenFlare.ts`).
+ */
 
 const QUAD_VERTEX = /* glsl */ `
   varying vec2 vUv;
@@ -171,7 +197,14 @@ function createTarget(width: number, height: number): THREE.WebGLRenderTarget {
 /** 씬 뒤에 붙는 풀스크린 패스 수(밝기 추출 + 가로 블러 + 세로 블러 + 합성) */
 const POST_PASS_COUNT = 4;
 
-export function PostProcessing({ stats }: { stats: RuntimeStats }) {
+export function PostProcessing({
+  stats,
+  timeOfDay,
+}: {
+  stats: RuntimeStats;
+  /** 지금 시간대. 맥동은 **밤 연출**이라 낮에는 거의 티가 나지 않아야 한다 */
+  timeOfDay: TimeOfDayId;
+}) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
   const camera = useThree((state) => state.camera);
@@ -241,8 +274,8 @@ export function PostProcessing({ stats }: { stats: RuntimeStats }) {
         tScene: { value: sceneTarget.texture },
         tBloom: { value: bloomTargetA.texture },
         strength: { value: BLOOM_STRENGTH },
-        saturation: { value: GRADE_SATURATION },
-        contrast: { value: GRADE_CONTRAST },
+        saturation: { value: GRADE.saturationCalm },
+        contrast: { value: GRADE.contrastCalm },
       },
       depthTest: false,
       depthWrite: false,
@@ -336,7 +369,32 @@ export function PostProcessing({ stats }: { stats: RuntimeStats }) {
    * GameScene이 문서화해 둔 컴포넌트 순서 의존(되돌리기 → 합치기 → 읽기)이
    * 그대로 유지된다.
    */
-  useFrame(() => {
+  // 얼마나 터져 있는가. 프레임마다 고쳐 쓰므로 useMemo로 한 번만 만든다
+  const flare = useMemo(() => createFlare(), []);
+
+  useFrame(({ clock }, delta) => {
+    /*
+     * 곡의 박에 맞춰 블룸이 맥동한다.
+     *
+     * 시계는 **렌더 시계**다(`clock.elapsedTime`). 오디오 컨텍스트를 보면
+     * 소리를 끈 사람의 화면이 멈춘다 — `music.ts`의 위상 함수가 순수한 이유다.
+     *
+     * 낮에는 거의 티가 나지 않는다. 밤 번화가에서 간판빛이 숨 쉬는 연출이지,
+     * 한낮 하늘까지 함께 밝아지면 그건 노출이 흔들리는 것으로 보인다.
+     */
+    /*
+     * 사건이 터진 만큼 채도·대비를 올렸다 되돌린다. 평상시는 예전보다 차분하고,
+     * 로봇을 눕히는 순간에만 화면이 짧게 진해진다.
+     */
+    recordFlare(flare, stats.combat, Math.min(delta, MAX_DELTA_SECONDS));
+    passes.composite.uniforms.saturation.value =
+      GRADE.saturationCalm + (GRADE.saturationPeak - GRADE.saturationCalm) * flare.level;
+    passes.composite.uniforms.contrast.value =
+      GRADE.contrastCalm + (GRADE.contrastPeak - GRADE.contrastCalm) * flare.level;
+
+    passes.composite.uniforms.strength.value =
+      BLOOM_STRENGTH * (1 + BLOOM_PULSE * PULSE_BY_TIME[timeOfDay] * beatPulse(clock.elapsedTime));
+
     const {
       sceneTarget,
       bloomTargetA,

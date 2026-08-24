@@ -173,6 +173,36 @@ export function getQualityPreset(level: QualityLevel): QualityPreset {
 }
 
 /** 한 단계 낮은 등급. 이미 최저면 그대로 돌려준다. */
+/**
+ * 낮은 fps가 이어질 때만 한 단계 내린다.
+ *
+ * `PlayerRig`의 프레임 루프 안에 손으로 적혀 있던 계산이다. 거기서는 **잴 수가
+ * 없었다** — 「로딩 직후 한두 프레임으로 판단하지 않는다」와 「한 번 내리면
+ * 시계가 0으로 돌아간다」가 화면을 오래 보고 있어야만 확인되는 규칙이었다.
+ *
+ * 부르는 쪽이 남은 시계를 들고 있고, 여기서는 **다음 시계와 내릴 등급**만
+ * 돌려준다. 내릴 필요가 없으면 `next`는 null이다.
+ */
+export function stepDowngradeWatch(
+  lowSeconds: number,
+  fps: number,
+  /** 이번 호출이 대표하는 시간(초). 프레임마다가 아니라 표본 주기마다 부른다 */
+  intervalSeconds: number,
+  level: QualityLevel,
+  thresholdFps: number,
+  sampleSeconds: number,
+): { lowSeconds: number; next: QualityLevel | null } {
+  // 기준을 넘겼으면 시계를 되돌린다. 띄엄띄엄 떨어지는 것으로 내리면 안 된다
+  if (fps >= thresholdFps) return { lowSeconds: 0, next: null };
+
+  const elapsed = lowSeconds + intervalSeconds;
+  if (elapsed < sampleSeconds) return { lowSeconds: elapsed, next: null };
+
+  const next = downgrade(level);
+  // 이미 최저면 내릴 것이 없다 — null을 돌려줘야 부르는 쪽이 같은 요청을 반복하지 않는다
+  return { lowSeconds: 0, next: next === level ? null : next };
+}
+
 export function downgrade(level: QualityLevel): QualityLevel {
   if (level === "high") return "medium";
   if (level === "medium") return "low";

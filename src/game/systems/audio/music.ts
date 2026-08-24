@@ -40,6 +40,46 @@ const SECONDS_PER_BEAT = 60 / BPM;
 const BEATS_PER_BAR = 4;
 
 /**
+ * 곡의 빠르기 — **화면도 읽는다.**
+ *
+ * BPM과 마디를 이 파일이 알고 있는데 화면은 그것을 몰랐다. 원작은 곡이 게임보다
+ * 먼저 나왔고 연출 타이밍이 곡 위에 있는데, 우리는 있는 값을 안 쓰고 있었다.
+ */
+export const MUSIC_TEMPO = {
+  bpm: BPM,
+  secondsPerBeat: SECONDS_PER_BEAT,
+  beatsPerBar: BEATS_PER_BAR,
+} as const;
+
+/**
+ * 지금 박의 진행도(0~1). 박이 넘어갈 때마다 0으로 돌아온다.
+ *
+ * **오디오 컨텍스트를 보지 않는다.** 경과 시간만 받는 순수 함수다 — 소리를
+ * 끈 사람(`M`)의 화면이 멈추면 안 되고, 소리를 켜지 않은 첫 화면에서도
+ * 맥동은 돌아야 한다. 렌더 시계(`clock.elapsedTime`)를 그대로 넘기면 된다.
+ */
+export function beatPhase(elapsedSeconds: number): number {
+  const beats = elapsedSeconds / SECONDS_PER_BEAT;
+  return beats - Math.floor(beats);
+}
+
+/** 지금 마디의 진행도(0~1). 마디 첫 박에 0이다 */
+export function barPhase(elapsedSeconds: number): number {
+  const bars = elapsedSeconds / (SECONDS_PER_BEAT * BEATS_PER_BAR);
+  return bars - Math.floor(bars);
+}
+
+/**
+ * 박에 맞춘 맥동 세기(0~1).
+ *
+ * 박 머리에서 1이고 다음 박까지 잦아든다. 사인파가 아니라 **감쇠**인 이유:
+ * 사인은 오르내리는 시간이 같아 「울렁인다」로 보이고, 실제 박은 치고 사라진다.
+ */
+export function beatPulse(elapsedSeconds: number): number {
+  return 1 - beatPhase(elapsedSeconds);
+}
+
+/**
  * 선행 스케줄 구간(초).
  *
  * 짧으면 프레임이 한 번 밀릴 때 음이 빠지고, 길면 강도 변화가 늦게 반영된다.

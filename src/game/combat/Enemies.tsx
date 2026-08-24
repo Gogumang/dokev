@@ -37,6 +37,14 @@ import {
   type Projectile,
 } from "@/game/combat/projectiles";
 import { ENEMY_BODY } from "@/game/combat/enemyBody";
+import {
+  createEmbers,
+  EMBER,
+  emberFade,
+  releaseEmber,
+  stepEmbers,
+  type Ember,
+} from "@/game/combat/emberRelease";
 import { WEAPONS, type WeaponId } from "@/game/combat/weapons";
 import { createSeededRandom } from "@/game/core/mathx";
 import type { CombatCues } from "@/game/systems/audio/combat";
@@ -133,6 +141,13 @@ export interface EnemiesProps {
   spawn: { x: number; z: number };
   quality: QualityPreset;
   reducedMotion: boolean;
+  /**
+   * 여정이 아직 **조용한 구간**인지 (`quest/questContent.ts`의 `isCalmStep`).
+   *
+   * 목표가 걷기인데 로봇이 사방에서 달려오면 고조될 자리가 없다. 로봇을
+   * 없애지는 않는다 — 멀리서 서성이는 것이 보여야 「곧 싸우겠구나」가 된다.
+   */
+  calm: boolean;
 }
 
 /**
@@ -148,6 +163,14 @@ const BOSS_HIT_RADIUS = 1.9;
 const ENEMY_COUNT_BY_QUALITY = { low: 8, medium: 16, high: 24 } as const;
 
 /** 파티클 풀 크기. 한 번 맞을 때 14개를 쓰므로 동시 타격 몇 번은 견딘다 */
+/**
+ * 조용한 구간의 인지 반경 배율.
+ *
+ * 0으로 두면 코앞에서도 반응하지 않아 **인형**으로 보인다. 0.3이면 16m가
+ * 4.8m로 줄어 — 일부러 다가가면 붙지만, 지나가는 길에는 걸리지 않는다.
+ */
+const CALM_AGGRO_SCALE = 0.3;
+
 const PARTICLE_POOL = 96;
 const PARTICLES_PER_HIT = 14;
 const PARTICLE_LIFE_SECONDS = 0.9;
@@ -174,6 +197,13 @@ const BOLT_COLOR = "#ff2f6a";
  * 색이 비슷하면 무엇을 피해야 하는지 순간적으로 판단할 수 없다.
  */
 const PLAYER_BOLT_COLOR = "#5ce1ff";
+/**
+ * 로봇 가슴에 박힌 점의 색.
+ *
+ * 몸(회색)·사수 표시(주황)·피격 섬광 어느 것과도 겹치지 않는 **살아 있는 색**
+ * 이어야 한다. 이 점 하나가 「저 안에 무언가 갇혀 있다」를 말한다.
+ */
+const CORE_COLOR = "#7cf5c4";
 /** 사수는 몸통 색으로 구분한다 — 멀리서도 "저건 쏜다"를 알아야 피할 수 있다 */
 const GUNNER_COLOR = "#c98a3a";
 /**
@@ -204,6 +234,7 @@ export function Enemies({
   spawn,
   quality,
   reducedMotion,
+  calm,
 }: EnemiesProps) {
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const headRef = useRef<THREE.InstancedMesh>(null);
@@ -212,6 +243,9 @@ export function Enemies({
   const boltRef = useRef<THREE.InstancedMesh>(null);
   /** 내가 쏜 탄. 적 탄과 색을 갈라야 어느 것을 피해야 하는지 한눈에 보인다 */
   const playerBoltRef = useRef<THREE.InstancedMesh>(null);
+  /** 로봇 가슴의 점과, 쓰러질 때 빠져나간 빛 */
+  const coreRef = useRef<THREE.InstancedMesh>(null);
+  const emberRef = useRef<THREE.InstancedMesh>(null);
 
   const count = ENEMY_COUNT_BY_QUALITY[quality.level];
 
@@ -229,6 +263,7 @@ export function Enemies({
   const projectiles = useRef<Projectile[]>([]);
   /** 플레이어가 쏜 탄. 적 탄과 목록을 나눈다 — 맞히는 대상이 반대다 */
   const playerBolts = useRef<PlayerBolt[]>([]);
+  const embers = useRef<Ember[]>(createEmbers());
   /**
    * 지난 프레임의 공격 단계.
    *
@@ -294,6 +329,7 @@ export function Enemies({
       confetti: new THREE.PlaneGeometry(ENEMY_BODY.confettiSize, ENEMY_BODY.confettiSize),
       // 8면체는 구보다 훨씬 싸고, 이 크기에서는 구분되지 않는다.
       bolt: new THREE.OctahedronGeometry(ENEMY_BODY.boltRadius, 0),
+      core: new THREE.SphereGeometry(ENEMY_BODY.coreRadius, 8, 6),
     }),
     [],
   );
@@ -355,6 +391,8 @@ export function Enemies({
     const struck = resolution.struck.map((index) => resolution.enemies[index]);
     for (const enemy of struck) {
       if (!reducedMotion) burst(enemy.x, 0.9, enemy.z);
+      // 눕는 순간 안에 있던 것이 빠져나간다. 색종이와 달리 **곧게 떠오른다**
+      if (enemy.mood === "down") releaseEmber(embers.current, enemy.x, enemy.z);
     }
     recordEnemyHits(link, struck);
 
@@ -381,13 +419,27 @@ export function Enemies({
     enemies.current = resolution.enemies.map((enemy) =>
       // 이동을 먼저 끝낸 뒤 그 자리에서 공격 단계를 진행한다 — 순서가 반대면
       // 한 프레임 전 위치로 사거리를 재게 된다.
-      stepEnemyStrike(stepEnemy(enemy, px, pz, dt, link.abilityAggroScale, isBlocked), px, pz, dt),
+      stepEnemyStrike(
+        stepEnemy(
+          enemy,
+          px,
+          pz,
+          dt,
+          // 조용한 구간에는 훨씬 늦게 알아본다. 지나가도 대개 그대로 서 있다
+          link.abilityAggroScale * (calm ? CALM_AGGRO_SCALE : 1),
+          isBlocked,
+        ),
+        px,
+        pz,
+        dt,
+      ),
     );
 
     /* ---------------- 사수 발사 ---------------- */
     let bolts = projectiles.current;
     enemies.current = enemies.current.map((enemy) => {
-      if (!readyToFire(enemy, px, pz, isBlocked)) return enemy;
+      // 조용한 구간에는 쏘지 않는다. 걷는 중에 등 뒤에서 날아오면 그건 조용함이 아니다
+      if (calm || !readyToFire(enemy, px, pz, isBlocked)) return enemy;
       bolts = fireProjectile(bolts, enemy.x, enemy.z, px, pz);
       return markFired(enemy);
     });
@@ -429,6 +481,7 @@ export function Enemies({
         enemies.current[hit.target] = next;
         boltStruck.push(next);
         if (!reducedMotion) burst(hit.x, 0.9, hit.z);
+        if (next.mood === "down") releaseEmber(embers.current, next.x, next.z);
       }
       recordEnemyHits(link, boltStruck);
     }
@@ -455,7 +508,8 @@ export function Enemies({
     const body = bodyRef.current;
     const head = headRef.current;
     const arm = armRef.current;
-    if (body && head && arm) {
+    const core = coreRef.current;
+    if (body && head && arm && core) {
       enemies.current.forEach((enemy, index) => {
         // 쓰러진 적은 옆으로 눕히고 낮춘다. 사라지게 하면 다시 나타날 때 튄다.
         const isDown = enemy.mood === "down";
@@ -475,6 +529,22 @@ export function Enemies({
         scratch.position.set(enemy.x, ground + (isDown ? 0.55 : 1.3) + bob, enemy.z);
         scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
         head.setMatrixAt(index, scratch.matrix);
+
+        /*
+         * 가슴의 점 — 몸통 **앞면**에 박혀 있다. 몸 안에 두면 회색 상자에
+         * 가려 아무 데서도 안 보이고, 그러면 있으나 마나다.
+         *
+         * 쓰러진 로봇에서도 계속 보인다. 빠져나간 빛(`emberRelease`)은 그
+         * 순간에 한 번 뜨는 것이고, 이 점은 「무엇이 들어 있(었)는가」다.
+         */
+        const coreForward = ENEMY_BODY.bodyDepth * 0.5;
+        scratch.position.set(
+          enemy.x + Math.sin(enemy.facing) * coreForward,
+          ground + (isDown ? 0.42 : 0.86) + bob,
+          enemy.z + Math.cos(enemy.facing) * coreForward,
+        );
+        scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
+        core.setMatrixAt(index, scratch.matrix);
 
         // 팔은 한 덩어리로 묶어 몸통 옆에 붙인다. 개별 관절은 이 거리에서 안 보인다.
         scratch.position.set(enemy.x, ground + (isDown ? 0.32 : 0.75) + bob, enemy.z);
@@ -500,6 +570,8 @@ export function Enemies({
       body.instanceMatrix.needsUpdate = true;
       head.instanceMatrix.needsUpdate = true;
       arm.instanceMatrix.needsUpdate = true;
+      core.instanceMatrix.needsUpdate = true;
+      core.computeBoundingSphere();
       if (body.instanceColor) body.instanceColor.needsUpdate = true;
       body.computeBoundingSphere();
       head.computeBoundingSphere();
@@ -559,6 +631,31 @@ export function Enemies({
       myBoltMesh.computeBoundingSphere();
     }
 
+    /* ---------------- 빠져나간 빛 ---------------- */
+    stepEmbers(embers.current, dt);
+
+    const emberMesh = emberRef.current;
+    if (emberMesh) {
+      for (let i = 0; i < EMBER.poolSize; i += 1) {
+        const ember = embers.current[i];
+        const fade = emberFade(ember);
+        if (fade > 0) {
+          scratch.position.set(ember.x, ember.y, ember.z);
+          scratch.quaternion.identity();
+          // 잦아들수록 작아진다. 크기와 밝기가 함께 줄어야 「사라진다」로 읽힌다
+          scratch.scale.setScalar(fade);
+        } else {
+          scratch.position.set(0, -999, 0);
+          scratch.quaternion.identity();
+          scratch.scale.set(0, 0, 0);
+        }
+        scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
+        emberMesh.setMatrixAt(i, scratch.matrix);
+      }
+      emberMesh.instanceMatrix.needsUpdate = true;
+      emberMesh.computeBoundingSphere();
+    }
+
     /* ---------------- 파티클 ---------------- */
     const confetti = confettiRef.current;
     if (confetti) {
@@ -612,6 +709,16 @@ export function Enemies({
       */}
       <instancedMesh ref={playerBoltRef} args={[geometry.bolt, undefined, PLAYER_BOLT_MAX]}>
         <meshBasicMaterial color={PLAYER_BOLT_COLOR} toneMapped={false} />
+      </instancedMesh>
+      {/*
+        가슴의 점. 로봇이 서 있는 동안 늘 보이고, 쓰러지면 아래 빛으로 빠져나간다.
+      */}
+      <instancedMesh ref={coreRef} args={[geometry.core, undefined, count]}>
+        <meshBasicMaterial color={CORE_COLOR} toneMapped={false} />
+      </instancedMesh>
+      {/* 빠져나간 빛 — 곧게 떠오르며 잦아든다. 색종이와 움직임이 다르다 */}
+      <instancedMesh ref={emberRef} args={[geometry.core, undefined, EMBER.poolSize]}>
+        <meshBasicMaterial color={CORE_COLOR} toneMapped={false} transparent opacity={0.9} />
       </instancedMesh>
       <instancedMesh ref={confettiRef} args={[geometry.confetti, undefined, PARTICLE_POOL]}>
         <meshBasicMaterial color="#ffd23f" side={THREE.DoubleSide} toneMapped={false} transparent />

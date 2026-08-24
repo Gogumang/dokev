@@ -24,15 +24,7 @@ import {
 } from "@/game/systems/quality";
 
 import { createAnalytics } from "@/game/systems/analytics";
-import {
-  companionParty,
-  DOKEBI,
-  type DokebiId,
-  nextDokebi,
-  resolveCompanion,
-  consumeDiscovery,
-  unlockedDokebi,
-} from "@/game/dokebi/roster";
+import { companionParty, consumeDiscovery, type DiscoveryView, DOKEBI, type DokebiId, nextDokebi, resolveCompanion, unlockedDokebi } from "@/game/dokebi/roster";
 import { createEmoteState } from "@/game/player/emote";
 import { createCombatCues } from "@/game/systems/audio/combat";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
@@ -310,6 +302,8 @@ export function PlayClient() {
     completed: false,
     // 이어받은 판에서는 첫 여정을 이미 넘겼을 수 있다. 규칙은 이어받기 계산이 갖는다
     firstQuestDone: resumeFrom?.firstQuestDone === true,
+    // 씬이 첫 프레임에 덮어쓴다. 0으로 두면 그때까지는 「조용한 구간」이다
+    stepIndex: 0,
   }));
 
   const [metDokebi, setMetDokebi] = useState<DokebiId[]>(
@@ -353,8 +347,10 @@ export function PlayClient() {
   const [appearance] = useState(() => loadSettings().appearance);
   // 이름은 시작 화면에서 정하고 플레이 중에는 바뀌지 않는다 — 한 번만 읽는다
   const [nickname] = useState(() => loadSettings().nickname);
-  const [discoveryView] = useState<{ pending: DokebiId | null }>(() => ({
+  const [discoveryView] = useState<DiscoveryView>(() => ({
     pending: null,
+    // 씬이 매 프레임 채운다. 자리에 서면 HUD가 「손을 내밀라」를 띄운다
+    nearby: null,
   }));
   /*
    * 주민 대사. 매 프레임 바뀌므로 상태가 아니라 공유 객체다 — HUD가
@@ -709,6 +705,7 @@ export function PlayClient() {
         questView={questView}
         talkView={talkView}
         gate={gateView}
+        discovery={discoveryView}
         nickname={nickname}
         foundClues={foundClues}
         combat={combatView}

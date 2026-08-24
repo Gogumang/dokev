@@ -876,9 +876,9 @@ describe("만남이 신호로 올라가는가", () => {
 
   it("자리에 서면 신호가 올라간다 — 안 올라가면 아무도 못 모은다", () => {
     const spot = anyHome();
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
 
-    const found = projectDiscovery(view, spot.x, spot.z, OPEN, []);
+    const found = projectDiscovery(view, spot.x, spot.z, OPEN, [], true);
 
     expect(found, "만남이 안 잡혔다").toBe(spot.id);
     expect(view.pending, "신호가 안 올라갔다").toBe(spot.id);
@@ -886,9 +886,9 @@ describe("만남이 신호로 올라가는가", () => {
 
   it("멀리 있으면 안 올라간다", () => {
     const spot = anyHome();
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
 
-    const found = projectDiscovery(view, spot.x + 200, spot.z + 200, OPEN, []);
+    const found = projectDiscovery(view, spot.x + 200, spot.z + 200, OPEN, [], true);
 
     expect(found).toBeNull();
     expect(view.pending, "멀리 있는데 만난 것으로 잡혔다").toBeNull();
@@ -896,9 +896,9 @@ describe("만남이 신호로 올라가는가", () => {
 
   it("이미 대기 중이면 덮어쓰지 않는다 — 덮으면 만남이 하나 사라진다", () => {
     const spot = anyHome();
-    const waiting = { pending: "chorong" as DokebiId };
+    const waiting = { pending: "chorong" as DokebiId, nearby: null as DokebiId | null };
 
-    const found = projectDiscovery(waiting, spot.x, spot.z, OPEN, []);
+    const found = projectDiscovery(waiting, spot.x, spot.z, OPEN, [], true);
 
     expect(found, "대기 중인데 새 만남을 잡았다").toBeNull();
     expect(waiting.pending, "가져가기 전에 덮어썼다").toBe("chorong");
@@ -906,23 +906,23 @@ describe("만남이 신호로 올라가는가", () => {
 
   it("이미 만난 도깨비는 다시 안 올라간다", () => {
     const spot = anyHome();
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
 
-    projectDiscovery(view, spot.x, spot.z, OPEN, [spot.id]);
+    projectDiscovery(view, spot.x, spot.z, OPEN, [spot.id], true);
 
     expect(view.pending, "만난 도깨비가 또 올라왔다").toBeNull();
   });
 
   it("조건을 안 채웠으면 자리에 서도 안 올라간다", () => {
     const spot = anyHome();
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
     const locked: DokebiProgress = {
       defeatedTotal: 0,
       questCompleted: false,
       bossDefeated: false,
     };
 
-    const found = projectDiscovery(view, spot.x, spot.z, locked, []);
+    const found = projectDiscovery(view, spot.x, spot.z, locked, [], true);
     // 조건이 열린 도깨비가 있으면 그건 올라와도 맞다 — 잠긴 것이 올라오면 안 된다
     if (found) {
       expect(pendingDiscoveries(locked, []).map((s) => s.id), `${found}가 잠겨 있다`).toContain(
@@ -964,7 +964,7 @@ describe("만남을 가져가는 짝", () => {
   });
 
   it("비어 있으면 아무 일도 없다", () => {
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
     expect(consumeDiscovery(view)).toBeNull();
   });
 
@@ -973,10 +973,10 @@ describe("만남을 가져가는 짝", () => {
     const spots = homes();
     expect(spots.length, "자리 있는 도깨비가 둘 이상이어야 이 검사가 뜻이 있다").toBeGreaterThan(1);
 
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
     const met: DokebiId[] = [];
     for (const spot of spots) {
-      projectDiscovery(view, spot.x, spot.z, OPEN, met);
+      projectDiscovery(view, spot.x, spot.z, OPEN, met, true);
       const taken = consumeDiscovery(view);
       if (taken) met.push(taken);
     }
@@ -986,11 +986,11 @@ describe("만남을 가져가는 짝", () => {
 
   it("안 가져가면 다음 만남이 막힌다 — 짝이 필요한 이유", () => {
     const spots = homes();
-    const view = { pending: null as DokebiId | null };
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
 
-    projectDiscovery(view, spots[0].x, spots[0].z, OPEN, []);
+    projectDiscovery(view, spots[0].x, spots[0].z, OPEN, [], true);
     // 일부러 안 가져간 채 다음 자리로 간다
-    const second = projectDiscovery(view, spots[1].x, spots[1].z, OPEN, []);
+    const second = projectDiscovery(view, spots[1].x, spots[1].z, OPEN, [], true);
 
     expect(second, "가져가기 전인데 덮어썼다").toBeNull();
     expect(view.pending, "첫 만남이 밀려났다").toBe(spots[0].id);
@@ -1050,5 +1050,106 @@ describe("방어선이 왜 안 밟히는가", () => {
 
     const next = nextDokebi("mulbineul", LOCKED, []);
     expect(DOKEBI_ORDER, `${next}는 없는 도깨비다`).toContain(next);
+  });
+});
+
+/*
+ * 만나는 순간에 행동이 있는가.
+ *
+ * 반경에 들어가면 바로 열렸다 — **걸어가면 끝**이라 만나는 순간에 아무 행동도
+ * 없었다(RALPH_BACKLOG 「10. 만나는 순간에 행동이 있다」). 조건은 자리에 가기
+ * 전(처치 수·여정·보스)에만 걸려 있었다.
+ */
+describe("손을 내밀어야 만난다", () => {
+  const OPEN: DokebiProgress = { defeatedTotal: 99, questCompleted: true, bossDefeated: true };
+
+  /** 조건을 다 채웠을 때 아직 안 만난, 자리가 있는 도깨비 하나 */
+  function anyHome(): { id: DokebiId; x: number; z: number } {
+    for (const spirit of pendingDiscoveries(OPEN, [])) {
+      if (spirit.home) return { id: spirit.id, x: spirit.home.x, z: spirit.home.z };
+    }
+    throw new Error("자리 있는 도깨비가 없다");
+  }
+
+  it("반경 안이어도 누르지 않으면 안 열린다", () => {
+    // 이 검사가 이 항목의 전부다. 여기가 통과하면 「지나가다 열림」이 돌아온 것이다
+    const spot = anyHome();
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
+
+    const found = projectDiscovery(view, spot.x, spot.z, OPEN, [], false);
+
+    expect(found, "지나가기만 했는데 만났다").toBeNull();
+    expect(view.pending, "신호까지 올라갔다").toBeNull();
+  });
+
+  it("자리를 벗어나서 누르면 아무 일도 없다", () => {
+    const spot = anyHome();
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
+
+    const found = projectDiscovery(view, spot.x + 60, spot.z + 60, OPEN, [], true);
+
+    expect(found, "먼 데서 눌렀는데 만났다").toBeNull();
+  });
+
+  it("자리에 서서 누르면 만난다", () => {
+    const spot = anyHome();
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
+
+    expect(projectDiscovery(view, spot.x, spot.z, OPEN, [], true), "눌렀는데 안 열린다").toBe(
+      spot.id,
+    );
+  });
+
+  it("한 번 누른 것으로 두 번 열리지 않는다", () => {
+    /*
+     * 신호를 가져가기 전에 다시 열리면 만남이 하나 사라진다. 대기 중 규칙과
+     * 같은 자리를 지킨다.
+     */
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
+    const spot = anyHome();
+
+    projectDiscovery(view, spot.x, spot.z, OPEN, [], true);
+    expect(projectDiscovery(view, spot.x, spot.z, OPEN, [], true), "두 번 열렸다").toBeNull();
+  });
+});
+
+describe("자리에 서면 화면이 알려 주는가", () => {
+  const OPEN: DokebiProgress = { defeatedTotal: 99, questCompleted: true, bossDefeated: true };
+
+  function anyHome(): { id: DokebiId; x: number; z: number } {
+    for (const spirit of pendingDiscoveries(OPEN, [])) {
+      if (spirit.home) return { id: spirit.id, x: spirit.home.x, z: spirit.home.z };
+    }
+    throw new Error("자리 있는 도깨비가 없다");
+  }
+
+  it("누르지 않아도 서 있는 것은 알린다", () => {
+    /*
+     * 규칙만 지키고 안내가 없으면 그건 잠긴 문이다 — 처음 오는 사람은 무엇을
+     * 눌러야 할지 알 수 없다.
+     */
+    const spot = anyHome();
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
+
+    projectDiscovery(view, spot.x, spot.z, OPEN, [], false);
+
+    expect(view.nearby, "자리에 섰는데 화면이 모른다").toBe(spot.id);
+    expect(view.pending, "안 눌렀는데 열렸다").toBeNull();
+  });
+
+  it("자리를 벗어나면 안내가 사라진다", () => {
+    const spot = anyHome();
+    const view = { pending: null as DokebiId | null, nearby: null as DokebiId | null };
+
+    projectDiscovery(view, spot.x, spot.z, OPEN, [], false);
+    projectDiscovery(view, spot.x + 80, spot.z + 80, OPEN, [], false);
+
+    expect(view.nearby, "떠났는데 안내가 남았다").toBeNull();
+  });
+
+  it("화면이 그 값을 읽는다", () => {
+    // 채워 두고 아무도 안 보면 없는 것과 같다
+    const hud = readFileSync("src/components/hud/WorldHud.tsx", "utf8");
+    expect(hud, "HUD가 자리 안내를 안 띄운다").toMatch(/discovery\.nearby/);
   });
 });

@@ -22,7 +22,15 @@ export interface InteractionFrame {
   input: { talkQueued: boolean };
   talkView: { line: string | null; speaker: string; remaining: number; nearby: boolean };
   clueView: { found: string[] };
-  playerLink: { cluesFound: number };
+  /**
+   * `interactPressed` — **대상 없이 눌린 상호작용**을 다음 차례로 넘긴다.
+   *
+   * 부두 끝의 낚시처럼 여기서 모르는 대상이 있다. 그렇다고 저쪽이 키를 직접
+   * 소비하면 **같은 한 번의 누름을 둘이 가져간다** — 이 저장소는 그 통로의
+   * 소비처가 하나여야 한다고 검사로 못 박아 두었고, 실제로 낚시를 붙이다가
+   * 걸렸다.
+   */
+  playerLink: { cluesFound: number; interactPressed: boolean };
   residentCandidate: Candidate;
   signCandidate: Candidate | null;
 }
@@ -53,6 +61,9 @@ export function stepInteraction(frame: InteractionFrame): void {
       talkView.line = other.line;
       talkView.speaker = other.speaker;
       talkView.remaining = TALK_LINE_SECONDS;
+    } else {
+      // 여기서 아는 대상이 없었다. 아는 쪽이 있으면 그쪽이 가져간다
+      playerLink.interactPressed = true;
     }
   }
 
@@ -61,4 +72,21 @@ export function stepInteraction(frame: InteractionFrame): void {
     // 시간이 다하면 지운다. 남겨 두면 다음에 누를 때 이전 줄이 잠깐 보인다
     if (talkView.remaining <= 0) talkView.line = null;
   }
+}
+
+/**
+ * 대상 없이 눌린 상호작용을 **한 번만** 꺼낸다.
+ *
+ * `stepInteraction`이 세운 신호를 아는 쪽이 가져간다. 꺼내면서 비우지 않으면
+ * 한 번 누른 것이 매 프레임 다시 들어와, 도깨비 자리를 지나가는 내내 손을
+ * 내밀고 있는 셈이 된다.
+ *
+ * 지금 소비하는 곳은 둘이다 — 도깨비 자리(리그)와 부두 끝(`PierDeck`). 둘은
+ * **같은 자리에 있을 수 없다**(부두는 해안 끝, 자리는 도시 교차로). 셋째가
+ * 생기면 그때는 누가 먼저 가져갈지 정해야 한다.
+ */
+export function consumeInteract(link: { interactPressed: boolean }): boolean {
+  if (!link.interactPressed) return false;
+  link.interactPressed = false;
+  return true;
 }

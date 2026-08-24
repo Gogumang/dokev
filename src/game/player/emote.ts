@@ -12,13 +12,21 @@
  * 다른 점은 시간에 따라 값이 변한다는 것뿐이다.
  */
 
+import { MUSIC_TEMPO } from "@/game/systems/audio/music";
 import type { PhotoPose } from "@/game/player/photoPose";
 
 /** 이 속도 이상으로 움직이면 동작이 끊긴다(m/s) */
 const CANCEL_SPEED = 0.6;
 
 /** 박자(Hz). BGM의 96BPM(1.6Hz)에 맞춘다 — 음악과 어긋나면 혼자 노는 것처럼 보인다 */
-const BEAT_HZ = 1.6;
+/*
+ * 춤 박자(Hz) — **곡에서 가져온다.**
+ *
+ * 1.6이라고 적혀 있었다. BGM은 96 BPM이니 1.6Hz가 맞지만, **같은 값이 두 곳에
+ * 따로 적혀 있었다** — 곡의 빠르기를 고치면 춤만 어긋나고, 그건 화면을 봐도
+ * 「뭔가 안 맞는다」로만 느껴지지 원인이 안 보인다. 시민의 춤도 같은 값을 읽는다.
+ */
+const BEAT_HZ = MUSIC_TEMPO.bpm / 60;
 
 export interface Emote {
   id: string;

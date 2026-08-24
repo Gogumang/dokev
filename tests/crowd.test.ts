@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { CROWD, PED_BODY, buildPedestrians, samplePerimeter, trackPerimeter, type TrackSample } from "@/game/world/crowdLayout";
+import {
+  CROWD,
+  PED_BODY,
+  buildPedestrians,
+  crowdCountFor,
+  samplePerimeter,
+  trackPerimeter,
+  type TrackSample,
+} from "@/game/world/crowdLayout";
 
 function sample(radius: number, u: number): TrackSample {
   return samplePerimeter(radius, u, { x: 0, z: 0, yaw: 0 });
@@ -161,5 +169,72 @@ describe("보행자가 사람 모양인가", () => {
     const height = PED_BODY.hipHeight + PED_BODY.torsoHeight + PED_BODY.headSize;
     expect(height, `키 ${height.toFixed(2)}m`).toBeGreaterThan(1);
     expect(height, `키 ${height.toFixed(2)}m`).toBeLessThan(2.5);
+  });
+});
+
+/*
+ * 서 있는 자리에서 사람이 보이는가.
+ *
+ * A-3의 완료 조건은 「낮 광장에 앉아 있는 사람과 마주 보고 선 둘이 **보인다**」다.
+ * 그런데 지금까지의 검사는 **몇 명을 만드는가**와 **행동이 여러 갈래인가**만 봤다.
+ * 둘 다 통과하면서도 그 사람들이 전부 도시 반대편에 있으면 화면은 텅 빈다 —
+ * 이 저장소에서 가장 흔했던 「값은 맞는데 화면은 그대로」다.
+ *
+ * 실제로 브라우저에서 광장을 봤을 때 보행자가 한 명도 안 보였고, 그래서 배치를
+ * 의심했다. 재 보니 **가장 가까운 사람이 16m**였다 — 배치는 멀쩡했고 카메라가
+ * 한 방향만 보고 있었을 뿐이다. 의심이 틀렸다는 것을 확인하는 데 쓴 자를 여기
+ * 남긴다. 다음에 블록 배치나 인원 예산을 손보다 사람들이 멀어지면, 광장이 비는
+ * 것을 눈으로 발견하기 전에 여기서 걸린다.
+ *
+ * 보행자는 블록 둘레를 도므로 **시작 위치**로 잰다. 트랙 위를 도는 동안 거리는
+ * 트랙 지름만큼 오갈 뿐, 「가까운 블록이 있는가」라는 질문의 답은 바뀌지 않는다.
+ */
+describe("가까이에 사람이 있다", () => {
+  /** 도시 한가운데(시작 자리)에서 각 보행자의 시작 위치까지 거리 */
+  function distancesFromCenter(budget: number): number[] {
+    const specs = buildPedestrians(budget);
+    const present = crowdCountFor(specs.length, "noon");
+    const out: TrackSample = { x: 0, z: 0, yaw: 0 };
+
+    const distances: number[] = [];
+    for (let index = 0; index < present; index += 1) {
+      const spec = specs[index];
+      samplePerimeter(spec.trackRadius, spec.startU, out);
+      distances.push(Math.hypot(spec.cx + out.x, spec.cz + out.z));
+    }
+
+    return distances.sort((a, b) => a - b);
+  }
+
+  /*
+   * 품질 세 단계 전부 본다. 낮은 품질에서 인원을 줄일 때 **가까운 사람부터**
+   * 지우면 광장이 비는데, 높은 품질만 재면 그것을 놓친다.
+   */
+  for (const budget of [16, 36, 56]) {
+    it(`예산 ${budget}에서도 시작 자리 근처에 사람이 있다`, () => {
+      const distances = distancesFromCenter(budget);
+
+      /*
+       * 30m는 눈에 사람으로 보이는 거리다. 컬링 한계(120m)로 재면 도시 반대편도
+       * 통과하므로 자가 되지 못한다.
+       */
+      expect(
+        distances[0],
+        `가장 가까운 보행자가 ${distances[0]?.toFixed(1)}m에 있다`,
+      ).toBeLessThan(30);
+
+      // 한 명만 가까우면 「거리」가 아니라 「지나가는 사람」이다
+      const near = distances.filter((distance) => distance <= 60).length;
+      expect(near, `60m 안에 ${near}명`).toBeGreaterThanOrEqual(2);
+    });
+  }
+
+  it("밤에는 같은 자리가 낮보다 비어 있다", () => {
+    const specs = buildPedestrians(36);
+
+    const noon = crowdCountFor(specs.length, "noon");
+    const night = crowdCountFor(specs.length, "night");
+
+    expect(night, `낮 ${noon}명 / 밤 ${night}명`).toBeLessThan(noon);
   });
 });

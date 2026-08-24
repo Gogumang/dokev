@@ -20,4 +20,11 @@ export const BOSS_BODY = {
   armWidth: 0.42,
   armHeight: 1.5,
   armDepth: 0.42,
+  /**
+   * 가슴에 박힌 점. 일반 로봇과 **같은 조형**이다.
+   *
+   * 대장만 없으면 「저 안에 갇혀 있다」는 규칙이 대장에게는 해당되지 않는 것으로
+   * 읽힌다. 몸이 큰 만큼 점도 크다.
+   */
+  coreRadius: 0.26,
 } as const;

@@ -14,16 +14,7 @@ import { useEffect, useState } from "react";
 
 import { HudButton } from "@/components/hud/HudButton";
 import { useDialogFocus } from "@/components/hud/useDialogFocus";
-import {
-  DOKEBI,
-  DOKEBI_ORDER,
-  isUnlocked,
-  revealedDokebi,
-  unlockHint,
-  unlockRatio,
-  type DokebiId,
-  type DokebiProgress,
-} from "@/game/dokebi/roster";
+import { DOKEBI, DOKEBI_ORDER, isUnlocked, revealedDokebi, storyFor, type DokebiId, type DokebiProgress, unlockHint, unlockRatio } from "@/game/dokebi/roster";
 import type { QuestView } from "@/game/quest/questRunner";
 
 export interface CodexProps {
@@ -158,6 +149,16 @@ function CodexEntry({
               {" — "}
               {spirit.ability}
             </p>
+            {/*
+              사연 — **만난 뒤에만** 온다. 여기서 조건을 다시 보지 않는다:
+              `storyFor`가 못 만난 도깨비에게 빈 목록을 돌려주므로 화면은
+              없는 것을 그릴 수 없다. 가리는 것과 안 받는 것은 다르다.
+            */}
+            {storyFor(id, met).map((line) => (
+              <p key={line} className="m-0 mt-1 text-xs text-[var(--color-text-secondary)]">
+                {line}
+              </p>
+            ))}
             {!isCurrent && (
               <button
                 type="button"

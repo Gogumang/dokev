@@ -89,6 +89,9 @@ export interface BossProps {
  * **화면에서 넷을 구분하기 위한** 값이라 그리는 쪽이 정해야 한다. 트레일러 3.4의
  * 「강한 컬러 파티클」을 따라 채도를 낮추지 않는다.
  */
+/** 대장 가슴의 점. 일반 로봇과 같은 색이어야 같은 것으로 읽힌다 */
+const BOSS_CORE_COLOR = "#7cf5c4";
+
 const SUMMON_COLOR: Record<SummonRole, string> = {
   mark: "#ffe066",
   lure: "#9b8aa6",
@@ -138,6 +141,7 @@ export function Boss({ link, frozen, home, reducedMotion, view, met }: BossProps
   const geometry = useMemo(
     () => ({
       body: new THREE.BoxGeometry(BOSS_BODY.bodyWidth, BOSS_BODY.bodyHeight, BOSS_BODY.bodyDepth),
+      core: new THREE.SphereGeometry(BOSS_BODY.coreRadius, 10, 8),
       head: new THREE.BoxGeometry(BOSS_BODY.headWidth, BOSS_BODY.headHeight, BOSS_BODY.headDepth),
       arm: new THREE.BoxGeometry(BOSS_BODY.armWidth, BOSS_BODY.armHeight, BOSS_BODY.armDepth),
       ring: new THREE.PlaneGeometry(BOSS.slamRadius * 2, BOSS.slamRadius * 2),
@@ -381,6 +385,14 @@ export function Boss({ link, frozen, home, reducedMotion, view, met }: BossProps
     <group ref={rootRef} position={[home.x, terrainHeight(home.x, home.z), home.z]}>
       <mesh ref={bodyRef} geometry={geometry.body} position={[0, 1.6, 0]} castShadow>
         <ToonMaterial color={COLOR.normal} />
+      </mesh>
+      {/*
+        가슴의 점 — 일반 로봇과 **같은 조형**이다(`enemyBody.coreRadius`).
+        대장만 없으면 「저 안에 갇혀 있다」는 규칙이 대장에게는 해당되지 않는
+        것으로 읽힌다. 몸이 큰 만큼 점도 크다.
+      */}
+      <mesh geometry={geometry.core} position={[0, 1.9, BOSS_BODY.bodyDepth / 2]}>
+        <meshBasicMaterial color={BOSS_CORE_COLOR} toneMapped={false} />
       </mesh>
       <mesh geometry={geometry.head} position={[0, 3, 0]} castShadow>
         <ToonMaterial color="#6f6a7d" />

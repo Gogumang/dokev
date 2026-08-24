@@ -27,16 +27,25 @@ import * as THREE from "three";
 import { shortestAngleDelta, TAU } from "@/game/core/mathx";
 import type { QualityLevel, QualityPreset } from "@/game/systems/quality";
 import { ToonMaterial } from "@/game/scene/ToonMaterial";
+import { emoteCue, isEmoting, type EmoteState } from "@/game/player/emote";
+import { combatPressure } from "@/game/combat/combatLink";
+import { barPhase, beatPhase } from "@/game/systems/audio/music";
 import { terrainHeight } from "@/game/world/terrain";
+import type { TimeOfDayId } from "@/game/world/timeOfDay";
 import {
   buildPedestrians,
   CROWD,
+  crowdCountFor,
+  crowdReaction,
+  fleeDirection,
+  joinsDance,
   PANTS_PALETTE,
   PED_BODY,
+  samplePerimeter,
   SHIRT_PALETTE,
   SKIN_PALETTE,
-  samplePerimeter,
   trackPerimeter,
+  type CrowdReaction,
 } from "@/game/world/crowdLayout";
 
 /** 품질 등급별 인원. 저사양에서 먼저 줄이는 것이 인스턴스 수다 */
@@ -60,6 +69,22 @@ interface PedestrianRuntime {
   yaw: number;
   /** 컬링 상태. 접힌 인스턴스를 매 프레임 다시 쓰지 않으려고 들고 있다 */
   visible: boolean;
+  /**
+   * 지금 플레이어의 춤에 합류한 상태인지.
+   *
+   * 판정 자체는 순수 함수가 매 프레임 다시 한다(`joinsDance`). 여기 들고 있는
+   * 것은 **다음 프레임의 「나아갈까」가 읽기 위해서**다 — 자리를 구하기 전에
+   * 필요한 값이라 이번 프레임의 답을 남겨 둔다.
+   */
+  dancing: boolean;
+  /**
+   * 지난 프레임에 무엇에 반응하고 있었는지, 그리고 물러설 쪽.
+   *
+   * 자리를 구하기 전에 「나아갈까」를 정해야 해서 이번 프레임의 답을 남긴다 —
+   * `dancing`과 같은 이유다.
+   */
+  reaction: CrowdReaction;
+  fleeSign: 1 | -1;
 }
 
 /**
@@ -82,13 +107,43 @@ export interface CrowdTalkLink {
   candidate: { index: number; distanceSquared: number };
 }
 
+/*
+ * 춤은 **곡의 박**으로 흔든다.
+ *
+ * 여기서 Hz를 따로 정하고 있었다. 그러면 시민이 흔드는 박과 BGM이 각자 돌아
+ * 「같이 추는 것」으로 보이지 않는다 — 원작 연출이 곡 위에 놓여 있다는 관찰
+ * (DOKEV_VIDEO_STUDY 「3.5 프레임에서 직접 확인한 것 (2026-08-24)」)의 요지가
+ * 그것이다. 정본은 `systems/audio/music.ts`의 빠르기다.
+ */
+
+/** 마디 첫 박에서 몸을 얼마나 더 쓰는지(비율) */
+const DANCE_BAR_ACCENT = 0.6;
+
 export interface CrowdProps {
   quality: QualityPreset;
   reducedMotion: boolean;
   talk: CrowdTalkLink;
+  /**
+   * 지금 시간대. **밤에는 거리가 빈다.**
+   *
+   * 배치를 다시 만들지 않고 목록 앞에서부터 세어 나머지를 숨긴다 — 시간대가
+   * 바뀔 때마다 새로 뽑으면 같은 사람이 다른 자리에서 다시 나타난다.
+   */
+  timeOfDay: TimeOfDayId;
+  /**
+   * 플레이어의 감정 표현. **객체를 그대로 받는다** — 매 프레임 바뀌는 값이라
+   * 복사하면 한 프레임 늦게 반응하고, 프롭으로 값을 내리면 초당 60회 리렌더가 난다.
+   */
+  emote: EmoteState;
+  /**
+   * 미니맵에 찍히는 적 좌표. **말 걸기 계약에 얹지 않는다** — 저쪽은 「누구에게
+   * 말을 걸까」이고 이쪽은 「어디가 위험한가」다. 한 객체에 섞으면 다음 사람이
+   * 군중이 무엇을 아는지 읽을 수 없다.
+   */
+  combat: { enemyBlips: Float32Array; enemyBlipCount: number };
 }
 
-export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
+export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat }: CrowdProps) {
   const { camera } = useThree();
 
   const specs = useMemo(
@@ -106,6 +161,9 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
           phase: spec.startPhase,
           yaw: spec.direction > 0 ? sample.yaw : sample.yaw + Math.PI,
           visible: true,
+          dancing: false,
+          reaction: "none",
+          fleeSign: 1,
         };
       }),
     [specs],
@@ -172,7 +230,7 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
     }
   }, [specs]);
 
-  useFrame((_, rawDelta) => {
+  useFrame(({ clock }, rawDelta) => {
     const torso = torsoRef.current;
     const head = headRef.current;
     const legs = legRef.current;
@@ -195,15 +253,61 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
     const playerX = talk.viewer.position.x;
     const playerZ = talk.viewer.position.z;
 
+    /*
+     * 플레이어가 **춤을** 추는 중인가. 손 흔들기·앉기에는 아무도 따라 하지
+     * 않는다 — 따라 하면 그건 춤이 아니라 고장으로 보인다.
+     */
+    const playerDancing = isEmoting(emote) && emoteCue(emote.index) === "dance";
+    const danceSwing = Math.sin(beatPhase(clock.elapsedTime) * TAU);
+    /*
+     * 마디 첫 박을 더 크게 흔든다. 매 박이 똑같으면 기계처럼 보인다 — 사람은
+     * 마디의 머리에서 몸을 더 쓴다.
+     */
+    const danceAccent = 1 + DANCE_BAR_ACCENT * (1 - barPhase(clock.elapsedTime));
+
+    /*
+     * 전투가 얼마나 가까운가. **플레이어 자리에서** 잰다 — 싸움은 그 근처에서
+     * 벌어지고, 보행자 각자가 얼마나 가까운지는 아래에서 따로 본다.
+     */
+    const pressure = combatPressure(
+      combat.enemyBlips,
+      combat.enemyBlipCount,
+      playerX,
+      playerZ,
+      false,
+      CROWD.fleeRadius,
+    );
+
+    const present = crowdCountFor(specs.length, timeOfDay);
+
     for (let index = 0; index < specs.length; index += 1) {
       const spec = specs[index];
       const state = runtime[index];
 
+      /*
+       * 시간대가 정한 인원 밖은 **거리에 없는 사람**이다. 컬링과 같은 길로
+       * 숨긴다 — 안 그러면 밤에 사람이 남아 있는 자리에 그림자만 선다.
+       */
+      const offDuty = index >= present;
+
       // 스칼라 진행은 거리와 무관하게 항상 돈다. 멀다고 멈추면 다시 보일 때
       // 도시 전체의 보행자가 뒤처져 있어 오히려 눈에 띈다.
-      const perimeter = trackPerimeter(spec.trackRadius);
-      state.u = (state.u + spec.speed * spec.direction * dt) % perimeter;
-      state.phase += (spec.speed / CROWD.strideLength) * dt * TAU;
+      /*
+       * **걷는 사람만 나아간다.** 앉아 있거나 이야기 중인 사람이 트랙을 따라
+       * 미끄러지면 앉은 채로 이동하는 그림이 된다.
+       */
+      const fleeing = state.reaction === "flee";
+      if (fleeing || (spec.activity === "walk" && !state.dancing)) {
+        /*
+         * 물러설 때는 **앉아 있던 사람도 일어나 걷는다.** 로봇이 코앞인데
+         * 벤치에 앉아 있으면 그건 반응이 아니라 배경이다.
+         */
+        const perimeter = trackPerimeter(spec.trackRadius);
+        const heading = fleeing ? state.fleeSign : spec.direction;
+        const pace = fleeing ? spec.speed * CROWD.fleeSpeedScale : spec.speed;
+        state.u = (state.u + pace * heading * dt) % perimeter;
+        state.phase += (pace / CROWD.strideLength) * dt * TAU;
+      }
 
       // 거리는 구역 중심으로 잰다. 같은 구역 보행자는 최대 25m 안에 있으므로
       // 개별 좌표로 재 봐야 판정이 달라지지 않는다.
@@ -211,7 +315,7 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
       const dz = spec.cz - camera.position.z;
       const distanceSq = dx * dx + dz * dz;
 
-      if (distanceSq > cullSq) {
+      if (offDuty || distanceSq > cullSq) {
         if (state.visible) {
           state.visible = false;
           torso.setMatrixAt(index, scratch.hidden);
@@ -230,14 +334,25 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
       state.visible = true;
 
       const sample = samplePerimeter(spec.trackRadius, state.u, scratch.sample);
-      const targetYaw = spec.direction > 0 ? sample.yaw : sample.yaw + Math.PI;
+      const facingPlayer = state.dancing || state.reaction === "glance";
+      const heading = state.reaction === "flee" ? state.fleeSign : spec.direction;
+      const targetYaw = facingPlayer
+        ? // 춤도 쳐다봄도 **사람 쪽**을 본다. 그래야 인과가 보인다
+          Math.atan2(playerX - (spec.cx + sample.x), playerZ - (spec.cz + sample.z))
+        : (heading > 0 ? sample.yaw : sample.yaw + Math.PI) +
+          (state.reaction === "flee" ? 0 : spec.yawOffset);
       // 모서리에서 90도가 한 프레임에 바뀌면 튄다. 최단 방향으로 감쇠시킨다.
       state.yaw +=
         shortestAngleDelta(state.yaw, targetYaw) * (1 - Math.exp(-CROWD.turnLambda * dt));
       scratch.yawQuat.setFromAxisAngle(scratch.up, state.yaw);
 
-      const swing = Math.sin(state.phase);
-      const bob = Math.abs(swing) * bobHeight;
+      // 서 있는 사람의 팔다리는 멎어 있어야 한다 — 제자리 걸음은 더 이상하다
+      const swing = state.dancing
+        ? danceSwing
+        : spec.activity === "walk" || state.reaction === "flee"
+          ? Math.sin(state.phase)
+          : 0;
+      const bob = Math.abs(swing) * bobHeight * (state.dancing ? danceAccent : 1);
       const x = spec.cx + sample.x;
       const z = spec.cz + sample.z;
 
@@ -245,6 +360,19 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
        * 컬링을 통과한 사람만 후보로 본다. 안 보이는 사람에게 말을 걸면
        * 허공에서 목소리가 난다.
        */
+      /*
+       * 합류 판정은 **자리를 구한 뒤**에 한다. 구역 중심으로 재면 25m짜리
+       * 구역 안 어디에 있든 같은 답이 나와, 길 건너 사람까지 함께 흔들린다.
+       *
+       * 다음 프레임의 「나아갈까」가 이 값을 읽는다 — 이번 프레임은 이미
+       * 나아간 뒤라 한 걸음이 남지만, 그 한 걸음은 눈에 띄지 않는다.
+       */
+      state.dancing = joinsDance(x, z, playerX, playerZ, playerDancing, CROWD.danceRadius);
+      state.reaction = crowdReaction(x, z, playerX, playerZ, pressure);
+      if (state.reaction === "flee") {
+        state.fleeSign = fleeDirection(x, z, playerX, playerZ, sample.yaw);
+      }
+
       const toPlayerX = x - playerX;
       const toPlayerZ = z - playerZ;
       const playerDistSq = toPlayerX * toPlayerX + toPlayerZ * toPlayerZ;
@@ -252,7 +380,8 @@ export function Crowd({ quality, reducedMotion, talk }: CrowdProps) {
         nearestSq = playerDistSq;
         nearestIndex = index;
       }
-      const hipY = CROWD.groundY + PED_BODY.hipHeight + bob;
+      // 앉으면 골반이 내려간다. 다리 각도까지 접지 않아도 이 거리에서는 앉은 것으로 읽힌다
+      const hipY = CROWD.groundY + PED_BODY.hipHeight * (spec.activity === "sit" ? 0.55 : 1) + bob;
 
       /*
        * 발밑 지면 높이를 더한다.

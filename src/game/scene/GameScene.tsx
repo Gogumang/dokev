@@ -36,6 +36,7 @@ import type { PlayerLink, SceneProps } from "@/game/scene/sceneTypes";
 export type { RuntimeStats } from "@/game/scene/sceneTypes";
 import { ClueGlow } from "@/game/quest/ClueGlow";
 import { pendingClues } from "@/game/quest/clues";
+import { isCalmStep } from "@/game/quest/questContent";
 import { PlayerRig } from "@/game/scene/PlayerRig";
 import { PostProcessing } from "@/game/scene/PostProcessing";
 import { Boss } from "@/game/combat/Boss";
@@ -44,6 +45,12 @@ import { Boss } from "@/game/combat/Boss";
  * `SpiritGates.tsx`로 두었더니 macOS의 대소문자 구분 없는 파일 시스템에서
  * 순수 모듈 `spiritGates.ts`와 같은 파일로 취급돼 타입 검사가 막혔다.
  */
+/*
+ * 파일 이름이 `PierDeck`인 이유: macOS의 대소문자 구분 없는 파일 시스템에서
+ * `Pier.tsx`가 순수 배치 모듈 `pier.ts`와 같은 파일로 취급된다. 빛으로 여는
+ * 문에서 같은 함정을 이미 한 번 밟았다.
+ */
+import { Pier } from "@/game/world/PierDeck";
 import { SpiritGates } from "@/game/world/SpiritGate";
 import { gateCollider, SPIRIT_GATES } from "@/game/world/spiritGates";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
@@ -147,6 +154,7 @@ export function GameScene(props: SceneProps) {
       companionVisible: false,
       companionAbilityReady: true,
       companionLightRange: 0,
+      interactPressed: false,
       defeatedTotal: props.resumeFrom?.defeatedTotal ?? 0,
     }),
     [layout.spawn, props.resumeFrom, props.stats.combat],
@@ -285,6 +293,9 @@ export function GameScene(props: SceneProps) {
         quality={quality}
         reducedMotion={reducedMotion}
         talk={{ viewer: playerLink, candidate: residentCandidate }}
+        timeOfDay={props.timeOfDay}
+        emote={props.stats.emote}
+        combat={playerLink}
       />
       <Traffic
         quality={quality}
@@ -303,6 +314,8 @@ export function GameScene(props: SceneProps) {
         빛으로 여는 문. 상자를 매 프레임 제자리에서 고치므로 리그가 보는
         목록과 **같은 객체**여야 한다 — 복사해 넘기면 문이 그림이 된다.
       */}
+      {/* 해안의 부두와 낚시. 배경(`Sea`)과 나눠 두는 이유는 이쪽이 눌러서 반응하는 것이라서다 */}
+      <Pier halfExtent={layout.halfExtent} link={playerLink} />
       <SpiritGates
         link={playerLink}
         boxes={gateBoxes}
@@ -366,9 +379,11 @@ export function GameScene(props: SceneProps) {
         된다.** 저사양에서는 아예 달지 않는다 — 달지 않아야 자동 렌더가
         돌아온다(구독이 없으면 R3F가 다시 그린다).
       */}
-      {quality.postProcessing && <PostProcessing stats={props.stats} />}
+      {quality.postProcessing && <PostProcessing stats={props.stats} timeOfDay={props.timeOfDay} />}
 
       <Enemies
+        /* 첫 여정 앞부분에서는 로봇이 다가오지 않는다 — 걷는 장면에서 시작해 고조된다 */
+        calm={isCalmStep(props.questView)}
         frozen={props.photoMode}
         link={playerLink}
         halfExtent={layout.halfExtent}

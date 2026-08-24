@@ -164,3 +164,39 @@ export function nextQuest(id: string): Quest | null {
   if (index < 0 || index + 1 >= QUEST_CHAIN.length) return null;
   return QUEST_CHAIN[index + 1];
 }
+
+/* ------------------------------------------------------------------ *
+ * 시작은 조용하다
+ *
+ * 기사들은 트레일러를 「chaotic」이라 부르면서도 **시작은 조용했다**고 적는다 —
+ * 아이들이 걷는 장면에서 시작해 고조된다. 우리는 시작하자마자 로봇이 달려와
+ * **고조될 자리가 없었다.**
+ *
+ * 여정 데이터는 이미 전투를 네 번째 단계에 두고 있었다. 빠진 것은 화면 쪽이다 —
+ * 목표가 걷기여도 로봇은 첫 프레임부터 사방에서 달려온다.
+ * ------------------------------------------------------------------ */
+
+/**
+ * 이 여정에서 전투를 처음 요구하는 단계. 없으면 -1.
+ *
+ * 단계 순서를 손으로 세지 않는다 — 순서를 바꾸면 이 값도 따라와야 하는데,
+ * 손으로 적으면 바로 그 자리가 어긋난다.
+ */
+export function firstCombatStep(quest: Quest): number {
+  return quest.steps.findIndex(
+    (step) => step.objective.kind === "defeat" || step.objective.kind === "defeatBoss",
+  );
+}
+
+/**
+ * 지금이 「조용한 구간」인가 — 첫 여정에서 전투를 만나기 전까지.
+ *
+ * 첫 여정을 마친 뒤에는 조용할 이유가 없다. 그때는 도시를 이미 아는 사람이고,
+ * 조용한 도시는 **처음 한 번**만 뜻이 있다.
+ */
+export function isCalmStep(view: { stepIndex: number; firstQuestDone: boolean }): boolean {
+  if (view.firstQuestDone) return false;
+  const combat = firstCombatStep(FIRST_RUN_QUEST);
+  if (combat < 0) return false;
+  return view.stepIndex < combat;
+}
