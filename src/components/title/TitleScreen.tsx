@@ -10,10 +10,10 @@
  * 여기서 정한 설정은 localStorage에 저장되어 월드가 읽어 간다.
  */
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-import { StreetScene } from "@/components/title/StreetScene";
 import { APPEARANCE_ORDER, APPEARANCES } from "@/game/player/appearance";
 import { createAnalytics } from "@/game/systems/analytics";
 import { CONTROLS } from "@/game/systems/controls";
@@ -36,43 +36,58 @@ const QUALITY_OPTIONS: Array<{ value: QualityChoice; label: string; hint: string
 ];
 
 /**
- * 배경 — 대낮 골목의 횡단보도 위에 얹은 대비 보호막.
+ * 배경 — 시작 화면 그림 한 장과 그 위의 대비 보호막.
  *
- * 장면은 `StreetScene`이 그린다. 여기서는 **글이 읽히게 하는 일만** 한다.
+ * 전에는 SVG 도형으로 장면을 그렸다. 도형으로는 명암도 질감도 두 단계가 한계라
+ * **인물이 스티커처럼 보였다** — 게임 키아트가 아니라 다이어그램이었다.
  *
- * 배경이 어두운 노을에서 환한 낮으로 바뀌면서 이 일이 반대가 됐다. 전에는
- * 밝은 창문 위에서 흰 글씨를 지키는 것이 문제였는데, 지금은 **하늘과 흰
- * 횡단보도** 위에서 지켜야 한다 — 훨씬 밝다. 그래서 왼쪽 기둥을 전보다
- * 짙게 깔았다(DESIGN_GUIDE 「2.1 세계가 먼저, UI는 나중에」).
+ * 그림 한 장으로 바꾼다. 이 저장소는 원래 외부 에셋을 캐릭터 모델 하나만
+ * 허용했고 나머지를 전부 코드로 만들었는데(런타임 캔버스 텍스처, Web Audio 합성),
+ * 그 규칙은 **초기 다운로드 예산** 때문이지 그림이 싫어서가 아니다. WebP로 줄여
+ * 137KB이고, 첫 화면에서 가장 크게 보이는 것이 이 한 장이라 값을 한다.
  *
- * 오른쪽은 일부러 그대로 둔다. 거기에 아이와 도깨비가 서 있고, 그 자리까지
- * 덮으면 장면을 바꾼 뜻이 사라진다.
+ * 검사 둘을 함께 고쳐야 들어온다 — 에셋 허용 목록(`tests/forbiddenApis.test.ts`)과
+ * 크기 수치다. 목록에 없는 파일은 통과하지 못하는 것이 이 저장소의 잠금장치다.
+ *
+ * 보호막은 **글이 놓이는 자리에만** 깐다. 그림이 밝아서 흰 글씨가 그냥은 안 읽힌다.
  */
 function Backdrop() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-      <StreetScene />
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
       {/*
-       * 왼쪽 기둥 — 제목·본문·버튼이 전부 이 안에 있다. 오른쪽으로 갈수록
-       * 빠르게 걷혀 장면이 드러난다.
+       * `object-cover`로 화면을 채운다. 세로가 긴 화면에서는 좌우가 잘리는데,
+       * 그림의 인물이 가운데에 몰려 있어 잘려도 남는다.
        */}
+      {/*
+       * `unoptimized`인 이유: 원본이 이미 폭 1600의 WebP다(2.26MB PNG를 137KB로
+       * 줄여 넣었다). 최적화 경로를 거치면 `sizes="100vw"`가 넓은 화면에서
+       * **3840px 판을 요청**하고, 없는 화소를 늘려 만드느라 첫 화면이 몇 초간
+       * 검게 남는다. 실제로 그렇게 됐다.
+       */}
+      <Image
+        src="/title-street.webp"
+        alt=""
+        fill
+        sizes="100vw"
+        priority
+        unoptimized
+        className="object-cover"
+      />
+      {/* 왼쪽 — 제목과 시작 버튼이 얹힌다 */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(100deg, rgba(9,7,14,0.45) 0%, rgba(9,7,14,0.22) 24%, rgba(9,7,14,0) 46%)",
+            "linear-gradient(100deg, rgba(9,7,14,0.72) 0%, rgba(9,7,14,0.45) 26%, rgba(9,7,14,0) 54%)",
         }}
       />
-      {/*
-       * 하단 띠. 안내 문구와 고지가 화면 아래를 가로지르는데, 그 자리 바닥은
-       * 밝은 아스팔트와 흰 횡단보도다 — 띠가 없으면 4.5:1이 안 나온다.
-       */}
+      {/* 아래 — 저장 안내와 고지가 화면 아래를 가로지른다 */}
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          height: "20vh",
+          height: "26vh",
           background:
-            "linear-gradient(180deg, rgba(9,7,14,0) 0%, rgba(9,7,14,0.34) 40%, rgba(9,7,14,0.82) 100%)",
+            "linear-gradient(180deg, rgba(9,7,14,0) 0%, rgba(9,7,14,0.45) 42%, rgba(9,7,14,0.86) 100%)",
         }}
       />
     </div>
@@ -93,10 +108,10 @@ function PanelToggle({
       type="button"
       onClick={onClick}
       aria-expanded={active}
-      className="rounded-[var(--radius-round)] border border-white/25 px-[var(--space-6)] text-base font-semibold text-[var(--color-text-primary)] transition-colors hover:bg-white/10"
+      className="bg-transparent p-0 text-xs text-[var(--color-text-secondary)] underline underline-offset-4 transition-colors hover:text-[var(--color-text-primary)]"
       style={{
-        minHeight: "calc(var(--touch-min) * 1.35)",
-        background: active ? "rgba(255,255,255,0.12)" : "transparent",
+        minHeight: "var(--touch-min)",
+        fontWeight: active ? 700 : 400,
       }}
     >
       {children}
@@ -348,7 +363,18 @@ export function TitleScreen() {
             동네로 들어가기
           </Link>
 
-          <div className="flex flex-wrap items-center gap-[var(--space-4)]">
+          {/*
+            조작법과 설정은 **화면에서 물러난다.**
+
+            첫 화면에 눌러야 할 것이 하나만 있어야 무엇을 눌러야 하는지 화면이
+            말해 준다. 그렇다고 지우지는 못한다 — 품질·닉네임·외형이 설정 안에
+            있고, 없애면 들어가기 전에 정할 방법이 사라진다.
+
+            그래서 **작은 글로 구석에 둔다.** 눈에 먼저 들어오지 않지만 찾으면
+            있고, Tab으로도 닿는다(`tests/accessibility.test.ts`가 초점 순서를
+            지킨다 — 시작 버튼이 언제나 먼저다).
+          */}
+          <div className="mt-[var(--space-2)] flex flex-wrap items-center gap-[var(--space-4)] text-xs text-[var(--color-text-secondary)] opacity-70">
             <PanelToggle
               active={panel === "controls"}
               onClick={() => setPanel(panel === "controls" ? "none" : "controls")}

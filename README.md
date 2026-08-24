@@ -431,7 +431,8 @@ npx vitest run --sequence.shuffle
 
 ## 이 프로젝트의 특이한 점
 
-**외부 에셋이 캐릭터 하나뿐이다.** 도시·소리·텍스처는 전부 코드로 만든다.
+**외부 에셋이 둘뿐이다** — 캐릭터 모델(`character.glb`)과 시작 화면 그림
+(`title-street.webp`). 도시·소리·텍스처는 전부 코드로 만든다.
 
 - 텍스처 → 런타임 캔버스 합성 (`src/game/world/textures.ts`)
 - 사운드 → Web Audio 합성 (`src/game/systems/audio/`)

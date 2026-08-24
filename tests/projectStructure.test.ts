@@ -86,7 +86,12 @@ describe("에셋 없음 원칙", () => {
      * 예외를 이름으로 적는다. 「1MB 넘는 건 봐준다」로 풀면 다음 파일도 그
      * 문으로 들어온다.
      */
-    const HEAVY_ALLOWED = new Set(["character.glb"]);
+    /*
+     * 둘째는 시작 화면 그림이다. 각자의 크기는 `forbiddenApis`가 이름을 대고
+     * 따로 잰다(캐릭터 2MB, 그림 300KB) — 여기서는 **그 둘 말고 다른 것이**
+     * 무거워지지 않는지만 본다.
+     */
+    const HEAVY_ALLOWED = new Set(["character.glb", "title-street.webp"]);
 
     const files = readdirSync("public").filter((name) => !HEAVY_ALLOWED.has(name));
     for (const name of files) {

@@ -243,8 +243,16 @@ describe("public에 에셋이 들어오지 않는가", () => {
     expect(files.length, `public 파일 ${files.length}개`).toBeGreaterThan(0);
   });
 
-  /** 들이기로 정한 것. 여기 없는 에셋은 실수로 본다 */
-  const ALLOWED = new Set(["public/character.glb"]);
+  /**
+   * 들이기로 정한 것. 여기 없는 에셋은 실수로 본다.
+   *
+   * 둘째가 시작 화면 그림이다. 그 전에는 SVG 도형으로 장면을 그렸는데, 도형으로는
+   * 명암이 두 단계가 한계라 **인물이 스티커처럼 보였다** — 게임 키아트가 아니라
+   * 다이어그램이었다. 첫 화면에서 가장 크게 보이는 것이라 값을 한다고 판단했다.
+   *
+   * 이것도 캐릭터와 같은 **한 번의 판단**이지 문이 열린 것이 아니다.
+   */
+  const ALLOWED = new Set(["public/character.glb", "public/title-street.webp"]);
 
   it("정해 둔 것 말고는 에셋이 없다", () => {
     /*
@@ -278,13 +286,25 @@ describe("public에 에셋이 들어오지 않는가", () => {
     expect(bytes / 1024 / 1024, `${(bytes / 1048576).toFixed(2)}MB`).toBeLessThan(2);
   });
 
+  it("시작 화면 그림이 예산을 넘지 않는다", () => {
+    /*
+     * 원본은 2.26MB PNG였다. WebP로 폭 1600까지 줄여 137KB다.
+     *
+     * 상한을 300KB로 둔다 — 첫 화면에서 가장 먼저 받는 것이라, 다시 키우면
+     * 처음 오는 사람이 흰 화면을 더 오래 본다. 캐릭터에 상한을 둔 것과 같은
+     * 이유이고, 목록에 넣어 놓고 크기를 안 재면 자가 반쪽이 된다.
+     */
+    const bytes = statSync("public/title-street.webp").size;
+    expect(bytes / 1024, `${(bytes / 1024).toFixed(0)}KB`).toBeLessThan(300);
+  });
+
   it("파일이 조용히 늘지 않는다", () => {
     /*
-     * 확장자만 막으면 `.json` 데이터나 새 SVG가 슬금슬금 는다. 지금 여섯이고,
-     * **줄이는 것은 언제든 환영**이라 상한만 둔다.
+     * 확장자만 막으면 `.json` 데이터나 새 SVG가 슬금슬금 는다. 지금 일곱이고
+     * (시작 화면 그림이 늘었다), **줄이는 것은 언제든 환영**이라 상한만 둔다.
      */
     expect(files.length, `public 파일 ${files.length}개:\n${files.join("\n")}`).toBeLessThanOrEqual(
-      6,
+      7,
     );
   });
 });
