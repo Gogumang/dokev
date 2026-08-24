@@ -46,7 +46,16 @@ export function DemoGuide({ beats }: DemoGuideProps) {
 
   return (
     <div
-      className="pointer-events-none absolute left-4 top-4 max-w-sm rounded-lg bg-black/70 px-3 py-2 text-sm text-white"
+      /*
+       * **오른쪽 아래.** 처음에 왼쪽 위에 뒀다가 목표 패널과 통째로 겹쳤다 —
+       * 두 글자 덩어리가 포개져 둘 다 못 읽는다. 실제로 화면을 열어 보고
+       * 알았다(코드로는 보이지 않는 종류다).
+       *
+       * HUD가 쓰는 네 자리(왼쪽 위·오른쪽 위·아래 왼쪽·아래 가운데)를 피한
+       * 곳이 여기다. 안전 영역 변수를 같이 쓴다 — 노치 있는 화면에서 잘린다.
+       */
+      className="pointer-events-none absolute max-w-sm rounded-lg bg-black/70 px-3 py-2 text-sm text-white"
+      style={{ bottom: "var(--safe-bottom)", right: "var(--safe-right)" }}
       role="status"
       aria-live="polite"
     >
