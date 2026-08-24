@@ -305,6 +305,7 @@ export function GameScene(props: SceneProps) {
       <Crowd
         quality={quality}
         reducedMotion={reducedMotion}
+        playSpots={layout.playSpots}
         talk={{ viewer: playerLink, candidate: residentCandidate }}
         timeOfDay={props.timeOfDay}
         emote={props.stats.emote}

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPedestrians,
+  buildPlaygroundKids,
   crowdCountFor,
   CROWD,
   PEDESTRIAN_ACTIVITIES,
 } from "@/game/world/crowdLayout";
+import { buildCityLayout } from "@/game/world/cityLayout";
 import { TIME_OF_DAY_ORDER } from "@/game/world/timeOfDay";
 
 /*
@@ -19,7 +21,20 @@ import { TIME_OF_DAY_ORDER } from "@/game/world/timeOfDay";
  * 우리는 낮이든 밤이든 전원이 같은 걸음으로 트랙을 돌았다. 그래서 **밀도를
  * 올려도 이 인상이 나오지 않았다.**
  */
-const SPECS = buildPedestrians(CROWD.maxPedestrians);
+/**
+ * 화면에 실제로 서 있는 사람 전부.
+ *
+ * 거리 보행자와 **놀이터 아이들**을 합친 것이 씬이 만드는 목록이다
+ * (`Crowd.tsx`). 한쪽만 보면 「목록에만 있고 아무도 하지 않는 행동」 검사가
+ * 조용히 비켜 간다 — `play`가 정확히 그랬다.
+ */
+const SPECS = [
+  ...buildPlaygroundKids(buildCityLayout().playSpots, CROWD.maxPedestrians),
+  ...buildPedestrians(CROWD.maxPedestrians),
+];
+
+/** 거리 보행자만 — 트랙을 도는 규칙은 이쪽에만 해당한다 */
+const STREET_SPECS = buildPedestrians(CROWD.maxPedestrians);
 
 describe("행동의 종류", () => {
   it("걷기 하나가 아니다", () => {
@@ -36,8 +51,12 @@ describe("행동의 종류", () => {
   });
 
   it("절반 이상은 걷는다 — 다 앉아 있으면 도시가 멈춘다", () => {
-    const walking = SPECS.filter((spec) => spec.activity === "walk").length;
-    expect(walking / SPECS.length, `걷는 사람 ${walking}/${SPECS.length}`).toBeGreaterThan(0.5);
+    // 거리 기준이다. 놀이터는 원래 아무도 안 걷는 자리다
+    const walking = STREET_SPECS.filter((spec) => spec.activity === "walk").length;
+    expect(
+      walking / STREET_SPECS.length,
+      `걷는 사람 ${walking}/${STREET_SPECS.length}`,
+    ).toBeGreaterThan(0.5);
   });
 
   it("한 구역 안에서도 행동이 갈린다", () => {
@@ -74,8 +93,15 @@ describe("행동의 종류", () => {
   });
 
   it("같은 시드면 행동도 같다 — 판마다 바뀌면 성능 비교가 무의미하다", () => {
-    const again = buildPedestrians(CROWD.maxPedestrians);
-    expect(again.map((spec) => spec.activity)).toEqual(SPECS.map((spec) => spec.activity));
+    // 두 목록 **각각** 확인한다. 합쳐서 비교하면 한쪽이 흔들려도 못 잡는다
+    expect(buildPedestrians(CROWD.maxPedestrians).map((spec) => spec.activity)).toEqual(
+      STREET_SPECS.map((spec) => spec.activity),
+    );
+
+    const spots = buildCityLayout().playSpots;
+    expect(buildPlaygroundKids(spots, CROWD.maxPedestrians)).toEqual(
+      buildPlaygroundKids(spots, CROWD.maxPedestrians),
+    );
   });
 });
 

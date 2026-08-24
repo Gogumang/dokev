@@ -34,6 +34,8 @@ import { terrainHeight } from "@/game/world/terrain";
 import type { TimeOfDayId } from "@/game/world/timeOfDay";
 import {
   buildPedestrians,
+  buildPlaygroundKids,
+  PLAYGROUND,
   CROWD,
   crowdCountFor,
   crowdReaction,
@@ -131,6 +133,13 @@ export interface CrowdProps {
    */
   timeOfDay: TimeOfDayId;
   /**
+   * 놀이터 한복판 좌표(`layout.playSpots`). 여기 둘러서서 논다.
+   *
+   * 좌표를 여기서 계산하지 않는다 — 놀이기구를 놓은 쪽(`park`)이 정한 것을
+   * 그대로 받는다. 두 곳에서 각자 구하면 아이들이 미끄럼틀 옆 잔디에서 논다.
+   */
+  playSpots: readonly { x: number; z: number }[];
+  /**
    * 플레이어의 감정 표현. **객체를 그대로 받는다** — 매 프레임 바뀌는 값이라
    * 복사하면 한 프레임 늦게 반응하고, 프롭으로 값을 내리면 초당 60회 리렌더가 난다.
    */
@@ -143,13 +152,19 @@ export interface CrowdProps {
   combat: { enemyBlips: Float32Array; enemyBlipCount: number };
 }
 
-export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat }: CrowdProps) {
+export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat, playSpots }: CrowdProps) {
   const { camera } = useThree();
 
-  const specs = useMemo(
-    () => buildPedestrians(PEDESTRIAN_BUDGET[quality.level]),
-    [quality.level],
-  );
+  const specs = useMemo(() => {
+    const budget = PEDESTRIAN_BUDGET[quality.level];
+    /*
+     * 놀이터 아이들을 **앞에** 둔다. 시간대별 인원(`crowdCountFor`)이 목록
+     * 앞에서부터 세므로, 뒤에 두면 밤에 제일 먼저 사라진다 — 놀이터가 밤에
+     * 비는 것은 맞지만, 낮에도 저사양 기기에서 통째로 사라지는 것은 다르다.
+     */
+    const kids = buildPlaygroundKids(playSpots, Math.round(budget * 0.2));
+    return [...kids, ...buildPedestrians(budget - kids.length)];
+  }, [quality.level, playSpots]);
 
   const runtime = useMemo<PedestrianRuntime[]>(
     () =>
@@ -297,6 +312,14 @@ export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat }
        * 미끄러지면 앉은 채로 이동하는 그림이 된다.
        */
       const fleeing = state.reaction === "flee";
+      /*
+       * 노는 사람은 나아가지 않고 **위상만 돈다.** 걷기와 같은 위상을 쓰므로
+       * 팔다리가 그대로 흔들리고, 아래에서 그 흔들림을 높이로 바꿔 폴짝이게
+       * 한다 — 새 애니메이션 경로를 만들지 않는다.
+       */
+      const playing = spec.activity === "play" && !fleeing && !state.dancing;
+      if (playing) state.phase += PLAYGROUND.hopRate * dt;
+
       if (fleeing || (spec.activity === "walk" && !state.dancing)) {
         /*
          * 물러설 때는 **앉아 있던 사람도 일어나 걷는다.** 로봇이 코앞인데
@@ -349,10 +372,18 @@ export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat }
       // 서 있는 사람의 팔다리는 멎어 있어야 한다 — 제자리 걸음은 더 이상하다
       const swing = state.dancing
         ? danceSwing
-        : spec.activity === "walk" || state.reaction === "flee"
+        : spec.activity === "walk" || spec.activity === "play" || state.reaction === "flee"
           ? Math.sin(state.phase)
           : 0;
-      const bob = Math.abs(swing) * bobHeight * (state.dancing ? danceAccent : 1);
+      /*
+       * 폴짝임은 걷기 흔들림을 키운 것이다. 뛰는 높이를 따로 계산하지 않는
+       * 이유: 팔다리 흔들림과 같은 위상에서 나와야 **발이 땅을 밀고 오르는**
+       * 것으로 보인다. 따로 굴리면 몸이 뜰 때 다리가 멈춰 있다.
+       */
+      const bob =
+        Math.abs(swing) *
+        bobHeight *
+        (state.dancing ? danceAccent : playing ? PLAYGROUND.hopScale : 1);
       const x = spec.cx + sample.x;
       const z = spec.cz + sample.z;
 

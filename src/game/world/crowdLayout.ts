@@ -132,8 +132,10 @@ export const SKIN_PALETTE = ["#f0c9a8", "#d8a67c", "#a97b55"] as const;
  * - `talk` — **둘이 마주 본다.** 트랙 안팎에 하나씩 서서 서로를 향한다.
  * - `sit` — 주저앉는다. 골반이 내려가고 다리가 접힌다.
  * - `linger` — 그냥 서 있다. 걸음이 멎어 있을 뿐이라 가장 싸다.
+ * - `play` — **제자리에서 폴짝인다.** 놀이터에 둘러서서 논다. 미끄럼틀과
+ *   그네를 세워 놓고 아무도 놀지 않으면 그건 놀이터가 아니라 조형물이다.
  */
-export const PEDESTRIAN_ACTIVITIES = ["walk", "talk", "sit", "linger"] as const;
+export const PEDESTRIAN_ACTIVITIES = ["walk", "talk", "sit", "linger", "play"] as const;
 
 export type PedestrianActivity = (typeof PEDESTRIAN_ACTIVITIES)[number];
 
@@ -312,6 +314,68 @@ export function samplePerimeter(radius: number, u: number, out: TrackSample): Tr
  * 인원을 줄여도 도시 한쪽만 비지 않도록, 구역을 돌면서 한 명씩 채우지 않고
  * 앞 구역부터 채우는 대신 방향·트랙을 섞어 밀도가 균일해 보이게 한다.
  */
+/**
+ * 놀이터 수치.
+ *
+ * 트랙 기계를 그대로 쓴다 — 「구역 중심 둘레의 직사각 트랙 위 한 점」이
+ * 이미 있는데, 중심을 놀이터로 바꾸고 반지름을 줄이면 그것이 곧 놀이터를
+ * 둘러선 원이다. 새 배치 규칙을 만들면 걷기와 놀기가 다른 좌표계를 살게
+ * 되고, 그러면 놀던 아이가 도망갈 때 순간이동한다.
+ */
+export const PLAYGROUND = {
+  /** 놀이터 한 곳에 몇 명이 노는가. 둘이면 형제, 넷이면 놀이터다 */
+  kidsPerSpot: 4,
+  /** 놀이기구를 둘러서는 반지름(m). 미끄럼틀·그네 밖이어야 몸이 안 겹친다 */
+  ringRadius: 4.2,
+  /** 폴짝이는 속도(rad/s). 걷기 위상보다 빨라야 뛰는 것으로 읽힌다 */
+  hopRate: 7.4,
+  /** 뛰어오르는 높이 배수. 걷기 흔들림(bob)에 곱한다 */
+  hopScale: 2.6,
+} as const;
+
+/**
+ * 놀이터에 모여 노는 사람들.
+ *
+ * 보행자와 **같은 타입**을 쓴다. 그래야 도망·쳐다봄·춤 합류가 저절로 따라온다 —
+ * 로봇이 오면 놀던 아이도 흩어져야 하는데, 별도 목록으로 두면 그 반응을
+ * 한 벌 더 적게 되고 한쪽만 고쳐진다.
+ */
+export function buildPlaygroundKids(
+  spots: readonly { x: number; z: number }[],
+  budget: number,
+): PedestrianSpec[] {
+  const random = createSeededRandom(CROWD.seed + 1);
+  const specs: PedestrianSpec[] = [];
+  const perimeter = trackPerimeter(PLAYGROUND.ringRadius);
+
+  for (const spot of spots) {
+    for (let i = 0; i < PLAYGROUND.kidsPerSpot && specs.length < budget; i += 1) {
+      specs.push({
+        cx: spot.x,
+        cz: spot.z,
+        trackRadius: PLAYGROUND.ringRadius,
+        activity: "play",
+        /*
+         * 안쪽을 본다. 직사각 트랙의 접선 방향에서 -90도가 언제나 중심
+         * 쪽이다(`samplePerimeter`의 네 구간이 모두 그렇다).
+         */
+        yawOffset: -Math.PI / 2,
+        direction: 1,
+        speed: 0,
+        // 둘레를 고르게 나눠 선다. 겹쳐 서면 한 사람으로 보인다
+        startU: (perimeter * i) / PLAYGROUND.kidsPerSpot,
+        shirtTone: Math.floor(random() * SHIRT_PALETTE.length),
+        pantsTone: Math.floor(random() * PANTS_PALETTE.length),
+        skinTone: Math.floor(random() * SKIN_PALETTE.length),
+        // 같이 뛰면 군무다. 위상을 흩어 각자 다른 박자로 뛴다
+        startPhase: random() * TAU,
+      });
+    }
+  }
+
+  return specs;
+}
+
 export function buildPedestrians(budget: number): PedestrianSpec[] {
   const random = createSeededRandom(CROWD.seed);
   const specs: PedestrianSpec[] = [];

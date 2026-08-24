@@ -148,6 +148,13 @@ export interface CityLayout {
    */
   treeExclusions: TreeExclusion[];
   /**
+   * 놀이터 한복판 좌표(`park.playSpots`).
+   *
+   * 군중이 여기 모여 논다. 배치가 정한 자리를 그대로 흘려보낸다 — 좌표를
+   * 두 곳에 적으면 아이들이 미끄럼틀 옆 잔디에서 논다.
+   */
+  playSpots: { x: number; z: number }[];
+  /**
    * 그래플을 걸 수 있는 높은 지점.
    *
    * 예전에는 `props`에서 `tone === 0 && height > 4`로 **추려 냈다.** 색과 높이로
@@ -630,6 +637,7 @@ export function buildCityLayout(): CityLayout {
     undergrowth,
     neon,
     treeExclusions,
+    playSpots: park.playSpots,
     grappleAnchors,
     colliders,
     halfExtent,

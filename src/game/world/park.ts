@@ -56,6 +56,15 @@ export interface ParkParts {
   colliders: Aabb[];
   /** 연못과 놀이터 자리 — 여기에 나무가 심기면 물 위에 나무가 선다 */
   treeExclusions: TreeExclusion[];
+  /**
+   * 놀이터 한복판 좌표.
+   *
+   * 미끄럼틀과 그네를 세워 놓고 **아무도 놀지 않았다.** 놀이기구만 있는
+   * 놀이터는 놀이터가 아니라 조형물이다 — 군중이 여기 모여 놀려면 자리를
+   * 알아야 하고, 그 자리는 배치가 정한 것이어야 한다(좌표를 두 곳에 적으면
+   * 아이들이 미끄럼틀 옆 잔디에서 논다).
+   */
+  playSpots: { x: number; z: number }[];
 }
 
 /**
@@ -120,6 +129,7 @@ export function buildPark(blocks: readonly ParkBlock[]): ParkParts {
   const paths: BoxInstance[] = [];
   const colliders: Aabb[] = [];
   const treeExclusions: TreeExclusion[] = [];
+  const playSpots: { x: number; z: number }[] = [];
 
   for (const block of blocks) {
     /*
@@ -130,10 +140,11 @@ export function buildPark(blocks: readonly ParkBlock[]): ParkParts {
      */
     addPond(pondWater, pondRim, treeExclusions, block, block.cx - 6.5, block.cz - 6.5);
     addPlayground(playground, colliders, treeExclusions, block, block.cx + 6.8, block.cz + 6.8);
+    playSpots.push({ x: block.cx + 6.8, z: block.cz + 6.8 });
     addPathLoop(paths, block);
   }
 
-  return { pondWater, pondRim, playground, paths, colliders, treeExclusions };
+  return { pondWater, pondRim, playground, paths, colliders, treeExclusions, playSpots };
 }
 
 function addPond(
