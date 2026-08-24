@@ -27,8 +27,6 @@ import { CaptureNotice } from "@/components/hud/CaptureNotice";
 import { PerfPanel } from "@/components/hud/PerfPanel";
 import { PhotoControls } from "@/components/hud/PhotoControls";
 import { ShrineNotice } from "@/components/hud/ShrineNotice";
-import { GateNotice } from "@/components/hud/GateNotice";
-import type { GateView } from "@/game/world/SpiritGate";
 import { Minimap } from "@/components/hud/Minimap";
 import { TouchControls } from "@/components/hud/TouchControls";
 import { TouchMenu } from "@/components/hud/TouchMenu";
@@ -71,8 +69,6 @@ interface WorldHudProps {
   foundClues: readonly string[];
   /** 주민 대사와 「말 걸 수 있음」. 군중이 매 프레임 갱신한다 */
   talkView: { line: string | null; speaker: string; nearby: boolean };
-  /** 문 앞인지와 빛이 얼마나 모자란지. 씬이 매 프레임 갱신한다 */
-  gate: GateView;
   /** 지금 도깨비 자리에 서 있는지. 「손을 내밀라」를 띄운다 */
   discovery: DiscoveryView;
   /** 지금 구역 — 바뀔 때만 배너를 띄운다 */
@@ -126,7 +122,6 @@ export function WorldHud({
   summary,
   dialogue,
   talkView,
-  gate,
   discovery,
   nickname,
   foundClues,
@@ -398,8 +393,6 @@ export function WorldHud({
         style={{ bottom: "calc(var(--safe-bottom) + 96px)" }}
       >
         {captureNotice && <CaptureNotice message={captureNotice} />}
-        {/* 문 앞에서만 뜬다 — 빛이 모자라면 얼마나 모자란지까지 말한다 */}
-        <GateNotice gate={gate} />
         <ShrinePrompt discovery={discovery} />
         <UnlockNotice summary={summary} questView={questView} met={metDokebi} />
         <VendingPrompt vending={vending} />

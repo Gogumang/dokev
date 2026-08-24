@@ -15,6 +15,8 @@ import { useEffect } from "react";
 import type { VehicleKind } from "@/game/config/tuning";
 import { CONTROL_CODES } from "@/game/systems/controls";
 import { nextWeapon, type WeaponId } from "@/game/combat/weapons";
+import { MAX_DELTA_SECONDS } from "@/game/config/tuning";
+import { isSummoned, stepLinger, wantsSummon } from "@/game/dokebi/summonWindow";
 
 export interface InputState {
   /** 카메라 기준 좌우 (-1..1) */
@@ -403,7 +405,21 @@ export function usePointerLook(
 /** 입력이 건너가는 자리 — 전투와 동료가 여기서 읽는다 */
 export interface CommandLink {
   attackQueued: boolean;
+  /**
+   * 동료가 지금 화면에 있어야 하는가.
+   *
+   * **손이 아니라 전투가 정한다.** 전에는 `C` 키가 그대로 이 값을 켰고 초기값이
+   * `true`라 동료가 도시를 내내 따라다녔다. 원작 공개분의 탐험 컷에는 동료가
+   * 없다(`docs/frame-notes/`).
+   */
   summoned: boolean;
+  /**
+   * 전투가 끝난 뒤 남은 여운(초). 프레임 루프가 들고 있는다.
+   *
+   * 이 값이 없으면 마지막 로봇이 쓰러지는 **그 순간** 동료가 사라져 이긴 장면이
+   * 결함으로 보인다.
+   */
+  summonLinger: number;
   abilityRequests: number;
   /**
    * 지금 들고 있는 무기. **입력이 이 값을 돌린다.**
@@ -423,7 +439,7 @@ export interface CommandLink {
  *
  *   - `attackQueued` — 안 넘기면 **J를 눌러도 아무 일이 없다.**
  *   - `weapon` — 안 돌리면 **Q를 눌러도 계속 방망이다.**
- *   - `summoned` — 안 넘기면 동료를 불러도 안 오고, 보내도 안 간다.
+ *   - `summoned` — 안 넘기면 **전투가 붙어도 동료가 안 나온다.**
  *   - `abilityRequests` — 안 넘기면 **능력이 영영 안 나간다.** 버튼은 켜져 있다.
  *
  * **큐는 옮기면서 비운다.** 안 비우면 한 번 누른 것이 매 프레임 다시 나간다 —
@@ -432,7 +448,13 @@ export interface CommandLink {
  * `attackQueued`는 **켜기만 한다.** 끄는 일은 쓰는 쪽(`consumeAttack`)이 하고,
  * 여기서 매 프레임 꺼 버리면 그 사이에 못 읽은 입력이 사라진다.
  */
-export function projectCommands(link: CommandLink, input: InputState): void {
+export function projectCommands(
+  link: CommandLink,
+  input: InputState,
+  /** 지금 얼마나 전투 한복판인가 0~1 (`combat/combatLink.combatPressure`) */
+  combatPressure01: number,
+  dt: number,
+): void {
   if (input.attackQueued) {
     input.attackQueued = false;
     link.attackQueued = true;
@@ -447,7 +469,22 @@ export function projectCommands(link: CommandLink, input: InputState): void {
     link.weapon = nextWeapon(link.weapon);
   }
 
-  link.summoned = input.companionSummoned;
+  /*
+   * **동료는 전투가 부른다.** 압력이 문턱을 넘으면 나오고, 더 낮은 문턱 아래로
+   * 떨어져야 사라진다(히스테리시스) — 하나로 두면 적이 사거리 경계를 들락날락할
+   * 때마다 깜빡인다. 규칙은 `dokebi/summonWindow`에 있다.
+   *
+   * `input.companionSummoned`는 더 이상 읽지 않는다. 손으로 부르고 보내는 것이
+   * 아니라, 싸움이 붙으면 오고 끝나면 간다.
+   */
+  const wanted = wantsSummon(combatPressure01, link.summoned);
+  /*
+   * dt에 상한을 씌운다. 탭을 두고 돌아오면 첫 프레임의 delta가 몇 초라, 그대로
+   * 빼면 **여운이 한 번에 증발해** 돌아온 순간 동료가 사라진다. 상한의 정본은
+   * `config/tuning`에 하나뿐이다.
+   */
+  link.summonLinger = stepLinger(link.summonLinger, wanted, Math.min(dt, MAX_DELTA_SECONDS));
+  link.summoned = isSummoned(wanted, link.summonLinger);
 
   if (input.companionAbilityQueued) {
     input.companionAbilityQueued = false;

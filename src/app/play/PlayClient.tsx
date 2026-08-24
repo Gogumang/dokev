@@ -28,7 +28,6 @@ import { companionParty, consumeDiscovery, type DiscoveryView, DOKEBI, type Doke
 import { createEmoteState } from "@/game/player/emote";
 import { createCombatCues } from "@/game/systems/audio/combat";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
-import { createGateView } from "@/game/world/SpiritGate";
 import { parseScenario } from "@/game/systems/devScenario";
 import { createContextLossView } from "@/game/systems/contextLoss";
 import { nextPhotoPose, PHOTO_POSES, type PhotoPoseId } from "@/game/player/photoPose";
@@ -365,7 +364,6 @@ export function PlayClient() {
   const { clueView, foundClues } = useFoundClues(resumeFrom?.foundClues, reportClue);
 
   // 문 안내. 씬이 매 프레임 쓰고 HUD가 들여다본다 — 다른 뷰들과 같은 방식이다.
-  const [gateView] = useState(createGateView);
   const [talkView] = useState(() => ({
     line: null as string | null,
     speaker: "주민",
@@ -656,7 +654,6 @@ export function PlayClient() {
             reducedMotion={reducedMotion}
             questView={questView}
             talkView={talkView}
-            gateView={gateView}
             clueView={clueView}
             combatView={combatView}
             summaryView={summaryView}
@@ -704,7 +701,6 @@ export function PlayClient() {
         stats={stats}
         questView={questView}
         talkView={talkView}
-        gate={gateView}
         discovery={discoveryView}
         nickname={nickname}
         foundClues={foundClues}

@@ -51,8 +51,6 @@ import { Boss } from "@/game/combat/Boss";
  * 문에서 같은 함정을 이미 한 번 밟았다.
  */
 import { Pier } from "@/game/world/PierDeck";
-import { SpiritGates } from "@/game/world/SpiritGate";
-import { gateCollider, SPIRIT_GATES } from "@/game/world/spiritGates";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
 import { BOSS_HOME } from "@/game/combat/bossSim";
 import { Shrines } from "@/game/dokebi/Shrine";
@@ -116,7 +114,9 @@ export function GameScene(props: SceneProps) {
       attackQueued: false,
       // 시작 무기. 저장하지 않는다 — 판마다 방망이로 시작하는 편이 배우기 쉽다.
       weapon: DEFAULT_WEAPON,
-      summoned: true,
+      // 평소에는 없다. 전투가 부른다 (`dokebi/summonWindow`)
+      summoned: false,
+      summonLinger: 0,
       abilityRequests: 0,
       bossSlamHit: false,
       summonHeal: 0,
@@ -167,10 +167,9 @@ export function GameScene(props: SceneProps) {
    * 새 배열을 만들면 이것을 받는 리그가 매번 다른 참조를 보게 되고, 그러면
    * 참조가 바뀔 때마다 딸린 것들이 다시 만들어진다.
    */
-  const gateBoxes = useMemo(() => SPIRIT_GATES.map((gate) => gateCollider(gate, false)), []);
   const walkColliders = useMemo(
-    () => [...layout.colliders, ...gateBoxes],
-    [layout.colliders, gateBoxes],
+    () => [...layout.colliders],
+    [layout.colliders],
   );
 
   const grappleView = useMemo(() => createGrappleView(), []);
@@ -316,12 +315,6 @@ export function GameScene(props: SceneProps) {
       */}
       {/* 해안의 부두와 낚시. 배경(`Sea`)과 나눠 두는 이유는 이쪽이 눌러서 반응하는 것이라서다 */}
       <Pier halfExtent={layout.halfExtent} link={playerLink} />
-      <SpiritGates
-        link={playerLink}
-        boxes={gateBoxes}
-        view={props.gateView}
-        reducedMotion={props.reducedMotion}
-      />
       <GrappleVisuals view={grappleView} />
       {/* 색보정은 포토 모드에서만. 플레이 중에는 화면을 가리기만 한다 */}
       {props.photoMode && !isTransparentFilter(filter) && <FilterOverlay filter={filter} />}

@@ -19,7 +19,6 @@ import type { CityDetails } from "@/game/world/cityDetails";
 import type { CityLayout } from "@/game/world/cityLayout";
 import type { Aabb } from "@/game/player/locomotion";
 import type { LocomotionMode } from "@/game/config/tuning";
-import type { GateView } from "@/game/world/SpiritGate";
 import type { WeaponId } from "@/game/combat/weapons";
 import type { DistrictId } from "@/game/world/districts";
 import type { TimeOfDayId } from "@/game/world/timeOfDay";
@@ -161,8 +160,7 @@ export interface SceneProps {
    *
    * 막혀 있는데 아무 안내가 없으면 그냥 벽으로 보인다 — 벽 앞에서는 아무도
    * 능력을 켜 보지 않으므로 이 기능이 있는 줄도 모른다.
-   */
-  gateView: GateView;
+
   /** 자판기 상태. HUD가 안내와 남은 시간에 쓴다 */
   vendingView: { machineInReach: boolean; boostRemaining: number; drinks: number };
   /**
@@ -265,6 +263,13 @@ export interface SceneProps {
  * 필요해지므로, 이 프로젝트의 다른 곳과 같은 방식으로 가변 객체를 공유한다.
  */
 export interface PlayerLink extends CompanionTarget, CombatLink, CompanionCommand {
+  /**
+   * 전투가 끝난 뒤 동료가 남아 있는 여운(초).
+   *
+   * `CompanionCommand`가 아니라 여기 둔다 — 동료가 알아야 할 값이 아니라
+   * **프레임 루프의 장부**다. 동료는 「지금 있어야 하나」(`summoned`)만 보면 된다.
+   */
+  summonLinger: number;
   position: { x: number; y: number; z: number };
   /**
    * 지금까지 조사한 흔적 수.

@@ -687,7 +687,7 @@ export function PlayerRig({
 
     projectCompanionTarget(playerLink, corrected.position, speed, corrected.facing, corrected.grounded);
     // 입력을 전투·동료 쪽으로 넘긴다. 소비는 각자가 한다.
-    projectCommands(playerLink, input);
+    projectCommands(playerLink, input, combatEase.current, dt);
     // 전투 결과를 HUD 쪽 객체로 옮긴다. 객체를 교체하지 않고 필드만 쓴다.
     // 완주 결과 집계 — 완료된 뒤에는 시간을 더 세지 않는다.
     projectSummaryView(summaryView, playerLink, speed, dt, questView.completed);

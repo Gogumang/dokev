@@ -295,7 +295,7 @@ describe("입력이 전투·동료로 건너가는가", () => {
    *   - `weapon` — 안 돌리면 **Q를 눌러도 계속 방망이다.**
    */
   function link(): CommandLink {
-    return { attackQueued: false, summoned: false, abilityRequests: 0, weapon: "bat" };
+    return { attackQueued: false, summoned: false, summonLinger: 0, abilityRequests: 0, weapon: "bat" };
   }
 
   it("공격이 건너간다", () => {
@@ -303,7 +303,7 @@ describe("입력이 전투·동료로 건너가는가", () => {
     const input = createInputState();
     input.attackQueued = true;
 
-    projectCommands(out, input);
+    projectCommands(out, input, 0, 0.016);
     expect(out.attackQueued, "J를 눌러도 아무 일이 없다").toBe(true);
     expect(input.attackQueued, "옮기면서 안 비웠다 — 매 프레임 다시 휘두른다").toBe(false);
   });
@@ -312,20 +312,62 @@ describe("입력이 전투·동료로 건너가는가", () => {
     const out = { ...link(), attackQueued: true };
     const input = createInputState();
 
-    projectCommands(out, input);
+    projectCommands(out, input, 0, 0.016);
     expect(out.attackQueued, "쓰는 쪽이 읽기 전에 꺼졌다").toBe(true);
   });
 
-  it("소환 상태가 그대로 건너간다", () => {
+  /*
+   * 전에는 「부른 상태가 그대로 건너가는가」를 봤다. `C` 키가 `summoned`를
+   * 직접 켰기 때문이다. 지금은 **전투가 부른다** — 평소에는 없고 적이 다가와야
+   * 나온다(`dokebi/summonWindow`). 그래서 손이 아니라 압력을 넣어 본다.
+   */
+  it("조용하면 동료가 없다", () => {
     const out = link();
     const input = createInputState();
 
-    projectCommands(out, input);
-    expect(out.summoned, "부른 상태가 안 넘어갔다").toBe(input.companionSummoned);
+    projectCommands(out, input, 0, 0.016);
+    expect(out.summoned, "아무도 없는데 동료가 나와 있다").toBe(false);
+  });
 
-    input.companionSummoned = !input.companionSummoned;
-    projectCommands(out, input);
-    expect(out.summoned, "보낸 상태가 안 넘어갔다").toBe(input.companionSummoned);
+  it("전투가 붙으면 나온다", () => {
+    const out = link();
+    const input = createInputState();
+
+    projectCommands(out, input, 1, 0.016);
+    expect(out.summoned, "적이 코앞인데 동료가 없다").toBe(true);
+  });
+
+  it("손으로 부르지 않는다 — C를 눌러도 조용하면 안 나온다", () => {
+    /*
+     * `input.companionSummoned`를 읽던 줄을 지웠다. 그 줄이 살아 있으면
+     * 「평소에는 없다」가 조용히 깨진다.
+     */
+    const out = link();
+    const input = createInputState();
+    input.companionSummoned = true;
+
+    projectCommands(out, input, 0, 0.016);
+    expect(out.summoned, "키 입력이 아직 동료를 부른다").toBe(false);
+  });
+
+  it("전투가 끝나도 잠깐 남는다 — 이긴 순간에 증발하지 않는다", () => {
+    const out = link();
+    const input = createInputState();
+
+    projectCommands(out, input, 1, 0.016);
+    projectCommands(out, input, 0, 0.016);
+    expect(out.summoned, "마지막 적이 쓰러지자마자 사라졌다").toBe(true);
+
+    /*
+     * 여운이 다 흐르면 물러난다.
+     *
+     * **큰 dt 한 번으로는 안 비워진다.** `projectCommands`가 dt에 상한
+     * (`MAX_DELTA_SECONDS`)을 씌우기 때문이다 — 탭을 두고 돌아온 첫 프레임에
+     * 여운이 통째로 증발하는 것을 막는 장치이고, 여기서 그 동작이 함께 확인된다.
+     * 처음에 `dt = 5` 한 번으로 비우려다 이 검사가 실패해서 알았다.
+     */
+    for (let frame = 0; frame < 120; frame += 1) projectCommands(out, input, 0, 0.016);
+    expect(out.summoned, "여운이 끝났는데도 남아 있다").toBe(false);
   });
 
   it("능력 요청이 한 번에 하나씩 는다 — 안 늘면 능력이 영영 안 나간다", () => {
@@ -333,13 +375,13 @@ describe("입력이 전투·동료로 건너가는가", () => {
     const input = createInputState();
     input.companionAbilityQueued = true;
 
-    projectCommands(out, input);
+    projectCommands(out, input, 0, 0.016);
     expect(out.abilityRequests, "요청이 안 늘었다").toBe(1);
     expect(input.companionAbilityQueued, "옮기면서 안 비웠다").toBe(false);
 
     // 누르지 않은 프레임들
-    projectCommands(out, input);
-    projectCommands(out, input);
+    projectCommands(out, input, 0, 0.016);
+    projectCommands(out, input, 0, 0.016);
     expect(out.abilityRequests, `요청 ${out.abilityRequests}번 — 초당 60번 쌓인다`).toBe(1);
   });
 
@@ -348,9 +390,9 @@ describe("입력이 전투·동료로 건너가는가", () => {
     const input = createInputState();
 
     input.companionAbilityQueued = true;
-    projectCommands(out, input);
+    projectCommands(out, input, 0, 0.016);
     input.companionAbilityQueued = true;
-    projectCommands(out, input);
+    projectCommands(out, input, 0, 0.016);
 
     expect(out.abilityRequests, `요청 ${out.abilityRequests}`).toBe(2);
   });

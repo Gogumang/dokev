@@ -62,15 +62,11 @@
 
 이걸 정하지 않으면 만든 것이 서로 안 맞는다.
 
-### 3.1 동료의 정체 — **정해 주셔야 합니다**
+### 3.1 동료의 정체 — 메인 그림으로 고정
 
-| 안 | 내용 | 대가 |
-|---|---|---|
-| **A. 동료를 생물로 바꾼다** | 도깨비 넷을 그림처럼 동물·사물 캐릭터로 다시 설계 | `roster.ts`의 사연·능력 글을 다시 씀. 시작 화면과 게임이 같아짐 |
-| B. 그림을 도깨비에 맞춘다 | 그림을 다시 생성해 등불·연기·물웅덩이 정령으로 | 지금 그림을 버림 |
-
-**A를 권한다.** 그림이 이미 마음에 드신 쪽이고, 「도깨비」라는 이름은 유지하면서
-생김새만 생물 쪽으로 옮기면 된다 — 한국 설화의 도깨비도 원래 사물에 깃든다.
+메인 그림에 나온 **곰·로봇·검은 고양이·버섯**을 게임의 네 도깨비로 사용한다.
+Meshy 입력 정본은 `assets/concepts/meshy/`에 있다. GLB 반입 때 `roster.ts`의 이름,
+사연, 능력 설명도 이 네 외형에 맞게 함께 바꾼다.
 
 ### 3.2 도시를 어디까지 바꾸는가
 
@@ -152,25 +148,11 @@ gradient shading, pure grey, pure white, text, watermark, brand logo,
 realistic human proportions
 ```
 
-### 7.2 동료 넷 (3.1의 A안 기준)
+### 7.2 동료 넷
 
-이름은 유지하고 생김새만 생물 쪽으로 옮긴다.
-
-```
-chorong   — a small round lantern creature the size of a house cat, cream body,
-            a warm glowing dome on its head like a paper lamp, two stubby legs,
-            tiny curious eyes, eager forward-leaning posture
-
-geueum    — a soot creature, dark charcoal fur with a warm-grey tint, heavy
-            rounded bottom, sleepy half-closed eyes, no visible limbs, a small
-            teal spark at the chest
-
-mulbineul — a water creature, pale teal, flat wide body like a rounded shell,
-            scale-like ripples across its back, short legs, calm slow posture
-
-jajeong   — a night creature, deep muted purple-grey, tall and soft,
-            upper half fading darker, faint cream glow at the core, quiet
-```
+곰·로봇·검은 고양이·버섯의 최종 입력 이미지와 캐릭터별 프롬프트는
+`assets/concepts/meshy/README.md`를 정본으로 사용한다. 이 문서에 프롬프트를
+복제하지 않는다 — 한쪽만 수정되어 외형이 다시 갈라지는 것을 막기 위해서다.
 
 ### 7.3 플레이어
 
