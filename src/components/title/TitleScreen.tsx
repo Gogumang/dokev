@@ -11,9 +11,9 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-import { createSeededRandom } from "@/game/core/mathx";
+import { StreetScene } from "@/components/title/StreetScene";
 import { APPEARANCE_ORDER, APPEARANCES } from "@/game/player/appearance";
 import { createAnalytics } from "@/game/systems/analytics";
 import { CONTROLS } from "@/game/systems/controls";
@@ -36,143 +36,43 @@ const QUALITY_OPTIONS: Array<{ value: QualityChoice; label: string; hint: string
 ];
 
 /**
- * 도시 실루엣.
+ * 배경 — 대낮 골목의 횡단보도 위에 얹은 대비 보호막.
  *
- * 반복 그라디언트로 만들면 높이가 전부 같아 도시가 아니라 창살처럼 보인다.
- * 높이·폭이 제각각이어야 스카이라인으로 읽히므로 SVG 사각형으로 그린다.
- * 시드를 고정해 서버와 클라이언트가 같은 결과를 내도록 한다 — 다르면
- * 하이드레이션 불일치가 난다.
- */
-function Skyline() {
-  const shapes = useMemo(() => {
-    const random = createSeededRandom(20260816);
-    const rects: Array<{ x: number; y: number; w: number; h: number; fill: string }> = [];
-    const tones = ["#171223", "#1e1830", "#241d38"];
-    const viewWidth = 1200;
-    const viewHeight = 300;
-
-    let x = -20;
-    while (x < viewWidth + 20) {
-      const width = 34 + random() * 62;
-      const height = 70 + random() * 190;
-      const fill = tones[Math.floor(random() * tones.length)];
-      rects.push({ x, y: viewHeight - height, w: width, h: height, fill });
-
-      // 옥상 물탱크와 안테나 — 한국 도시 실루엣의 특징적인 윤곽
-      if (random() < 0.4) {
-        const tankWidth = width * 0.26;
-        rects.push({
-          x: x + width * 0.2,
-          y: viewHeight - height - 14,
-          w: tankWidth,
-          h: 14,
-          fill,
-        });
-      }
-      if (random() < 0.28) {
-        rects.push({
-          x: x + width * 0.68,
-          y: viewHeight - height - 34,
-          w: 2.5,
-          h: 34,
-          fill,
-        });
-      }
-
-      // 창문 — 노을에 반사된 몇 칸만 켠다
-      const cols = Math.max(1, Math.floor(width / 16));
-      const rows = Math.max(1, Math.floor(height / 22));
-      for (let c = 0; c < cols; c += 1) {
-        for (let r = 0; r < rows; r += 1) {
-          if (random() > 0.22) continue;
-          rects.push({
-            x: x + 6 + c * 16,
-            y: viewHeight - height + 10 + r * 22,
-            w: 6,
-            h: 9,
-            fill: "#f2b071",
-          });
-        }
-      }
-
-      x += width + 3 + random() * 9;
-    }
-    return rects;
-  }, []);
-
-  return (
-    <svg
-      className="absolute inset-x-0 bottom-0 w-full"
-      style={{ height: "36vh" }}
-      viewBox="0 0 1200 300"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {shapes.map((shape, index) => (
-        <rect
-          key={index}
-          x={shape.x}
-          y={shape.y}
-          width={shape.w}
-          height={shape.h}
-          fill={shape.fill}
-          opacity={shape.fill === "#f2b071" ? 0.75 : 1}
-        />
-      ))}
-    </svg>
-  );
-}
-
-/**
- * 배경 — 노을 하늘과 도시 실루엣.
+ * 장면은 `StreetScene`이 그린다. 여기서는 **글이 읽히게 하는 일만** 한다.
  *
- * 이미지 파일도, 3D도 쓰지 않는다. 그라디언트 두 겹과 반복 선형 그라디언트로
- * 만든 스카이라인이면 첫인상에 필요한 만큼은 충분하고, 전송 바이트는 0이다.
+ * 배경이 어두운 노을에서 환한 낮으로 바뀌면서 이 일이 반대가 됐다. 전에는
+ * 밝은 창문 위에서 흰 글씨를 지키는 것이 문제였는데, 지금은 **하늘과 흰
+ * 횡단보도** 위에서 지켜야 한다 — 훨씬 밝다. 그래서 왼쪽 기둥을 전보다
+ * 짙게 깔았다(DESIGN_GUIDE 「2.1 세계가 먼저, UI는 나중에」).
+ *
+ * 오른쪽은 일부러 그대로 둔다. 거기에 아이와 도깨비가 서 있고, 그 자리까지
+ * 덮으면 장면을 바꾼 뜻이 사라진다.
  */
 function Backdrop() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <StreetScene />
+      {/*
+       * 왼쪽 기둥 — 제목·본문·버튼이 전부 이 안에 있다. 오른쪽으로 갈수록
+       * 빠르게 걷혀 장면이 드러난다.
+       */}
       <div
         className="absolute inset-0"
         style={{
-          background: "linear-gradient(180deg, #2a1f3d 0%, #6b3f5c 38%, #c96a4f 68%, #f0a06a 100%)",
+          background:
+            "linear-gradient(100deg, rgba(9,7,14,0.45) 0%, rgba(9,7,14,0.22) 24%, rgba(9,7,14,0) 46%)",
         }}
       />
-      {/* 해 */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: "38vmin",
-          height: "38vmin",
-          right: "12%",
-          bottom: "18%",
-          background: "radial-gradient(circle, #ffd9a8 0%, #ff9d5c 55%, rgba(255,157,92,0) 70%)",
-          opacity: 0.85,
-        }}
-      />
-      <Skyline />
       {/*
-       * 하단 스크림.
-       *
-       * 실루엣 위에 본문과 버튼이 얹히므로 대비 보호 레이어가 필요하다
-       * (DESIGN_GUIDE 「2.1 세계가 먼저, UI는 나중에」). 건물의 밝은 창문 위에서도 4.5:1이 유지되도록
-       * 아래로 갈수록 확실히 어두워지게 한다.
+       * 하단 띠. 안내 문구와 고지가 화면 아래를 가로지르는데, 그 자리 바닥은
+       * 밝은 아스팔트와 흰 횡단보도다 — 띠가 없으면 4.5:1이 안 나온다.
        */}
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          height: "46vh",
+          height: "20vh",
           background:
-            "linear-gradient(180deg, rgba(20,16,28,0) 0%, rgba(20,16,28,0.55) 38%, rgba(20,16,28,0.92) 72%, #14101c 100%)",
-        }}
-      />
-      {/* 본문 대비 확보용 — 텍스트가 어느 배경 위에서도 읽혀야 한다 */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(100deg, rgba(10,7,16,0.82) 0%, rgba(10,7,16,0.55) 45%, rgba(10,7,16,0.12) 100%)",
+            "linear-gradient(180deg, rgba(9,7,14,0) 0%, rgba(9,7,14,0.34) 40%, rgba(9,7,14,0.82) 100%)",
         }}
       />
     </div>
@@ -424,29 +324,31 @@ export function TitleScreen() {
         }}
       >
         <header className="pt-[var(--space-8)]">
-          <p className="m-0 text-xs font-semibold tracking-[0.32em] text-[var(--color-action-primary)]">
-            BROWSER 3D ADVENTURE
-          </p>
-          <h1 className="mt-[var(--space-3)] text-[clamp(2.75rem,9vw,5.5rem)] leading-[0.95] font-black tracking-tight">
+          <h1 className="mt-[var(--space-3)] text-[clamp(3rem,10vw,6.5rem)] leading-[0.95] font-black tracking-tight">
             Doke
             <span className="text-[var(--color-brand-sunset)]">V</span>
           </h1>
-          <p className="mt-[var(--space-4)] max-w-[42ch] text-lg text-[var(--color-text-secondary)]">
-            노을 지는 동네를 달리고, 골목을 가로지르고, 숨어 있던 도깨비와 친구가 되는 브라우저
-            어드벤처.
-          </p>
         </header>
 
         <div className="flex flex-col gap-[var(--space-4)] pb-[var(--space-8)]">
-          <div className="flex flex-wrap items-center gap-[var(--space-3)]">
-            <Link
-              href="/play"
-              className="inline-flex items-center justify-center rounded-[var(--radius-round)] bg-[var(--color-action-primary)] px-[var(--space-8)] text-lg font-bold text-[var(--color-text-inverse)] no-underline shadow-[0_10px_40px_-12px_rgba(47,212,196,0.8)] transition-transform hover:scale-[1.02]"
-              style={{ minHeight: "calc(var(--touch-min) * 1.35)" }}
-            >
-              동네로 들어가기
-            </Link>
+          {/*
+            주 행동은 하나다.
 
+            전에는 「동네로 들어가기」·「조작법」·「설정」 셋이 같은 크기로 나란히
+            서 있었다. 셋 다 눌러도 되는 것처럼 보이면 **무엇을 먼저 눌러야 하는지
+            화면이 말해 주지 않는다.** 시작 버튼만 크게 두고 나머지는 작은 글로
+            내린다 — 지우지는 않는다. 품질·닉네임·외형이 설정 안에 있어서,
+            없애면 들어가기 전에 정할 방법이 사라진다.
+          */}
+          <Link
+            href="/play"
+            className="inline-flex w-fit items-center justify-center rounded-[var(--radius-round)] bg-[var(--color-action-primary)] px-[var(--space-10)] text-2xl font-black tracking-wide text-[var(--color-text-inverse)] no-underline shadow-[0_14px_50px_-10px_rgba(47,212,196,0.85)] transition-transform hover:scale-[1.03]"
+            style={{ minHeight: "calc(var(--touch-min) * 1.6)" }}
+          >
+            동네로 들어가기
+          </Link>
+
+          <div className="flex flex-wrap items-center gap-[var(--space-4)]">
             <PanelToggle
               active={panel === "controls"}
               onClick={() => setPanel(panel === "controls" ? "none" : "controls")}
@@ -461,23 +363,18 @@ export function TitleScreen() {
             </PanelToggle>
           </div>
 
-          {/*
-            저장 안내는 실제 동작과 정확히 맞춰야 한다.
-
-            "진행 상황은 저장되지 않습니다"라고 적혀 있었는데 저장은 이미
-            동작하고 있었다 — 여정 단계·처치 수·만난 도깨비·설정이 전부
-            브라우저에 남는다. 반대로 위치와 체력은 남지 않아 다시 들어오면
-            광장에서 시작한다. 어느 쪽이든 사실과 다르면 사람이 확인을 못 한다.
-          */}
-          <p className="m-0 text-sm text-[var(--color-text-secondary)]">
-            설치와 로그인 없이 바로 시작합니다. 여정 진행과 만난 도깨비는 이 브라우저에 저장되고,
-            서 있던 자리는 저장되지 않아 다시 들어오면 광장에서 시작합니다.
-          </p>
-
           {panel === "controls" && <ControlsPanel />}
           {panel === "settings" && <SettingsPanel settings={settings} onChange={update} />}
 
-          <footer className="mt-[var(--space-4)] text-xs leading-relaxed text-[var(--color-text-secondary)]">
+          {/*
+            저장 안내는 실제 동작과 정확히 맞춰야 한다. "저장되지 않습니다"라고
+            적혀 있던 적이 있는데 저장은 이미 동작하고 있었다 — 여정과 만난
+            도깨비는 남고 서 있던 자리만 안 남는다.
+          */}
+          <footer className="mt-[var(--space-2)] text-xs leading-relaxed text-[var(--color-text-secondary)]">
+            설치·로그인 없이 시작합니다. 여정과 만난 도깨비는 이 브라우저에 저장되고, 서 있던
+            자리는 저장되지 않아 다시 들어오면 광장에서 시작합니다.
+            <br />
             한국 설화와 현대 도시에서 출발한 독자 IP 창작물이며, 특정 상용 게임의 공식 서비스가
             아닙니다.
           </footer>
