@@ -22,8 +22,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, CAMERA_COLLIDER_RADIUS, CAMERA_GROUND_CLEARANCE, CHARACTER_FADE, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
-import { clamp, damp } from "@/game/core/mathx";
+import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, CAMERA_COLLIDER_RADIUS, CAMERA_GROUND_CLEARANCE, CHARACTER_FADE, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, RUN_CAMERA, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
+import { damp } from "@/game/core/mathx";
 import {
   createLocomotionState,
   findGrappleTarget,
@@ -74,9 +74,11 @@ import {
   lookAheadDistance,
   orbitDirection,
   speedRatio,
+  stepFollowYaw,
   findCameraDistance,
   characterAlpha,
 } from "@/game/scene/cameraRig";
+import { recordLook, type LookState } from "@/game/scene/lookControl";
 import type { RigProps, } from "@/game/scene/sceneTypes";
 
 /*
@@ -155,9 +157,18 @@ export function PlayerRig({
   const bodyRef = useRef<THREE.Group>(null);
 
   const locomotion = useRef<LocomotionState>(createLocomotionState(layout.spawn));
-  const yaw = useRef(0);
-  // as const 때문에 리터럴 타입이 잡힌다 — 드래그로 바뀌는 값이므로 number로 연다
-  const pitch = useRef<number>(CAMERA.pitchStart);
+  /*
+   * 시점 상태 한 덩어리.
+   *
+   * yaw·pitch·포토 거리·마지막 조작 시각이 **같이 갱신되어야 맞는** 값들이라
+   * ref 넷으로 흩어 두면 한 곳만 고쳐질 자리가 생긴다(`recordLook`).
+   */
+  const look = useRef<LookState>({
+    yaw: 0,
+    pitch: CAMERA.pitchStart,
+    photoDistance: PHOTO_CAMERA.defaultDistance,
+    sinceLookSeconds: RUN_CAMERA.lookGraceSeconds,
+  }).current;
   const shake = useRef(0);
   const combatEase = useRef(0); // 눅인 전투 압력. 날것으로 쓰면 카메라가 튄다
   const cameraPosition = useRef(new THREE.Vector3());
@@ -200,9 +211,6 @@ export function PlayerRig({
   const spokeStart = useRef(false);
   const wasSummoned = useRef(true);
   const wasDowned = useRef(false);
-  /** 포토 모드 카메라 거리. 휠로 조절한다 */
-  const photoDistance = useRef<number>(PHOTO_CAMERA.defaultDistance);
-
   // 성능 샘플링 누적기
   const frameCount = useRef(0);
   const elapsed = useRef(0);
@@ -260,35 +268,17 @@ export function PlayerRig({
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
 
     /* ---------------- 시점 ---------------- */
-    const look = consumeLookDelta(input);
-    yaw.current -= look.x * CAMERA.sensitivity;
-
-    /*
-     * 포토 모드에서는 이동 키가 카메라를 돌린다.
-     *
-     * 구도는 드래그와 휠로만 잡을 수 있었다 — 키보드만 쓰는 사람은 P로 들어갈
-     * 수는 있어도 아무것도 할 수 없었다. 포토 모드에서는 시뮬레이션이 멈춰
-     * 이동 키가 하는 일이 없으므로, 그 자리를 카메라에 내준다.
-     */
-    if (photoMode) {
-      yaw.current -= input.moveX * PHOTO_CAMERA.keyTurnRate * dt;
-      pitch.current += input.moveZ * PHOTO_CAMERA.keyTurnRate * dt;
-    }
-    // 포토 모드에서는 위아래로 더 크게 돌릴 수 있다 — 올려다보는 구도가 필요하다.
-    pitch.current = clamp(
-      pitch.current + look.y * CAMERA.sensitivity,
-      photoMode ? PHOTO_CAMERA.pitchMin : CAMERA.pitchMin,
-      photoMode ? PHOTO_CAMERA.pitchMax : CAMERA.pitchMax,
+    recordLook(
+      look,
+      {
+        look: consumeLookDelta(input),
+        zoom: consumeZoom(input),
+        moveX: input.moveX,
+        moveZ: input.moveZ,
+        photoMode,
+      },
+      dt,
     );
-
-    const zoom = consumeZoom(input);
-    if (photoMode && zoom !== 0) {
-      photoDistance.current = clamp(
-        photoDistance.current + (zoom / 100) * PHOTO_CAMERA.zoomPerNotch,
-        PHOTO_CAMERA.minDistance,
-        PHOTO_CAMERA.maxDistance,
-      );
-    }
 
     /* ---------------- 이동 ---------------- */
     const moveInput: MoveInput = {
@@ -299,7 +289,7 @@ export function PlayerRig({
       grappleRequested: consumeGrapple(input),
       run: input.run,
       vehicle: input.vehicle,
-      cameraYaw: yaw.current,
+      cameraYaw: look.yaw,
       speedScale: speedScale(vending.current),
     };
 
@@ -382,9 +372,27 @@ export function PlayerRig({
 
     /* ---------------- 속도 연동 카메라 ---------------- */
     const speed01 = speedRatio(speed, CAMERA.fovSpeedReference);
+
+    /*
+     * 달리면 카메라가 진행 방향 뒤로 돌아온다.
+     *
+     * 포토 모드에서는 하지 않는다 — 구도를 잡는 중에 카메라가 스스로 움직이면
+     * 사진을 찍을 수가 없다. 시뮬레이션이 멈춰 speed도 0이라 어차피 강도가
+     * 0이지만, 의도를 코드에 남긴다.
+     */
+    if (!photoMode) {
+      look.yaw = stepFollowYaw(
+        look.yaw,
+        corrected.facing,
+        speed01,
+        look.sinceLookSeconds,
+        dt,
+        RUN_CAMERA,
+      );
+    }
     combatEase.current = damp(combatEase.current, combatPressure(playerLink.enemyBlips, playerLink.enemyBlipCount, corrected.position.x, corrected.position.z, bossView.engaged, CAMERA.combatRadius), CAMERA.followLambda, dt);
-    const distance = followDistance(tuning, speed01, photoMode, photoDistance.current, combatEase.current, corrected.position.y, isVehicle(stats.mode));
-    const orbit = orbitDirection(yaw.current, pitch.current);
+    const distance = followDistance(tuning, speed01, photoMode, look.photoDistance, combatEase.current, corrected.position.y, isVehicle(stats.mode));
+    const orbit = orbitDirection(look.yaw, look.pitch);
 
     scratch.direction.set(orbit.x, orbit.y, orbit.z).normalize();
 

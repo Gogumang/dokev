@@ -8,7 +8,7 @@
  * three.js에 의존하지 않는다. 벡터 연산은 씬이 하고 여기서는 수치만 정한다.
  */
 
-import { inverseLerpClamped, lerp } from "@/game/core/mathx";
+import { inverseLerpClamped, lerp, rotateToward } from "@/game/core/mathx";
 import type { Aabb, Vec3 } from "@/game/player/locomotion";
 
 export interface CameraTuning {
@@ -249,4 +249,36 @@ export function characterAlpha(
   range: { start: number; end: number },
 ): number {
   return inverseLerpClamped(range.end, range.start, distance);
+}
+
+/**
+ * 카메라 yaw를 한 프레임 진행한다 — 달리면 진행 방향 뒤로 돌아온다.
+ *
+ * 이것이 없으면 앞으로 달려도 **시점이 그대로**라, 캐릭터가 화면 옆으로
+ * 빠져나가고 진행 방향이 화면 밖이 된다. 3인칭 액션 게임이 예외 없이 갖고
+ * 있는 되돌림이다.
+ *
+ * 「빠를수록 세게」로만 두지 않는다. 방금 손으로 돌려 둔 시점을 곧바로
+ * 되돌리면 카메라와 손이 싸운다 — 마우스에서 손을 떼는 순간 화면이 홱
+ * 돌아간다. 그래서 **유예 시간 안에는 아무것도 하지 않는다.**
+ */
+export function stepFollowYaw(
+  yaw: number,
+  /** 몸이 가고 있는 방향(rad) */
+  heading: number,
+  /** 속도 0~1. `speedRatio`가 준 값 */
+  speed01: number,
+  /** 마지막 수동 시점 조작 뒤 경과 시간(초) */
+  sinceLookSeconds: number,
+  dt: number,
+  tuning: { alignSpeedFloor: number; alignRate: number; lookGraceSeconds: number },
+): number {
+  if (sinceLookSeconds < tuning.lookGraceSeconds) return yaw;
+
+  // 걷는 속도에서는 0이 되어 자유롭게 둘러볼 수 있다.
+  const strength = inverseLerpClamped(tuning.alignSpeedFloor, 1, speed01);
+  if (strength <= 0) return yaw;
+
+  // 각속도 제한이라 목표를 넘어가지 않는다 — 큰 dt에서도 진동하지 않는다.
+  return rotateToward(yaw, heading, tuning.alignRate * strength * dt);
 }

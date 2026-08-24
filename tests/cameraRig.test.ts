@@ -177,11 +177,12 @@ describe("포토 모드를 키보드로 조작할 수 있는가", () => {
    * 카메라에 내준다.
    */
   it("이동 키가 카메라를 돌린다", () => {
-    const rig = readCode("src/game/scene/PlayerRig.tsx");
-    expect(rig, "포토 모드에서 키보드가 시점을 바꾸지 않는다").toContain(
+    // 시점 조작은 `lookControl`에 있다 — 씬의 프레임 루프에서 떼어 냈다
+    const look = readCode("src/game/scene/lookControl.ts");
+    expect(look, "포토 모드에서 키보드가 시점을 바꾸지 않는다").toContain(
       "input.moveX * PHOTO_CAMERA.keyTurnRate",
     );
-    expect(rig).toContain("input.moveZ * PHOTO_CAMERA.keyTurnRate");
+    expect(look).toContain("input.moveZ * PHOTO_CAMERA.keyTurnRate");
   });
 
   it("포토 모드에서만 그렇게 한다", () => {
@@ -189,10 +190,10 @@ describe("포토 모드를 키보드로 조작할 수 있는가", () => {
      * 월드에서 이동 키가 카메라를 돌리면 걷다가 화면이 같이 돈다.
      * 조건 안에 있어야 한다.
      */
-    const rig = readCode("src/game/scene/PlayerRig.tsx");
-    const at = rig.indexOf("PHOTO_CAMERA.keyTurnRate");
-    const before = rig.slice(Math.max(0, at - 200), at);
-    expect(before, "포토 모드 조건 밖에서 돈다").toContain("if (photoMode)");
+    const look = readCode("src/game/scene/lookControl.ts");
+    const at = look.indexOf("PHOTO_CAMERA.keyTurnRate");
+    const before = look.slice(Math.max(0, at - 200), at);
+    expect(before, "포토 모드 조건 밖에서 돈다").toContain("if (input.photoMode)");
   });
 
   it("돌리는 속도가 쓸 만한 범위다", () => {
