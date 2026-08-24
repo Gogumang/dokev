@@ -12,28 +12,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 
-import { APPEARANCE_ORDER, APPEARANCES } from "@/game/player/appearance";
 import { createAnalytics } from "@/game/systems/analytics";
-import { CONTROLS } from "@/game/systems/controls";
-import {
-  NICKNAME_MAX_LENGTH,
-  getServerSettingsSnapshot,
-  getSettingsSnapshot,
-  subscribeSettings,
-  type PlayerSettings,
-  type QualityChoice,
-  updateSettings,
-} from "@/game/systems/settings";
 
-
-const QUALITY_OPTIONS: Array<{ value: QualityChoice; label: string; hint: string }> = [
-  { value: "auto", label: "자동", hint: "기기 성능을 확인해 정합니다" },
-  { value: "low", label: "가벼움", hint: "그림자 없음, 가장 부드러움" },
-  { value: "medium", label: "보통", hint: "균형" },
-  { value: "high", label: "높음", hint: "그림자와 안티에일리어싱" },
-];
 
 /**
  * 배경 — 시작 화면 그림 한 장과 그 위의 대비 보호막.
@@ -94,213 +76,6 @@ function Backdrop() {
   );
 }
 
-function PanelToggle({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-expanded={active}
-      className="bg-transparent p-0 text-xs text-[var(--color-text-secondary)] underline underline-offset-4 transition-colors hover:text-[var(--color-text-primary)]"
-      style={{
-        minHeight: "var(--touch-min)",
-        fontWeight: active ? 700 : 400,
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ControlsPanel() {
-  return (
-    <section
-      aria-label="조작법"
-      className="hud-scrim overflow-x-auto rounded-[var(--radius-lg)] p-[var(--space-6)]"
-    >
-      <table className="w-full min-w-[30rem] border-collapse text-sm">
-        <thead>
-          <tr className="text-left text-[var(--color-text-secondary)]">
-            <th scope="col" className="pb-2 font-medium">
-              동작
-            </th>
-            <th scope="col" className="pb-2 font-medium">
-              키보드 · 마우스
-            </th>
-            <th scope="col" className="pb-2 font-medium">
-              터치
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {CONTROLS.map((row) => (
-            <tr key={row.action} className="border-t border-white/10">
-              <th scope="row" className="py-2 text-left font-semibold">
-                {row.action}
-              </th>
-              <td className="py-2 text-[var(--color-text-secondary)]">{row.keyboard}</td>
-              <td className="py-2 text-[var(--color-text-secondary)]">{row.touch}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
-function ToggleRow({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center justify-between gap-[var(--space-4)]">
-      <span>
-        <span className="block text-sm font-semibold">{label}</span>
-        <span className="block text-xs text-[var(--color-text-secondary)]">{description}</span>
-      </span>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-[var(--radius-round)] border border-white/25 transition-colors checked:bg-[var(--color-action-primary)]"
-        style={{ minWidth: "2.75rem" }}
-      />
-    </label>
-  );
-}
-
-function SettingsPanel({
-  settings,
-  onChange,
-}: {
-  settings: PlayerSettings;
-  onChange: (patch: Partial<PlayerSettings>) => void;
-}) {
-  return (
-    <section
-      aria-label="설정"
-      className="hud-scrim grid gap-[var(--space-6)] rounded-[var(--radius-lg)] p-[var(--space-6)]"
-    >
-      <fieldset className="m-0 border-0 p-0">
-        <legend className="mb-[var(--space-3)] text-sm font-semibold">캐릭터</legend>
-        <div className="flex flex-wrap gap-[var(--space-2)]">
-          {APPEARANCE_ORDER.map((id) => {
-            const look = APPEARANCES[id];
-            const chosen = settings.appearance === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onChange({ appearance: id })}
-                aria-pressed={chosen}
-                className="flex items-center gap-2 rounded-[var(--radius-round)] border border-white/25 px-[var(--space-4)] text-sm font-semibold"
-                style={{
-                  minHeight: "var(--touch-min)",
-                  background: chosen ? "var(--color-action-primary)" : "transparent",
-                  color: chosen ? "var(--color-text-inverse)" : "var(--color-text-primary)",
-                }}
-              >
-                {/* 색 견본 — 이름만으로는 어떤 색인지 알 수 없다 */}
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-4 w-4 rounded-[var(--radius-round)] border border-white/40"
-                  style={{ background: look.hoodie }}
-                />
-                {look.name}
-              </button>
-            );
-          })}
-        </div>
-
-        {/*
-          이름.
-          
-          비워 두어도 된다 — 이름을 요구하면 「시작」까지 한 걸음이 늘고,
-          그 한 걸음에서 사람이 떠난다. 넣으면 완주 화면과 저장한 사진
-          이름에 쓰인다.
-
-          `maxLength`는 거들 뿐이고 실제 제한은 저장할 때 다시 건다 —
-          붙여넣기와 IME는 이 속성을 지나칠 수 있다.
-        */}
-        <label className="mt-[var(--space-4)] block text-sm font-semibold" htmlFor="nickname">
-          이름 (선택)
-        </label>
-        <input
-          id="nickname"
-          type="text"
-          value={settings.nickname}
-          maxLength={NICKNAME_MAX_LENGTH}
-          onChange={(event) => onChange({ nickname: event.target.value })}
-          placeholder="비워 두어도 됩니다"
-          aria-describedby="nickname-help"
-          className="mt-[var(--space-2)] w-full rounded-[var(--radius-md)] border border-white/25 bg-transparent px-[var(--space-3)] text-sm"
-          style={{ minHeight: "var(--touch-min)" }}
-        />
-        <p id="nickname-help" className="m-0 mt-[var(--space-2)] text-xs text-[var(--color-text-secondary)]">
-          이 브라우저에만 저장되고 어디로도 보내지 않습니다.
-        </p>
-      </fieldset>
-
-      <fieldset className="m-0 border-0 p-0">
-        <legend className="mb-[var(--space-3)] text-sm font-semibold">그래픽 품질</legend>
-        <div className="flex flex-wrap gap-[var(--space-2)]">
-          {QUALITY_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onChange({ quality: option.value })}
-              aria-pressed={settings.quality === option.value}
-              title={option.hint}
-              className="rounded-[var(--radius-round)] border border-white/25 px-[var(--space-4)] text-sm font-semibold"
-              style={{
-                minHeight: "var(--touch-min)",
-                background:
-                  settings.quality === option.value ? "var(--color-action-primary)" : "transparent",
-                color:
-                  settings.quality === option.value
-                    ? "var(--color-text-inverse)"
-                    : "var(--color-text-primary)",
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-[var(--space-2)] mb-0 text-xs text-[var(--color-text-secondary)]">
-          {QUALITY_OPTIONS.find((option) => option.value === settings.quality)?.hint}
-        </p>
-      </fieldset>
-
-      <ToggleRow
-        label="소리"
-        description="배경음과 효과음을 재생합니다"
-        checked={settings.sound}
-        onChange={(value) => onChange({ sound: value })}
-      />
-      <ToggleRow
-        label="모션 줄이기"
-        description="카메라 흔들림과 속도선을 끕니다"
-        checked={settings.reducedMotion}
-        onChange={(value) => onChange({ reducedMotion: value })}
-      />
-    </section>
-  );
-}
-
 export function TitleScreen() {
   /*
    * 퍼널의 시작점. 이 이벤트가 없으면 "랜딩을 본 사람 중 몇 명이 시작했나"를
@@ -311,18 +86,6 @@ export function TitleScreen() {
    */
   useEffect(() => {
     createAnalytics().track("landing_view");
-  }, []);
-
-  // 서버에서는 기본값, 클라이언트에서는 저장된 값. React가 전환을 처리한다.
-  const settings = useSyncExternalStore(
-    subscribeSettings,
-    getSettingsSnapshot,
-    getServerSettingsSnapshot,
-  );
-  const [panel, setPanel] = useState<"none" | "settings" | "controls">("none");
-
-  const update = useCallback((patch: Partial<PlayerSettings>) => {
-    updateSettings(patch);
   }, []);
 
   return (
@@ -357,40 +120,11 @@ export function TitleScreen() {
           */}
           <Link
             href="/play"
-            className="inline-flex w-fit items-center justify-center rounded-[var(--radius-round)] bg-[var(--color-action-primary)] px-[var(--space-10)] text-2xl font-black tracking-wide text-[var(--color-text-inverse)] no-underline shadow-[0_14px_50px_-10px_rgba(47,212,196,0.85)] transition-transform hover:scale-[1.03]"
+            className="inline-flex w-fit items-center justify-center rounded-[var(--radius-round)] bg-[var(--color-action-primary)] px-[var(--space-8)] text-2xl font-black tracking-wide text-[var(--color-text-inverse)] no-underline shadow-[0_14px_50px_-10px_rgba(47,212,196,0.85)] transition-transform hover:scale-[1.03]"
             style={{ minHeight: "calc(var(--touch-min) * 1.6)" }}
           >
             동네로 들어가기
           </Link>
-
-          {/*
-            조작법과 설정은 **화면에서 물러난다.**
-
-            첫 화면에 눌러야 할 것이 하나만 있어야 무엇을 눌러야 하는지 화면이
-            말해 준다. 그렇다고 지우지는 못한다 — 품질·닉네임·외형이 설정 안에
-            있고, 없애면 들어가기 전에 정할 방법이 사라진다.
-
-            그래서 **작은 글로 구석에 둔다.** 눈에 먼저 들어오지 않지만 찾으면
-            있고, Tab으로도 닿는다(`tests/accessibility.test.ts`가 초점 순서를
-            지킨다 — 시작 버튼이 언제나 먼저다).
-          */}
-          <div className="mt-[var(--space-2)] flex flex-wrap items-center gap-[var(--space-4)] text-xs text-[var(--color-text-secondary)] opacity-70">
-            <PanelToggle
-              active={panel === "controls"}
-              onClick={() => setPanel(panel === "controls" ? "none" : "controls")}
-            >
-              조작법
-            </PanelToggle>
-            <PanelToggle
-              active={panel === "settings"}
-              onClick={() => setPanel(panel === "settings" ? "none" : "settings")}
-            >
-              설정
-            </PanelToggle>
-          </div>
-
-          {panel === "controls" && <ControlsPanel />}
-          {panel === "settings" && <SettingsPanel settings={settings} onChange={update} />}
 
           {/*
             저장 안내는 실제 동작과 정확히 맞춰야 한다. "저장되지 않습니다"라고

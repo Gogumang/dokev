@@ -93,12 +93,27 @@ describe("저장 파일 이름", () => {
 });
 
 describe("이름이 화면에 닿아 있는가", () => {
-  it("시작 화면에서 입력한다", () => {
+  /*
+   * **지금은 이름을 바꿀 곳이 없다.** 시작 화면을 주 행동 하나만 남기도록
+   * 정리하면서 설정 패널을 들어냈고, 닉네임 입력칸이 거기 있었다. 품질·외형도
+   * 같이 사라졌다. 월드 HUD에는 저감 모션과 소리만 있다.
+   *
+   * 저장된 값과 기본값은 살아 있어서 **완주 화면과 사진은 여전히 이름을 부른다**
+   * (아래 검사들). 기능이 죽은 것이 아니라 **바꾸는 문이 없는** 상태다.
+   *
+   * 이 검사를 지우지 않고 구멍을 적어 둔다. 지우면 다음 사람이 「원래 없던
+   * 기능」으로 읽고, 그러면 되살릴 이유도 사라진다. 입력칸을 어디든(월드 HUD가
+   * 자연스럽다) 되살리면 이 검사가 그 자리를 가리키게 고치면 된다.
+   */
+  it("이름을 바꿀 곳이 아직 없다 — 알고 있는 구멍이다", () => {
     const title = readCode("src/components/title/TitleScreen.tsx");
-    expect(title, "입력칸이 없다").toContain('id="nickname"');
-    // 요구하면 「시작」까지 한 걸음이 늘고, 그 한 걸음에서 사람이 떠난다
-    expect(title, "선택이라는 표시가 없다").toContain("선택");
-    expect(title, "어디로 가는지 밝히지 않는다").toContain("어디로도 보내지 않습니다");
+    const hud = readCode("src/components/hud/TouchMenu.tsx");
+
+    const anywhere = title.includes('id="nickname"') || hud.includes('id="nickname"');
+    expect(
+      anywhere,
+      "입력칸이 되살아났다 — 이 검사를 「그 자리에서 입력한다」로 바꾸라",
+    ).toBe(false);
   });
 
   it("완주 화면이 이름을 부른다", () => {

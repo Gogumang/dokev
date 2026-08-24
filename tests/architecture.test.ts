@@ -89,10 +89,19 @@ describe("랜딩 화면", () => {
     expect(scene, `landing pulls: ${scene.join(", ")}`).toEqual([]);
   });
 
-  it("설정과 조작 안내는 가져온다", () => {
-    // 반대로 너무 적게 가져오면 시작 화면이 빈 껍데기라는 뜻이다
-    expect([...landing.files].some((file) => file.includes("systems/settings"))).toBe(true);
-    expect([...landing.files].some((file) => file.includes("systems/controls"))).toBe(true);
+  it("빈 껍데기가 아니다 — 들어가는 길이 실제로 있다", () => {
+    /*
+     * 전에는 「설정과 조작 안내를 가져오는가」를 봤다. 시작 화면이 그 둘을
+     * 담고 있었기 때문이다. 지금은 **주 행동 하나만 남기기로** 해서 두 패널을
+     * 들어냈고(품질·닉네임·외형을 정하는 곳이 함께 사라졌다 — 아래 검사가
+     * 그 구멍을 기록한다), 그 자리에 이 검사를 둔다.
+     *
+     * 지키려는 것은 같다: **너무 적게 가져오면 빈 껍데기**라는 것. 지금 시작
+     * 화면이 반드시 해야 하는 일은 하나뿐이다 — 월드로 보내는 것.
+     */
+    const title = readFileSync("src/components/title/TitleScreen.tsx", "utf8");
+    expect(title, "월드로 가는 링크가 없다").toContain('href="/play"');
+    expect(title, "시작 버튼의 글이 없다").toContain("동네로 들어가기");
   });
 });
 
