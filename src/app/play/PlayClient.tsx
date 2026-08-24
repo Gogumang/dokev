@@ -36,6 +36,8 @@ import { createEmoteState } from "@/game/player/emote";
 import { createCombatCues } from "@/game/systems/audio/combat";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
 import { parseScenario } from "@/game/systems/devScenario";
+import { buildDemoRoute, demoSpawn } from "@/game/systems/demoRoute";
+import { DemoGuide } from "@/components/hud/DemoGuide";
 import { createContextLossView } from "@/game/systems/contextLoss";
 import { nextPhotoPose, PHOTO_POSES, type PhotoPoseId } from "@/game/player/photoPose";
 import { nextPhotoFilter, photoFilterPreset, type PhotoFilterId } from "@/game/systems/photoFilter";
@@ -537,6 +539,8 @@ export function PlayClient() {
   // 도시 배치는 시드가 고정이라 한 번만 만들면 된다.
   const layout = useMemo(() => {
     const built = buildCityLayout();
+    // 시연 지점은 코스의 첫 장면에서 시작한다 (`demoSpawn` 주석)
+    if (scenario?.id === "demo") return { ...built, spawn: demoSpawn(built) };
     // 확인 지점이 정해졌으면 거기서 시작한다. 도시 자체는 그대로다.
     if (!scenario?.spawn && scenario?.spawnHeight === undefined) return built;
     return {
@@ -549,6 +553,8 @@ export function PlayClient() {
     };
   }, [scenario]);
   const details = useMemo(() => buildCityDetails(layout), [layout]);
+  /** 시연 코스. `?see=demo`가 아니면 안내를 그리지 않으므로 값만 만들어 둔다 */
+  const demoRoute = useMemo(() => buildDemoRoute(layout), [layout]);
 
   /*
    * 저감 모션을 플레이 중에 반영한다 — 운영체제 설정과 게임 안 설정 **양쪽**이다.
@@ -731,6 +737,8 @@ export function PlayClient() {
         가리고, 이 정보는 이미 눈에 보이는 것들로 충분히 전달된다.
       */}
       <h1 className="sr-only">DokeV 월드</h1>
+      {/* 시연 코스 안내 — `?see=demo`에서만. 다음에 무엇을 누를지가 화면 안에 있어야 눈이 화면을 떠나지 않는다 */}
+      {scenario?.id === "demo" && <DemoGuide beats={demoRoute} />}
       <WorldHud
         stats={stats}
         questView={questView}

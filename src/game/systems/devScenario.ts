@@ -95,6 +95,31 @@ export const SCENARIOS: Record<string, Scenario> = {
     spawn: { x: BOSS_HOME.x, z: BOSS_HOME.z + 14 },
     metDokebi: [...DOKEBI_ORDER],
   },
+  /**
+   * 1분 30초 시연 — 코스 첫 장면에서, 전부 열린 채로 시작한다.
+   *
+   * 시연은 **한 번에 이어 찍어야** 한다. 중간에 도깨비를 만나러 가거나
+   * 로봇 열두 기를 잡고 있으면 90초가 그것으로 다 간다 — 확인 지점이
+   * 필요한 이유와 같고, 여기서는 그 이유가 더 크다.
+   *
+   * 자리를 적지 않는다. 코스의 첫 장면이 곧 시작 지점이고, 그 좌표는
+   * 배치가 정한다(`demoRoute`) — 광장이 옮겨 가면 여기도 따라간다.
+   */
+  demo: {
+    id: "demo",
+    label: "시연 1분 30초 — 코스 첫 장면에서, 전부 열린 채로",
+    metDokebi: [...DOKEBI_ORDER],
+    questCompleted: true,
+    /*
+     * 자정은 대장을 눕혀야 열린다. 눕혀 둔 채로 시작해도 **대장은 잠시 뒤
+     * 되살아나므로**, 넷을 다 데리고 가서 그 앞에서 다시 눕힐 수 있다 —
+     * 시연의 마지막 장면이 정확히 그것이다.
+     */
+    bossDefeated: true,
+    // 대장을 눕히는 마무리 연출까지 가려면 도깨비 넷이 다 나와야 한다
+    defeatedTotal: 12,
+    timeOfDay: "noon",
+  },
   night: {
     id: "night",
     label: "밤 — 창문·가로등·전조등 밝기",
