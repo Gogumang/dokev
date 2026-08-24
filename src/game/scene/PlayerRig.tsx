@@ -22,13 +22,11 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, CAMERA_COLLIDER_RADIUS, CAMERA_GROUND_CLEARANCE, CHARACTER_FADE, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, RUN_CAMERA, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
-import { damp } from "@/game/core/mathx";
+import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, RUN_CAMERA, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
 import {
   createLocomotionState,
   findGrappleTarget,
   horizontalSpeed,
-  resolveHorizontalCollisions,
   resolveMode,
   type LocomotionState,
   type MoveInput,
@@ -53,10 +51,9 @@ import {
   projectDistrictView,
   projectVendingView,
 } from "@/game/scene/hudProjection";
-import { combatPressure, consumeRespawn } from "@/game/combat/combatLink";
-import { stepDowngradeWatch } from "@/game/systems/quality";
+import { consumeRespawn } from "@/game/combat/combatLink";
+import { createFrameMetrics, recordFrameMetrics } from "@/game/scene/frameMetrics";
 import { projectDiscovery } from "@/game/dokebi/roster";
-import { fovPulse, FOV_PULSE_SECONDS } from "@/game/dokebi/discoveryEffect";
 import { createEmoteState, emoteCue, stepEmote, type EmoteState } from "@/game/player/emote";
 import {
   createVendingState,
@@ -66,19 +63,15 @@ import {
   stepVending,
   type VendingState,
 } from "@/game/systems/vending";
-import {
-  followDistance,
-  followHeight,
-  stepLandingShake,
-  followFov,
-  lookAheadDistance,
-  orbitDirection,
-  speedRatio,
-  stepFollowYaw,
-  findCameraDistance,
-  characterAlpha,
-} from "@/game/scene/cameraRig";
+import { stepLandingShake } from "@/game/scene/cameraRig";
 import { recordLook, type LookState } from "@/game/scene/lookControl";
+import { createCameraFrame, recordCameraFrame } from "@/game/scene/cameraFrame";
+import {
+  createFinisher,
+  finisherIntensity,
+  finisherTimeScale,
+  stepFinisher,
+} from "@/game/scene/finisher";
 import type { RigProps, } from "@/game/scene/sceneTypes";
 
 /*
@@ -169,9 +162,15 @@ export function PlayerRig({
     photoDistance: PHOTO_CAMERA.defaultDistance,
     sinceLookSeconds: RUN_CAMERA.lookGraceSeconds,
   }).current;
+  /** 대장을 눕히는 순간의 슬로우 모션·얼굴 클로즈업 상태 */
+  const finisher = useRef(createFinisher());
+  /*
+   * 카메라가 프레임을 넘어 들고 가는 것들 — 눅인 전투 압력, 현재 위치,
+   * 시선 지점, 임시 벡터. 흩어 두면 「지금 그려진 자리」와 「원하는 자리」가
+   * 각자 다른 파일에서 갱신된다.
+   */
+  const cameraFrame = useRef(createCameraFrame()).current;
   const shake = useRef(0);
-  const combatEase = useRef(0); // 눅인 전투 압력. 날것으로 쓰면 카메라가 튄다
-  const cameraPosition = useRef(new THREE.Vector3());
   /*
    * 캐릭터를 얼마나 진하게 그릴지. 매 프레임 setState를 하지 않으려고
    * 공유 객체로 넘긴다 — 이 저장소의 규칙이다.
@@ -182,8 +181,6 @@ export function PlayerRig({
    * **한 번 만들어 계속 쓰는 객체**면 충분하다.
    */
   const characterFade = useMemo(() => ({ value: 1 }), []);
-  const lookTarget = useRef(new THREE.Vector3());
-  const initialized = useRef(false);
 
   const questProgress = useRef<QuestProgress | null>(null);
   /** 만남 카메라 숨의 경과 시간. null이면 쉬고 있지 않다 */
@@ -211,10 +208,11 @@ export function PlayerRig({
   const spokeStart = useRef(false);
   const wasSummoned = useRef(true);
   const wasDowned = useRef(false);
-  // 성능 샘플링 누적기
-  const frameCount = useRef(0);
-  const elapsed = useRef(0);
-  const lowFpsElapsed = useRef(0);
+  /*
+   * 성능 샘플링 누적기 셋. **함께 비워져야 맞는** 값이라 한 덩어리로 둔다 —
+   * ref로 흩어 두었을 때는 하나만 안 비우면 fps가 첫 표본에 머물렀다.
+   */
+  const metrics = useRef(createFrameMetrics()).current;
 
   const tuning = reducedMotion ? { ...CAMERA, ...CAMERA_REDUCED } : CAMERA;
 
@@ -255,17 +253,24 @@ export function PlayerRig({
     [layout.grappleAnchors],
   );
 
-  const scratch = useMemo(
-    () => ({
-      desired: new THREE.Vector3(),
-      direction: new THREE.Vector3(),
-      playerHead: new THREE.Vector3(),
-    }),
-    [],
-  );
-
   useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
+
+    /* ---------------- 마무리 연출 ---------------- */
+    /*
+     * **실시간 dt로 센다.** 느려진 시간으로 세면 자기가 늦춘 시간에 자기가
+     * 갇혀 연출이 4.5배 길어진다.
+     */
+    finisher.current = stepFinisher(finisher.current, playerLink.bossDowns, dt, reducedMotion);
+    const finish01 = finisherIntensity(finisher.current);
+    /*
+     * 시간 배율을 공유 링크에 적는다 — 전투·대장·캐릭터가 이 값을 읽는다.
+     * 포토 모드의 「멈춤」과 연출의 「느림」이 같은 칸을 쓴다: 통로를 나누면
+     * 둘이 겹칠 때 어느 쪽이 이기는지 아무도 모른다.
+     */
+    playerLink.timeScale = photoMode ? 0 : finisherTimeScale(finisher.current);
+    // 플레이어 이동도 같은 시간을 산다 — 배경만 느려지면 연출이 아니라 렉이다
+    const simDt = dt * playerLink.timeScale;
 
     /* ---------------- 시점 ---------------- */
     recordLook(
@@ -318,7 +323,7 @@ export function PlayerRig({
      */
     // 지형이 아니라 **딛는 면**이다 — 도시 구역에는 16cm 올라온 인도가 깔려 있다
     const onRide = isVehicle(stats.mode);
-    const corrected = stepPlayerOnGround(locomotion.current, moveInput, photoMode ? 0 : dt, {
+    const corrected = stepPlayerOnGround(locomotion.current, moveInput, simDt, {
       /*
        * 어느 자리든 같은 식으로 발밑을 잰다 — 이동 전과 이동 후를 두 번 잰다.
        * 두 곳에 손으로 적으면 한쪽만 고쳐질 자리가 하나 더 생긴다.
@@ -370,174 +375,39 @@ export function PlayerRig({
       LANDING_SHAKE,
     );
 
-    /* ---------------- 속도 연동 카메라 ---------------- */
-    const speed01 = speedRatio(speed, CAMERA.fovSpeedReference);
-
-    /*
-     * 달리면 카메라가 진행 방향 뒤로 돌아온다.
-     *
-     * 포토 모드에서는 하지 않는다 — 구도를 잡는 중에 카메라가 스스로 움직이면
-     * 사진을 찍을 수가 없다. 시뮬레이션이 멈춰 speed도 0이라 어차피 강도가
-     * 0이지만, 의도를 코드에 남긴다.
-     */
-    if (!photoMode) {
-      look.yaw = stepFollowYaw(
-        look.yaw,
-        corrected.facing,
-        speed01,
-        look.sinceLookSeconds,
-        dt,
-        RUN_CAMERA,
-      );
-    }
-    combatEase.current = damp(combatEase.current, combatPressure(playerLink.enemyBlips, playerLink.enemyBlipCount, corrected.position.x, corrected.position.z, bossView.engaged, CAMERA.combatRadius), CAMERA.followLambda, dt);
-    const distance = followDistance(tuning, speed01, photoMode, look.photoDistance, combatEase.current, corrected.position.y, isVehicle(stats.mode));
-    const orbit = orbitDirection(look.yaw, look.pitch);
-
-    scratch.direction.set(orbit.x, orbit.y, orbit.z).normalize();
-
-    scratch.playerHead.set(
-      corrected.position.x,
-      corrected.position.y + followHeight(tuning, speed01, combatEase.current, corrected.position.y, isVehicle(stats.mode)),
-      corrected.position.z,
-    );
-
-    const allowedDistance = findCameraDistance(
-      scratch.playerHead,
-      scratch.direction,
-      distance,
-      layout.colliders,
-    );
-
-    scratch.desired.copy(scratch.playerHead).addScaledVector(scratch.direction, allowedDistance);
-
-    /*
-     * 카메라가 언덕을 파고들지 않게 한다.
-     *
-     * 충돌체는 건물뿐이라 지형은 막아 주지 않는다. 내리막을 등지고 서면
-     * 카메라가 뒤쪽 언덕 **속**으로 들어가 화면이 흙빛 한 장이 된다.
-     * 지면 위 최소 높이만 지켜 준다 — 시선 방향은 그대로 두므로 구도가
-     * 흔들리지 않는다.
-     */
-    const cameraGround = surfaceHeight(scratch.desired.x, scratch.desired.z) + CAMERA_GROUND_CLEARANCE;
-    if (scratch.desired.y < cameraGround) scratch.desired.y = cameraGround;
-
-    /*
-     * 그래도 벽 안이면 밀어낸다.
-     *
-     * `findCameraDistance`는 카메라를 당겨 오지만 **최소 거리(1.4m)가 바닥**이라,
-     * 벽에 바짝 붙어 서면 그 지점이 벽 안일 수 있다. 달리다 옛 마을 집에
-     * 붙었더니 화면이 통째로 벽 내부가 됐다.
-     *
-     * 플레이어를 밀어내는 것과 **같은 함수**를 쓴다. 카메라만 따로 밀어내는
-     * 식을 새로 쓰면 두 판정이 갈라지고, 그러면 플레이어는 못 들어가는 자리에
-     * 카메라만 들어가는 자리가 생긴다.
-     */
-    const cleared = resolveHorizontalCollisions(scratch.desired, CAMERA_COLLIDER_RADIUS, layout.colliders);
-    scratch.desired.x = cleared.x;
-    scratch.desired.z = cleared.z;
-
-    if (!initialized.current || photoMode) {
-      // 포토 모드에서는 지연 없이 붙어야 원하는 구도가 바로 잡힌다.
-      cameraPosition.current.copy(scratch.desired);
-      initialized.current = true;
-    } else {
-      cameraPosition.current.x = damp(
-        cameraPosition.current.x,
-        scratch.desired.x,
-        tuning.followLambda,
-        dt,
-      );
-      cameraPosition.current.y = damp(
-        cameraPosition.current.y,
-        scratch.desired.y,
-        tuning.followLambda,
-        dt,
-      );
-      cameraPosition.current.z = damp(
-        cameraPosition.current.z,
-        scratch.desired.z,
-        tuning.followLambda,
-        dt,
-      );
-    }
-
-    /*
-     * 카메라가 가까우면 캐릭터를 지운다.
-     *
-     * 벽에서 밀려난 카메라는 플레이어 쪽으로 당겨져 화면이 **뒤통수로 가득
-     * 찬다.** 카메라를 억지로 물리려다 한 번 실패했다(위로 올렸더니 벽면을
-     * 정면으로 보게 됐다) — 위치를 옮기는 대신 **가리는 것을 지운다.**
-     *
-     * 실제로 그려진 자리(`cameraPosition`)로 잰다. 원하는 자리로 재면
-     * 부드럽게 따라오는 동안 값이 어긋나 캐릭터가 깜빡인다.
-     */
-    characterFade.value = characterAlpha(
-      cameraPosition.current.distanceTo(scratch.playerHead),
-      CHARACTER_FADE,
-    );
-
-    camera.position.copy(cameraPosition.current);
-    if (shake.current > 0.0005) {
-      // 상하로만 흔든다. 좌우로 흔들면 진행 방향이 흔들려 멀미가 심해진다.
-      camera.position.y += Math.sin(performance.now() * 0.06) * shake.current;
-    }
-
-    // 시선은 진행 방향으로 조금 앞서 나간다 — 빠를수록 더 멀리 본다.
-    // 포토 모드에서는 시선 선행을 끈다 — 구도를 잡는데 시선이 미끄러지면 안 된다.
-    const lookAhead = lookAheadDistance(tuning, speed01, photoMode);
-    const forwardX = speed > 0.1 ? (corrected.velocity.x / speed) * lookAhead : 0;
-    const forwardZ = speed > 0.1 ? (corrected.velocity.z / speed) * lookAhead : 0;
-    lookTarget.current.set(
-      corrected.position.x + forwardX,
-      corrected.position.y + PLAYER_HEIGHT * 0.75,
-      corrected.position.z + forwardZ,
-    );
-    camera.lookAt(lookTarget.current);
-
-    const perspective = camera as THREE.PerspectiveCamera;
-    /*
-     * 포토 모드에서는 숨을 쉬지 않는다 — 구도를 잡는 중에 시야각이 흔들리면
-     * 사진이 어긋난다.
-     */
-    if (discoveryPulse.current !== null) {
-      discoveryPulse.current += dt;
-      if (discoveryPulse.current >= FOV_PULSE_SECONDS) discoveryPulse.current = null;
-    }
-    const pulse =
-      photoMode || discoveryPulse.current === null ? 0 : fovPulse(discoveryPulse.current);
-
-    const targetFov = followFov(tuning, speed01, photoMode, pulse);
-    if (Math.abs(perspective.fov - targetFov) > 0.01) {
-      perspective.fov = damp(perspective.fov, targetFov, 5.5, dt);
-      perspective.updateProjectionMatrix();
-    }
+    /* ---------------- 카메라 ---------------- */
+    recordCameraFrame(camera, cameraFrame, look, {
+      tuning,
+      position: corrected.position,
+      velocity: corrected.velocity,
+      facing: corrected.facing,
+      speed,
+      mode: stats.mode,
+      photoMode,
+      finish01,
+      shake: shake.current,
+      colliders: layout.colliders,
+      enemyBlips: playerLink.enemyBlips,
+      enemyBlipCount: playerLink.enemyBlipCount,
+      bossEngaged: bossView.engaged,
+      characterFade,
+      dt,
+    });
 
     /* ---------------- 계측 ---------------- */
-    frameCount.current += 1;
-    elapsed.current += rawDelta;
-
-    if (elapsed.current >= STATS_SAMPLE_SECONDS) {
-      const fps = frameCount.current / elapsed.current;
-      stats.fps = fps;
-      stats.frameMs = (elapsed.current * 1000) / frameCount.current;
-      // 후처리가 켜져 있으면 그쪽이 채운다 (RuntimeStats.renderStatsOwned 주석)
-      if (!stats.renderStatsOwned) {
-        stats.drawCalls = gl.info.render.calls;
-        stats.triangles = gl.info.render.triangles;
-      }
-
-      const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory;
-      stats.heapMb = memory ? memory.usedJSHeapSize / 1048576 : 0;
-
-      frameCount.current = 0;
-      elapsed.current = 0;
-
-      // 낮은 fps가 이어질 때만 강등한다. 규칙과 검사는 systems/quality.ts에 있다
-      const watch = stepDowngradeWatch(lowFpsElapsed.current, fps, STATS_SAMPLE_SECONDS, quality.level, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS);
-      lowFpsElapsed.current = watch.lowSeconds;
-      if (watch.next) onRequestDowngrade(watch.next);
-    }
+    /*
+     * **실시간 dt**로 잰다. 슬로우 모션으로 줄인 값을 주면 fps가 거짓이 되고,
+     * 연출이 걸릴 때마다 자동 강등이 발동한다.
+     */
+    const downgrade = recordFrameMetrics(metrics, stats, {
+      rawDelta,
+      sampleSeconds: STATS_SAMPLE_SECONDS,
+      render: gl.info.render,
+      quality: quality.level,
+      fpsThreshold: DOWNGRADE_FPS_THRESHOLD,
+      downgradeAfterSeconds: DOWNGRADE_SAMPLE_SECONDS,
+    });
+    if (downgrade) onRequestDowngrade(downgrade);
 
     projectMotionView(stats, corrected, speed, mode);
     /*
@@ -688,7 +558,7 @@ export function PlayerRig({
 
     projectCompanionTarget(playerLink, corrected.position, speed, corrected.facing, corrected.grounded);
     // 입력을 전투·동료 쪽으로 넘긴다. 소비는 각자가 한다.
-    projectCommands(playerLink, input, combatEase.current, dt);
+    projectCommands(playerLink, input, cameraFrame.combatEase, dt);
     // 전투 결과를 HUD 쪽 객체로 옮긴다. 객체를 교체하지 않고 필드만 쓴다.
     // 완주 결과 집계 — 완료된 뒤에는 시간을 더 세지 않는다.
     projectSummaryView(summaryView, playerLink, speed, dt, questView.completed);

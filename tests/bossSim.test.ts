@@ -393,6 +393,7 @@ describe("대장을 때린 것이 기록되는가", () => {
       cues: { hits: 0, defeats: 0, slams: 0 },
       defeatedTotal: 0,
       bossDefeated: false,
+      bossDowns: 0,
     };
   }
 

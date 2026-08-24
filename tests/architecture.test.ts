@@ -149,6 +149,13 @@ describe("레이어 방향", () => {
       // 셰이더 문자열에 손을 넣고 인스턴스 속성을 붙인다 — 같은 이유다.
       // City가 800줄 상한을 넘어 떼어 냈고, 파사드·간판·아틀라스가 함께 쓴다.
       "src/game/world/instancedUv.ts",
+      /*
+       * 카메라 조립. **행렬을 직접 옮기는 일**이라 three가 필요하다 —
+       * PlayerRig가 800줄 상한을 넘어 떼어 냈고, 값을 정하는 계산은
+       * `cameraRig.ts`(순수)에 그대로 남아 있다. 규칙 자체가 그 분리를
+       * 지킨다: 여기 예외가 두 개가 되는 날이 카메라 계산이 새는 날이다.
+       */
+      "src/game/scene/cameraFrame.ts",
     ];
 
     const pureDirs = collectSources("src/game")

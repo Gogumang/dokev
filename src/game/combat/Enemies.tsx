@@ -68,6 +68,17 @@ export interface CombatLink {
   weapon: WeaponId;
   /** 지금까지 쓰러뜨린 로봇 누적 수. 퀘스트가 읽는다 */
   defeatedTotal: number;
+  /** 대장을 눕힌 횟수. 마무리 연출이 늘어난 만큼 발동한다 (`bossSim`) */
+  bossDowns: number;
+  /**
+   * 시뮬레이션 시간 배율. **리그가 쓰고 전투·대장·캐릭터가 읽는다.**
+   *
+   * 0이면 멈춤(포토 모드), 1이 평소, 그 사이가 슬로우 모션이다. 세 컴포넌트가
+   * 각자 `frozen` 불리언을 받던 것을 이 값 하나로 합쳤다 — 「멈춤」과 「느림」을
+   * 다른 통로로 두면 둘이 겹칠 때 어느 쪽이 이기는지 아무도 모르고, 새 연출을
+   * 더할 때마다 프롭이 하나씩 는다.
+   */
+  timeScale: number;
   /** 플레이어 체력 0~maxHp. HUD가 읽는다 */
   playerHp: number;
   /** 쓰러져 있는지 */
@@ -128,7 +139,6 @@ export interface EnemiesProps {
    * 됐다. 선택 필드로 두지 않는다: 새 호출부가 빠뜨리면 조용히 예전으로
    * 돌아간다.
    */
-  frozen: boolean;
   halfExtent: number;
   /** 그 자리가 벽인지. 로봇이 건물 안에서 생기지 않게 한다 */
   isBlocked: (x: number, z: number) => boolean;
@@ -228,7 +238,6 @@ interface Particle {
 
 export function Enemies({
   link,
-  frozen,
   halfExtent,
   isBlocked,
   spawn,
@@ -369,7 +378,7 @@ export function Enemies({
 
   useFrame((_, rawDelta) => {
     // 멈춘 동안에는 로봇도 탄도 움직이지 않으므로 새 피격이 생기지 않는다
-    const dt = frozen ? 0 : Math.min(rawDelta, MAX_DELTA_SECONDS);
+    const dt = Math.min(rawDelta, MAX_DELTA_SECONDS) * link.timeScale;
     const px = link.position.x;
     const pz = link.position.z;
 

@@ -134,6 +134,20 @@ export function GameScene(props: SceneProps) {
        */
       bossDefeated: props.resumeFrom?.bossDefeated === true,
       /*
+       * 이번 판에서 눕힌 횟수. 이어받기에서 복원하지 **않는다** — 마무리
+       * 연출은 "지금 눕혔다"에 걸리는 것이고, 이어받는 순간 지난 판의 처치
+       * 수만큼 밀린 연출이 터지면 안 된다.
+       */
+      bossDowns: 0,
+      /*
+       * 시뮬레이션 시간 배율. 리그가 매 프레임 쓰고 전투·대장·캐릭터가 읽는다.
+       *
+       * 포토 모드(0)와 마무리 연출의 슬로우 모션(0.22)이 같은 칸을 쓴다 —
+       * 「멈춤」과 「느림」을 다른 통로로 두면 둘이 겹칠 때 어느 쪽이 이기는지
+       * 아무도 모른다.
+       */
+      timeScale: 1,
+      /*
        * 이어받은 수에서 시작한다 — 지도는 하나 남았다는데 목표가 0/3이면
        * 어긋난다. 공유 목록이 아니라 **이어받기 값**을 읽는다: 공유 목록은
        * 매 프레임 바뀌므로 이 객체가 안정적일 수 없다.
@@ -321,7 +335,6 @@ export function GameScene(props: SceneProps) {
       {/* 미니 보스 — 광장 반대편 교차로에 서 있다 */}
       <Boss
         link={playerLink}
-        frozen={props.photoMode}
         home={BOSS_HOME}
         reducedMotion={reducedMotion}
         view={props.bossView}
@@ -377,7 +390,6 @@ export function GameScene(props: SceneProps) {
       <Enemies
         /* 첫 여정 앞부분에서는 로봇이 다가오지 않는다 — 걷는 장면에서 시작해 고조된다 */
         calm={isCalmStep(props.questView)}
-        frozen={props.photoMode}
         link={playerLink}
         halfExtent={layout.halfExtent}
         isBlocked={isBlocked}

@@ -158,11 +158,16 @@ describe("한 프레임의 시간 상한", () => {
       const source = readCode(path);
       if (!SIM_CALLS.test(source)) return false;
       /*
-       * 함수를 **정의하는** 순수 모듈은 dt를 받기만 한다 — 상한은 부르는
-       * 쪽(프레임을 아는 쪽)의 책임이다. 처음에 정의부까지 세어 세 파일이
-       * 걸렸다.
+       * **프레임 루프를 열지 않는 모듈은 면제한다.** dt를 받기만 하므로
+       * 상한은 부르는 쪽의 책임이다 — 이것이 규칙의 실제 근거다.
+       *
+       * 처음에는 "step 함수를 정의하는 파일"로 적었는데, 그건 근거가 아니라
+       * 그때 걸린 세 파일의 공통점이었다. 시뮬레이션을 조립만 하는 모듈
+       * (`groundStep`)이나, 실시간을 **일부러** 쓰는 계측 모듈
+       * (`frameMetrics` — 상한을 씌우면 긴 프레임이 짧게 세어져 fps가
+       * 부풀고 자동 강등이 영영 안 걸린다)이 나오자 그 공통점은 깨졌다.
        */
-      if (/export function step\w+\(/.test(source)) return false;
+      if (!source.includes("useFrame(")) return false;
       return !source.includes("MAX_DELTA_SECONDS");
     });
 
@@ -301,24 +306,25 @@ describe("포토 모드가 시간을 멈추는가", () => {
 
   it("멈출 수 있게 되어 있다", () => {
     /*
-     * 처음엔 파일에 `frozen`이라는 **낱말이 있는지만** 봤다. 그러면
-     * `const dt = frozen ? 0 : ...`에서 조건만 지워도 통과한다 —
-     * props에 이름이 남아 있기 때문이다. 되돌려 보고 알았다.
+     * 처음엔 파일에 낱말이 **있는지만** 봤다. 그러면 `const dt = ... ? 0 : ...`
+     * 에서 조건만 지워도 통과한다 — props에 이름이 남아 있기 때문이다.
+     * 되돌려 보고 알았다. 시간을 재는 **그 줄**이 배율을 보는지 확인한다.
      *
-     * 시간을 재는 그 줄이 실제로 `frozen`을 보는지 확인한다.
+     * `frozen` 불리언이 `link.timeScale`(0=멈춤, 1=평소, 그 사이=슬로우
+     * 모션)로 바뀌었다. 「멈춤」과 「느림」을 다른 통로로 두면 둘이 겹칠 때
+     * 어느 쪽이 이기는지 아무도 모른다 — 대장을 눕히는 순간 포토 모드로
+     * 들어가는 것이 실제로 가능하다.
      */
-    const missing = attackers.filter((path) => !/const dt = [^;]*\bfrozen\b/.test(readCode(path)));
+    const missing = attackers.filter(
+      (path) => !/const dt = [^;]*\blink\.timeScale\b/.test(readCode(path)),
+    );
     expect(missing, `시간을 멈추지 않는 곳:\n${missing.join("\n")}`).toEqual([]);
   });
 
-  it("씬이 포토 모드를 실제로 넘긴다", () => {
-    // 받을 준비만 하고 안 넘기면 아무것도 안 멈춘다
-    const scene = readCode("src/game/scene/GameScene.tsx");
-    const passes = [...scene.matchAll(/frozen=\{([^}]+)\}/g)].map((match) => match[1].trim());
-    expect(passes.length, `넘기는 곳 ${passes.length}군데`).toBe(attackers.length);
-    for (const value of passes) {
-      expect(value, `frozen에 ${value}를 넘긴다`).toContain("photoMode");
-    }
+  it("리그가 포토 모드에서 배율을 0으로 적는다", () => {
+    // 읽을 준비만 하고 안 적으면 아무것도 안 멈춘다
+    const rig = readCode("src/game/scene/PlayerRig.tsx");
+    expect(rig, "시간 배율을 적지 않는다").toMatch(/playerLink\.timeScale = [^;]*photoMode/);
   });
 });
 

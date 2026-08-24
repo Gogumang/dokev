@@ -67,7 +67,6 @@ const COLOR = {
 export interface BossProps {
   link: CombatLink;
   /** 시간을 멈출지 (포토 모드). `Enemies`와 같은 이유 — 포즈를 고르는 동안 맞았다 */
-  frozen: boolean;
   /** 서 있는 자리 */
   home: { x: number; z: number };
   reducedMotion: boolean;
@@ -114,7 +113,7 @@ const SUMMON_ORB_SEGMENTS = { width: 12, height: 10 } as const;
 /** 궤도 좌표에서 보스 회전을 되돌릴 때 쓰는 축. 매 프레임 만들지 않는다 */
 const UP = new THREE.Vector3(0, 1, 0);
 
-export function Boss({ link, frozen, home, reducedMotion, view, met }: BossProps) {
+export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
   const rootRef = useRef<THREE.Group>(null);
   const bodyRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
@@ -180,7 +179,7 @@ export function Boss({ link, frozen, home, reducedMotion, view, met }: BossProps
     if (!root) return;
 
     // 멈춘 동안에는 다가오지도 내려치지도 않는다
-    const dt = frozen ? 0 : Math.min(rawDelta, MAX_DELTA_SECONDS);
+    const dt = Math.min(rawDelta, MAX_DELTA_SECONDS) * link.timeScale;
     const px = link.position.x;
     const pz = link.position.z;
 

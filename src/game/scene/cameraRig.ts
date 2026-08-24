@@ -28,6 +28,14 @@ export interface CameraTuning {
   fovMax: number;
   lookAheadMax: number;
   fovSpeedReference: number;
+  /**
+   * 카메라가 목표 위치를 따라잡는 속도.
+   *
+   * 이 칸이 타입에 없어서 `CameraTuning`을 받는 쪽이 `CAMERA`를 다시 읽어야
+   * 했다 — 저감 모션 설정이 이 값을 12로 덮어쓰는데(`CAMERA_REDUCED`), 그
+   * 덮어쓴 값이 조립부에 닿지 않으면 저감 모션에서만 카메라가 늦게 따라온다.
+   */
+  followLambda: number;
 }
 
 /**

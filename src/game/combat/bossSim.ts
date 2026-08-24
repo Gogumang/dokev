@@ -260,6 +260,17 @@ export interface BossHitLink {
   cues: { hits: number; defeats: number; slams: number };
   defeatedTotal: number;
   bossDefeated: boolean;
+  /**
+   * 대장을 눕힌 **횟수**. 마무리 연출이 늘어난 만큼 발동한다.
+   *
+   * `bossDefeated`(해금 깃발)로는 셀 수 없다 — 한 번 켜지면 계속 켜져 있어
+   * 두 번째 처치를 알 방법이 없다. 대장은 잠시 뒤 되살아나므로 두 번째가
+   * 실제로 온다.
+   *
+   * `cues.defeats`로도 셀 수 없다. 지나가던 로봇도 그 칸을 올리므로,
+   * 골목에서 로봇 한 기를 눕힐 때마다 대장 연출이 터진다.
+   */
+  bossDowns: number;
 }
 
 /**
@@ -282,6 +293,7 @@ export function recordBossHit(link: BossHitLink, downed: boolean): void {
   link.cues.defeats += 1;
   link.defeatedTotal += 1;
   link.bossDefeated = true;
+  link.bossDowns += 1;
 }
 
 /** 대장이 탄에 맞은 자리 */

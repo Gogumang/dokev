@@ -58,9 +58,13 @@ describe("가까우면 캐릭터가 사라진다", () => {
      * 값만 계산하고 넘기지 않으면 검사는 통과하는데 화면은 그대로다 — 이
      * 저장소에서 가장 흔했던 결함 모양이다.
      */
+    // 페이드 계산은 카메라 조립(`cameraFrame`)이 하고, 씬은 그 값을 캐릭터에 넘긴다
+    const frame = readFileSync("src/game/scene/cameraFrame.ts", "utf8");
+    expect(frame, "페이드를 계산하지 않는다").toContain("CHARACTER_FADE");
+
     const rig = readFileSync("src/game/scene/PlayerRig.tsx", "utf8");
-    expect(rig, "페이드를 계산하지 않는다").toContain("CHARACTER_FADE");
     expect(rig, "캐릭터에 넘기지 않는다").toMatch(/fade=\{characterFade\}/);
+    expect(rig, "카메라 조립에 넘기지 않는다").toMatch(/characterFade,/);
 
     const model = readFileSync("src/game/player/CharacterModel.tsx", "utf8");
     expect(model, "받은 값을 재질에 먹이지 않는다").toContain("applyAlpha(");
@@ -72,8 +76,8 @@ describe("가까우면 캐릭터가 사라진다", () => {
      * 카메라는 원하는 자리로 **부드럽게 따라온다**. 원하는 자리로 재면 따라오는
      * 동안 값이 어긋나 캐릭터가 깜빡인다.
      */
-    const rig = readFileSync("src/game/scene/PlayerRig.tsx", "utf8");
-    expect(rig).toMatch(/cameraPosition\.current\.distanceTo\(scratch\.playerHead\)/);
-    expect(rig, "씬이 자기 식을 따로 쓴다").toContain("characterAlpha(");
+    const frame = readFileSync("src/game/scene/cameraFrame.ts", "utf8");
+    expect(frame).toMatch(/state\.position\.distanceTo\(state\.scratch\.playerHead\)/);
+    expect(frame, "조립부가 자기 식을 따로 쓴다").toContain("characterAlpha(");
   });
 });
