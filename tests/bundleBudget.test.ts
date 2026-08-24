@@ -117,7 +117,7 @@ describe.skipIf(!hasBuild)("문서가 말하는 크기", () => {
    * 두 문서를 **각각** 본다. 이어 붙여 한 번만 찾았더니 앞 문서에서 먼저
    * 맞아 버려 뒤 문서가 틀려도 통과했다 — 되돌려 보고 알았다.
    */
-  const DOCS = ["README.md", "PROJECT_PLAN.md"] as const;
+  const DOCS = ["README.md", "docs/PROJECT_PLAN.md"] as const;
 
   function claimedIn(pattern: RegExp): Array<{ doc: string; value: number }> {
     const found = DOCS.flatMap((doc) => {

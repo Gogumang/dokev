@@ -111,7 +111,7 @@ describe("확인 지점", () => {
      * 만들어 두고 알려 주지 않으면 없는 것과 같다 — 보스를 지도에 표시하지
      * 않았던 것(반복 63)과 같은 종류다.
      */
-    const backlog = readFileSync("RALPH_BACKLOG.md", "utf8");
+    const backlog = readFileSync("docs/RALPH_BACKLOG.md", "utf8");
     expect(backlog, "확인 지점 사용법이 백로그에 없다").toContain("?see=");
 
     /*

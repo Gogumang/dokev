@@ -676,7 +676,7 @@ describe("누르는 자리가 충분히 큰가", () => {
 
   it("가이드가 말하는 값과 토큰이 같다", () => {
     // 가이드만 고치고 토큰이 남으면 두 문장이 서로 다른 약속을 한다
-    const guide = readFileSync("DESIGN_GUIDE.md", "utf8");
+    const guide = readFileSync("docs/DESIGN_GUIDE.md", "utf8");
     const claimed = /최소 (\d+)×\d+ CSS px/.exec(guide);
     expect(claimed, "가이드에서 터치 기준을 못 찾았다").not.toBeNull();
 

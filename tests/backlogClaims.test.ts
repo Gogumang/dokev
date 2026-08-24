@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest";
  * 문서를 안 고치게 된다(`docs` 검사가 같은 이유로 숫자와 이름만 본다).
  */
 
-const backlog = readFileSync("RALPH_BACKLOG.md", "utf8");
+const backlog = readFileSync("docs/RALPH_BACKLOG.md", "utf8");
 
 /** 완료 표시. 제목 줄에 이것이 있으면 끝난 항목이다 */
 const DONE_MARK = "✅";

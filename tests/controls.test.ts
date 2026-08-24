@@ -196,7 +196,7 @@ describe("문서가 조작 수를 맞게 말하는가", () => {
    * 터치 버튼이 **있는지**는 위 「터치 조작 동등성」이 본다. 여기서는
    * **문서의 숫자**만 정본과 맞춘다.
    */
-  const analysis = readFileSync("TRAILER_FEATURE_ANALYSIS.md", "utf8");
+  const analysis = readFileSync("docs/TRAILER_FEATURE_ANALYSIS.md", "utf8");
 
   it("터치 버튼 개수가 조작 정본과 같다", () => {
     const claimed = /키 (\d+)종 전부에 터치 버튼/.exec(analysis);
@@ -235,7 +235,7 @@ describe("문서가 조작 수를 맞게 말하는가", () => {
      * 붙었는지까지 맞추려면 표를 정본으로 만들어야 하는데, 그건 이 문서의
      * 역할이 아니다(정본은 `CONTROL_CODES` 하나다).
      */
-    const guide = readFileSync("DESIGN_GUIDE.md", "utf8");
+    const guide = readFileSync("docs/DESIGN_GUIDE.md", "utf8");
     const table = guide.slice(guide.indexOf("| 행동 | 키보드/마우스"), guide.indexOf("키 재설정은"));
     expect(table.length, "입력 표를 못 찾았다").toBeGreaterThan(80);
 

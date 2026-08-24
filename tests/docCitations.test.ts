@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
  * 어긋나면 여기서 잡힌다.
  */
 
-const DOCS = ["PROJECT_PLAN.md", "DESIGN_GUIDE.md", "TRAILER_FEATURE_ANALYSIS.md"] as const;
+const DOCS = ["docs/PROJECT_PLAN.md", "docs/DESIGN_GUIDE.md", "docs/TRAILER_FEATURE_ANALYSIS.md"] as const;
 
 function collect(dir: string): string[] {
   const files: string[] = [];

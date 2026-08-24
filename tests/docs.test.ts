@@ -25,7 +25,24 @@ import { TIME_OF_DAY_ORDER } from "@/game/world/timeOfDay";
  * 여기서는 **숫자와 이름**만 본다. 문장까지 검사하면 문서를 고칠 때마다
  * 테스트가 깨져 아무도 문서를 안 고치게 된다.
  */
-const plan = readFileSync("PROJECT_PLAN.md", "utf8");
+const plan = readFileSync("docs/PROJECT_PLAN.md", "utf8");
+
+/**
+ * 이 저장소의 문서 전부 (루트 + `docs/`).
+ *
+ * 기획 문서를 `docs/`로 옮겼을 때 루트만 훑던 검사 둘이 **아무것도 못 찾은
+ * 채로** 통과할 뻔했다. 「어느 문서를 볼지」를 손으로 적지 않는 이유와 같은
+ * 이유로 **어느 디렉터리를 볼지도** 한 곳에만 적는다.
+ */
+function markdownFiles(): string[] {
+  const roots = [".", "docs"];
+  return roots.flatMap((dir) =>
+    readdirSync(dir)
+      .filter((name) => name.endsWith(".md"))
+      .map((name) => (dir === "." ? name : `${dir}/${name}`)),
+  );
+}
+
 
 /**
  * 문서에 적힌 테스트 수와 비교할 기준값 — 소스에서 센다.
@@ -105,8 +122,7 @@ describe("PROJECT_PLAN 18절", () => {
      * 훑어 **말한 곳이면 어디든** 검사한다.
      */
     const counted = countTests();
-    const claims = readdirSync(".")
-      .filter((name) => name.endsWith(".md"))
+    const claims = markdownFiles()
       .flatMap((name) => {
         const text = readFileSync(name, "utf8");
         return [...text.matchAll(/(?:테스트 \*\*|\*\*)?(\d{2,})개(?:\*\*)? 테스트/g)].map((m) => ({
@@ -126,7 +142,7 @@ describe("PROJECT_PLAN 18절", () => {
 });
 
 describe("백로그의 한계 기록", () => {
-  const backlog = readFileSync("RALPH_BACKLOG.md", "utf8");
+  const backlog = readFileSync("docs/RALPH_BACKLOG.md", "utf8");
 
   it("화면을 확인하지 않았다는 사실을 맨 앞에 둔다", () => {
     /*
@@ -153,7 +169,7 @@ describe("백로그의 한계 기록", () => {
 });
 
 describe("트레일러 기능 분석", () => {
-  const trailer = readFileSync("TRAILER_FEATURE_ANALYSIS.md", "utf8");
+  const trailer = readFileSync("docs/TRAILER_FEATURE_ANALYSIS.md", "utf8");
 
   it("구현 현황이 적혀 있다", () => {
     // 반복 3에서 쓴 뒤 53번 동안 갱신되지 않았다. 다시 낡지 않게 표시를 고정한다.
@@ -296,7 +312,7 @@ describe("백로그를 훑을 수 있는가", () => {
    *
    * 요약이 있고, 그 요약이 실제 항목을 가리키는지 본다.
    */
-  const backlog = readFileSync("RALPH_BACKLOG.md", "utf8");
+  const backlog = readFileSync("docs/RALPH_BACKLOG.md", "utf8");
 
   it("결함 요약이 앞에 있다", () => {
     const summary = backlog.indexOf("사용자에게 영향이 있던 결함");
@@ -413,7 +429,7 @@ describe("MVP 목록이 실제 상태를 말하는가", () => {
    *
    * 체크를 붙였으니 이제는 **체크한 것이 실제로 있는지**를 지킨다.
    */
-  const plan = readFileSync("PROJECT_PLAN.md", "utf8");
+  const plan = readFileSync("docs/PROJECT_PLAN.md", "utf8");
   const section = plan.slice(plan.indexOf("### 반드시 포함"), plan.indexOf("### MVP에서 제외"));
 
   it("목록을 실제로 읽었다", () => {
@@ -473,7 +489,7 @@ describe("백로그 요약이 행 번호를 빠짐없이 덮는가", () => {
    * 사람이 셀 일이 아니라 여기서 센다: 구간이 **이어지고**, 겹치지 않고,
    * 마지막만 열려 있어야 한다.
    */
-  const backlog = readFileSync("RALPH_BACKLOG.md", "utf8");
+  const backlog = readFileSync("docs/RALPH_BACKLOG.md", "utf8");
   const headings = [...backlog.matchAll(/^## .*\(반복 (\d+)~(\d*) 요약\)/gm)].map((match) => ({
     from: Number(match[1]),
     to: match[2] === "" ? null : Number(match[2]),
@@ -547,9 +563,7 @@ describe("검사가 짚는 이정표가 실제로 있는가", () => {
     ...collectSources("src").map((path) => readFileSync(path, "utf8")),
     readFileSync("src/app/globals.css", "utf8"),
     // 문서를 손으로 적지 않는다 — 새 문서가 생기면 목록이 낡아 없는 이정표를 만들어 낸다
-    ...readdirSync(".")
-      .filter((name) => name.endsWith(".md"))
-      .map((name) => readFileSync(name, "utf8")),
+    ...markdownFiles().map((name) => readFileSync(name, "utf8")),
   ].join("\n");
 
   const landmarks = readdirSync("tests")
@@ -590,7 +604,7 @@ describe("길잡이 절이 수를 들고 있지 않은가", () => {
    * 과거 기록(「스물한 번 뚫어 다섯 구멍」처럼 이미 일어난 일)은 낡지 않으므로
    * 막지 않는다. 막는 것은 **살아 있는 개수**다 — 「N개」·「N 질문」.
    */
-  const backlog = readFileSync("RALPH_BACKLOG.md", "utf8");
+  const backlog = readFileSync("docs/RALPH_BACKLOG.md", "utf8");
   const from = backlog.indexOf("## 지금 상태");
   const block = backlog.slice(from, backlog.indexOf("\n## ", from + 1));
 
