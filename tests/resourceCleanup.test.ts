@@ -62,7 +62,19 @@ describe("복제한 텍스처", () => {
      * 컴포넌트의 것이다. 안 지우면 방문할 때마다 새 GPU 텍스처가 생긴다.
      */
     for (const { path, text } of sources) {
-      if (!/\.clone\(\)/.test(text)) continue;
+      /*
+       * GPU 자원이 아닌 복제는 뺀다 — 행렬·벡터.
+       *
+       * `VehicleInstances`가 GLB 노드의 변환을 `matrixWorld.clone()`으로 떠
+       * 온다. 순수 수치라 해제할 것이 없는데, `.clone()` 전부를 방아쇠로 두면
+       * 여기서 「텍스처를 안 놓는다」고 걸린다.
+       *
+       * 규칙이 노리는 것은 처음부터 텍스처였다 — 위 주석이 그렇게 적혀 있다.
+       * 방아쇠가 뜻보다 넓으면 걸리는 쪽이 규칙을 피해 가게 되고, 그러면 정작
+       * 텍스처를 놓는 규칙이 사라진다.
+       */
+      const gpu = text.replace(/\w*([mM]atrix\w*|[vV]ector\w*|[qQ]uaternion)\.clone\(\)/g, "");
+      if (!/\.clone\(\)/.test(gpu)) continue;
       expect(/texture\.dispose\(\)/.test(text), `${path}: clone한 텍스처를 해제하지 않는다`).toBe(
         true,
       );

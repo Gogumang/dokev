@@ -164,6 +164,8 @@ describe("레이어 방향", () => {
        * 그러면 한쪽만 고쳐져 대장만 매끈해지는 날이 온다.
        */
       "src/game/scene/toonModel.ts",
+      // GLB를 받는 유일한 자리. 로더는 렌더러 없이는 뜻이 없다
+      "src/game/scene/modelCache.ts",
     ];
 
     const pureDirs = collectSources("src/game")

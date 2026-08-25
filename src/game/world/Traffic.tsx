@@ -12,9 +12,16 @@
 /**
  * 주행 차량과 신호등 렌더링.
  *
- * 차체·캐빈 두 겹, 신호등 기둥·헤드·램프 세 겹으로 드로우콜 다섯 개다.
- * 차량은 그림자를 만들지 않는다 — 그림자 맵은 매 프레임 다시 그려지므로 움직이는
- * 캐스터를 늘리면 그림자 패스가 그대로 무거워지고, 배경 차량이 낼 값이 아니다.
+ * 여기가 맡는 것은 **주행**이다 — 앞차와의 간격, 신호 앞 감속, 순환, 시야 밖
+ * 접기. 결과는 자세 배열 하나에 담기고, 그것을 읽어 차를 그리는 일은 차종마다
+ * `VehicleInstances`가 한다.
+ *
+ * 나눈 계기는 차가 상자에서 GLB 세 종이 된 것이다. 주행은 여전히 한 배열로
+ * 돌아야 하는데(같은 차선의 앞차를 찾아야 한다) 그리기는 차종별로 갈라진다 —
+ * 한 반복문에 두면 차종을 하나 들일 때마다 주행 코드를 건드리게 된다.
+ *
+ * 신호등은 기둥·헤드·램프 세 겹으로 여기 남는다. 움직이지 않아서 자세 배열에
+ * 낄 것이 없다.
  *
  * 차간 거리 유지는 "같은 차선의 다음 차와의 간격" 하나로 끝난다. 배치가 등간격
  * 순환이라 추월이 일어나지 않고, 따라서 초기 순서가 영원히 유지되기 때문이다.
@@ -25,18 +32,18 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { mixHex } from "@/game/core/color";
 import { damp } from "@/game/core/mathx";
 import type { QualityLevel, QualityPreset } from "@/game/systems/quality";
 import { CROWD } from "@/game/world/crowdLayout";
 import { ToonMaterial } from "@/game/scene/ToonMaterial";
 import { terrainHeight } from "@/game/world/terrain";
+import { createPoses, partitionFleet, VEHICLE_MODELS } from "@/game/world/trafficFleet";
+import { VehicleInstances } from "@/game/world/VehicleInstances";
 import {
   buildSignalPosts,
   buildTraffic,
   canProceed,
   coordinateFromU,
-  MOVING_CAR_PALETTE,
   sampleSignal,
   SIGNAL,
   TRAFFIC,
@@ -45,11 +52,6 @@ import {
 } from "@/game/world/trafficLayout";
 
 /** 품질 등급별 차량 수 */
-/** 꺼진 전조등 — 낮에는 그냥 유리 렌즈다 */
-const BEAM_OFF_COLOR = "#8f939c";
-/** 켜진 전조등 */
-const BEAM_LIT_COLOR = "#fff3d0";
-
 const CAR_BUDGET: Record<QualityLevel, number> = {
   low: 12,
   medium: 24,
@@ -60,7 +62,6 @@ const CAR_BUDGET: Record<QualityLevel, number> = {
 const LAMP_LIT = ["#ff4438", "#ffc634", "#3fd46a"] as const;
 /** 소등 색. 검게 두면 밤에 구멍처럼 보여 어두운 동색으로 낮춘다 */
 const LAMP_OFF = ["#43201d", "#413822", "#1f4029"] as const;
-const CABIN_COLOR = "#2b3138";
 const POLE_COLOR = "#2e2a3a";
 
 function lampIndexOf(color: SignalColor): number {
@@ -120,49 +121,21 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
     [plan],
   );
 
-  const bodyRef = useRef<THREE.InstancedMesh>(null);
-  const cabinRef = useRef<THREE.InstancedMesh>(null);
   const lampRef = useRef<THREE.InstancedMesh>(null);
   const poleRef = useRef<THREE.InstancedMesh>(null);
   const headRef = useRef<THREE.InstancedMesh>(null);
-  /** 차량 전조등. 밤에만 밝게 켜진다 */
-  const beamRef = useRef<THREE.InstancedMesh>(null);
 
   const elapsed = useRef(0);
   // 마지막으로 램프에 반영한 신호. 색이 바뀐 프레임에만 색 버퍼를 다시 올린다.
   const shownSignal = useRef<SignalState | null>(null);
 
-  const scratch = useMemo(
-    () => ({
-      matrix: new THREE.Matrix4(),
-      hidden: new THREE.Matrix4().makeScale(0, 0, 0),
-      position: new THREE.Vector3(),
-      quaternion: new THREE.Quaternion(),
-      up: new THREE.Vector3(0, 1, 0),
-      bodyScale: new THREE.Vector3(TRAFFIC.bodyWidth, TRAFFIC.bodyHeight, TRAFFIC.bodyLength),
-      beamScale: new THREE.Vector3(TRAFFIC.bodyWidth * 0.82, 0.16, 0.12),
-      cabinScale: new THREE.Vector3(TRAFFIC.cabinWidth, TRAFFIC.cabinHeight, TRAFFIC.cabinLength),
-    }),
-    [],
-  );
-
-  // 차량 색은 바뀌지 않는다. 매 프레임 갱신하는 것은 행렬뿐이다.
-  useLayoutEffect(() => {
-    const body = bodyRef.current;
-    const cabin = cabinRef.current;
-    if (!body || !cabin) return;
-
-    const color = new THREE.Color();
-    plan.cars.forEach((spec, index) => {
-      color.set(MOVING_CAR_PALETTE[spec.tone % MOVING_CAR_PALETTE.length]);
-      body.setColorAt(index, color);
-      color.set(CABIN_COLOR);
-      cabin.setColorAt(index, color);
-    });
-
-    if (body.instanceColor) body.instanceColor.needsUpdate = true;
-    if (cabin.instanceColor) cabin.instanceColor.needsUpdate = true;
-  }, [plan]);
+  /*
+   * 그리는 쪽이 읽는 공유 배열. 매 프레임 고쳐 쓴다 — setState로 올리면 초당
+   * 60회 리렌더가 되어 성능 예산을 지킬 수 없다.
+   */
+  const poses = useMemo(() => createPoses(plan.cars.length), [plan]);
+  const tones = useMemo(() => plan.cars.map((spec) => spec.tone), [plan]);
+  const fleet = useMemo(() => partitionFleet(tones), [tones]);
 
   // 신호등은 움직이지 않는다 — 행렬을 한 번만 쓰고 이후에는 색만 바꾼다.
   useLayoutEffect(() => {
@@ -226,11 +199,7 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
   const speedScale = reducedMotion ? 0.7 : 1;
 
   useFrame((_, rawDelta) => {
-    const body = bodyRef.current;
-    const cabin = cabinRef.current;
     const lamp = lampRef.current;
-    const beam = beamRef.current;
-    if (!body || !cabin) return;
 
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
     elapsed.current += dt;
@@ -283,13 +252,13 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
       }
     }
 
-    /* ---------------- 행렬 ---------------- */
+    /* ---------------- 자세 ---------------- */
     const cullSq = TRAFFIC.cullDistance * TRAFFIC.cullDistance;
-    let dirty = false;
 
     for (let index = 0; index < plan.cars.length; index += 1) {
       const spec = plan.cars[index];
       const state = runtime[index];
+      const pose = poses[index];
 
       const coordinate = coordinateFromU(state.u, spec.direction, halfSpan);
       const x = spec.axis === "z" ? spec.lanePosition : coordinate;
@@ -298,46 +267,18 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
       const dx = x - camera.position.x;
       const dz = z - camera.position.z;
       if (dx * dx + dz * dz > cullSq) {
-        if (state.visible) {
-          state.visible = false;
-          body.setMatrixAt(index, scratch.hidden);
-          cabin.setMatrixAt(index, scratch.hidden);
-          if (beam) beam.setMatrixAt(index, scratch.hidden);
-          dirty = true;
-        }
+        state.visible = false;
+        pose.visible = false;
         continue;
       }
+
       state.visible = true;
-
-      scratch.quaternion.setFromAxisAngle(scratch.up, state.yaw);
+      pose.visible = true;
+      pose.x = x;
       /* 차도 위를 달린다 — 언덕에서는 차도 함께 오르내려야 한다 */
-      const ground = terrainHeight(x, z);
-      scratch.position.set(x, ground + TRAFFIC.bodyCenterY, z);
-      scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.bodyScale);
-      body.setMatrixAt(index, scratch.matrix);
-
-      scratch.position.set(x, ground + TRAFFIC.cabinCenterY, z);
-      scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.cabinScale);
-      cabin.setMatrixAt(index, scratch.matrix);
-
-      // 전조등은 차 앞면에 붙인다. yaw가 곧 진행 방향이라 sin/cos로 앞을 구한다.
-      if (beam) {
-        const nose = TRAFFIC.bodyLength / 2;
-        scratch.position.set(
-          x + Math.sin(state.yaw) * nose,
-          TRAFFIC.bodyCenterY + 0.05,
-          z + Math.cos(state.yaw) * nose,
-        );
-        scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.beamScale);
-        beam.setMatrixAt(index, scratch.matrix);
-      }
-      dirty = true;
-    }
-
-    if (dirty) {
-      body.instanceMatrix.needsUpdate = true;
-      cabin.instanceMatrix.needsUpdate = true;
-      if (beam) beam.instanceMatrix.needsUpdate = true;
+      pose.y = terrainHeight(x, z);
+      pose.z = z;
+      pose.yaw = state.yaw;
     }
 
     /* ---------------- 신호 색 ---------------- */
@@ -362,27 +303,16 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
 
   return (
     <group>
-      {/*
-        frustumCulled를 끈다. InstancedMesh 경계구는 한 번 계산 후 캐시되는데
-        차량은 매 프레임 움직여 캐시가 곧 틀린 값이 된다 (Crowd.tsx와 같은 이유).
-      */}
-      <instancedMesh
-        ref={bodyRef}
-        args={[undefined, undefined, Math.max(1, plan.cars.length)]}
-        frustumCulled={false}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <ToonMaterial />
-      </instancedMesh>
-
-      <instancedMesh
-        ref={cabinRef}
-        args={[undefined, undefined, Math.max(1, plan.cars.length)]}
-        frustumCulled={false}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <ToonMaterial />
-      </instancedMesh>
+      {VEHICLE_MODELS.map((model, index) => (
+        <VehicleInstances
+          key={model.url}
+          model={model}
+          slots={fleet[index]}
+          poses={poses}
+          tones={tones}
+          glow={glow}
+        />
+      ))}
 
       <instancedMesh ref={poleRef} args={[undefined, undefined, posts.length]}>
         <boxGeometry args={[1, 1, 1]} />
@@ -392,19 +322,6 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
       <instancedMesh ref={headRef} args={[undefined, undefined, posts.length]}>
         <boxGeometry args={[1, 1, 1]} />
         <ToonMaterial color={POLE_COLOR} />
-      </instancedMesh>
-
-      {/* 전조등 — 조명을 받지 않는다. 밤에는 색이 밝아져 스스로 빛나 보인다 */}
-      <instancedMesh
-        ref={beamRef}
-        args={[undefined, undefined, Math.max(1, plan.cars.length)]}
-        frustumCulled={false}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <meshBasicMaterial
-          color={mixHex(BEAM_OFF_COLOR, BEAM_LIT_COLOR, glow)}
-          toneMapped={false}
-        />
       </instancedMesh>
 
       {/* 램프는 조명을 받지 않는다 — 역광에서도 신호 색이 살아 있어야 한다 */}

@@ -77,7 +77,7 @@ const LEGACY = new Map<string, number>([
   ["src/game/world/Crowd.tsx", 537],
   ["src/game/world/GroundSurfaces.tsx", 307],
   ["src/game/world/Sea.tsx", 431],
-  ["src/game/world/Traffic.tsx", 418],
+  ["src/game/world/Traffic.tsx", 335],
   ["src/game/world/atlasTextures.ts", 546],
   ["src/game/world/cityDetails.ts", 723],
   ["src/game/world/cityLayout.ts", 800],

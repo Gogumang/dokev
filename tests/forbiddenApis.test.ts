@@ -81,29 +81,24 @@ describe("금지한 API를 쓰지 않는가", () => {
      * 로더가 목록 밖에 생기면 여기서 걸린다 — CSP(`connect-src 'self'`) 안에서만
      * 받는다는 약속도 그때 함께 흔들린다.
      *
-     * 둘째가 대장이다. 예고 동작이 **게임플레이 그 자체**라서 열었다 — 팔이
-     * 올라가는 1.1초가 피할 때를 아는 유일한 단서인데, 상자로는 그 팔이 안
-     * 올라간다. 캐릭터와 같은 종류의 **한 번의 판단**이지 문이 열린 것이 아니다.
+     * 한때 **둘**이었다(캐릭터·대장). 차량까지 오면 셋이 되는데, 그렇게 늘어나면
+     * 「적어 둔 곳에서만」은 적는 습관이지 규칙이 아니게 된다 — 받는 일을
+     * `modelCache.ts` 하나로 모으고 목록을 다시 하나로 되돌렸다.
      */
-    const LOADER_HOMES = new Set([
-      "src/game/player/CharacterModel.tsx",
-      "src/game/combat/BossModel.tsx",
-    ]);
+    const LOADER_HOME = "src/game/scene/modelCache.ts";
 
     const offenders = sources
-      .filter(({ path }) => !LOADER_HOMES.has(path))
+      .filter(({ path }) => path !== LOADER_HOME)
       .filter(({ text }) => /\b(fetch\s*\(|new XMLHttpRequest|TextureLoader|GLTFLoader)/.test(text))
       .map(({ path }) => path);
     expect(offenders, `외부에서 받아 오는 곳:\n${offenders.join("\n")}`).toEqual([]);
   });
 
-  it("적어 둔 곳은 실제로 로더를 쓴다", () => {
+  it("그 하나는 실제로 로더를 쓴다", () => {
     // 예외로 적어 두고 정작 안 쓰면, 이 검사가 아무것도 안 지키면서 문만 열어 둔다
-    for (const path of ["src/game/player/CharacterModel.tsx", "src/game/combat/BossModel.tsx"]) {
-      const home = sources.find((file) => file.path === path);
-      expect(home, `${path}가 없다`).toBeDefined();
-      expect(home?.text, `${path}가 로더를 안 쓴다`).toMatch(/GLTFLoader/);
-    }
+    const home = sources.find((file) => file.path === "src/game/scene/modelCache.ts");
+    expect(home, "받는 자리가 없다").toBeDefined();
+    expect(home?.text, "받는 자리가 로더를 안 쓴다").toMatch(/GLTFLoader/);
   });
 });
 
@@ -277,7 +272,11 @@ describe("public에 에셋이 들어오지 않는가", () => {
      *
      * 셋 다 원본은 117~120MB짜리 Meshy 출력이었다(300만 삼각형). 여기 있는
      * 것은 절차를 거친 결과다 — 알베도만 남기고, 512²로 줄이고, 단순화하고,
-     * draco로 압축했다.
+     * `quantize`로 압축했다(draco는 앱의 로더가 못 읽는다, ASSET_PLAN 8.1).
+     *
+     * **세 축을 각각 눌러 넣었다.** 길이만 맞춘 첫 반입은 폭이 2.3~3.3m로
+     * 나왔는데 차선은 1.7m 기준이라 마주 오는 차와 겹쳤다. 지금 파일이 실제로
+     * 그 크기인지는 `tests/trafficFleet.test.ts`가 잰다.
      */
     "public/models/traffic-compact-car.glb",
     "public/models/traffic-city-minibus.glb",
@@ -330,7 +329,7 @@ describe("public에 에셋이 들어오지 않는가", () => {
   it("배경 차량이 예산을 넘지 않는다", () => {
     /*
      * 차종당 압축 후 350KB — `assets/concepts/meshy/vehicles/README.md` 6항.
-     * 지금은 59~73KB다.
+     * 지금은 103~122KB다(1,778~1,988 삼각형).
      *
      * 셋을 따로 재는 이유: 합계만 보면 하나가 커진 것을 다른 둘이 가려 준다.
      * 실제로 원본은 셋 다 117MB가 넘었고, 그때도 합계 자만 있었다면 「셋 다

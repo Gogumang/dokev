@@ -13,12 +13,12 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { BOSS, type BossPhase } from "@/game/combat/bossSim";
 import { BOSS_BODY } from "@/game/combat/bossBody";
 import { bossClipFor, bossPlaybackRate, holdsLastFrame } from "@/game/combat/bossClips";
 import { MAX_DELTA_SECONDS } from "@/game/config/tuning";
+import { loadGltf, type LoadedModel } from "@/game/scene/modelCache";
 import { createOutline, disposeOutline, paintToon } from "@/game/scene/toonModel";
 
 const MODEL_URL = "/models/boss-scrap-foreman.glb";
@@ -28,26 +28,6 @@ const MODEL_HEIGHT = 1.7;
 
 /** 동작을 바꿀 때 겹치는 시간(초). 예고는 짧아야 하므로 캐릭터보다 촘촘하다 */
 const CROSSFADE = 0.12;
-
-interface Loaded {
-  scene: THREE.Group;
-  clips: THREE.AnimationClip[];
-}
-
-/** 한 번만 받는다 — 컴포넌트가 다시 마운트돼도 같은 약속을 나눠 쓴다 */
-let pending: Promise<Loaded> | null = null;
-
-function loadModel(): Promise<Loaded> {
-  pending ??= new Promise<Loaded>((resolve, reject) => {
-    new GLTFLoader().load(
-      MODEL_URL,
-      (gltf) => resolve({ scene: gltf.scene, clips: gltf.animations }),
-      undefined,
-      reject,
-    );
-  });
-  return pending;
-}
 
 /** 단계가 실제로 지속되는 시간(초). 0이면 동작 길이를 그대로 쓴다 */
 function phaseSeconds(phase: BossPhase): number {
@@ -65,14 +45,14 @@ export interface BossModelProps {
 }
 
 export function BossModel({ source, fallback }: BossModelProps) {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [loaded, setLoaded] = useState<LoadedModel | null>(null);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const actions = useRef(new Map<string, THREE.AnimationAction>());
   const playing = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    loadModel().then(
+    loadGltf(MODEL_URL).then(
       (model) => {
         if (alive) setLoaded(model);
       },

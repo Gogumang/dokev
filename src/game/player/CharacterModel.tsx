@@ -18,9 +18,9 @@
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { MAX_DELTA_SECONDS, PLAYER_HEIGHT } from "@/game/config/tuning";
+import { loadGltf, type LoadedModel } from "@/game/scene/modelCache";
 import { createOutline, disposeOutline, paintToon } from "@/game/scene/toonModel";
 import {
   CLIP,
@@ -39,31 +39,6 @@ const MODEL_HEIGHT = 1.7;
 
 /** 동작을 바꿀 때 겹치는 시간(초). 0이면 툭툭 끊긴다 */
 const CROSSFADE = 0.18;
-
-interface Loaded {
-  scene: THREE.Group;
-  clips: THREE.AnimationClip[];
-}
-
-/**
- * 한 번만 받는다.
- *
- * 컴포넌트가 다시 마운트돼도(포토 모드 전환 등) 같은 약속을 나눠 쓴다 —
- * 매번 받으면 1MB를 여러 번 받는다.
- */
-let pending: Promise<Loaded> | null = null;
-
-function loadModel(): Promise<Loaded> {
-  pending ??= new Promise<Loaded>((resolve, reject) => {
-    new GLTFLoader().load(
-      MODEL_URL,
-      (gltf) => resolve({ scene: gltf.scene, clips: gltf.animations }),
-      undefined,
-      reject,
-    );
-  });
-  return pending;
-}
 
 export interface CharacterModelProps {
   /** 매 프레임 갱신되는 공유 객체 — 씬이 쓰고 여기서 읽는다 */
@@ -108,14 +83,14 @@ function applyAlpha(scene: THREE.Object3D, alpha: number, previous: number): voi
 }
 
 export function CharacterModel({ motion, fallback, fade }: CharacterModelProps) {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [loaded, setLoaded] = useState<LoadedModel | null>(null);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const actions = useRef(new Map<string, THREE.AnimationAction>());
   const playing = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    loadModel()
+    loadGltf("/character.glb")
       .then((model) => {
         if (alive) setLoaded(model);
       })
