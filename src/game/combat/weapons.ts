@@ -28,14 +28,15 @@ export type WeaponKind = "melee" | "ranged";
 
 /** 탄이 어떻게 나는가. 근접 무기는 null이다 */
 export interface BoltSpec {
-  /** 날아가는 속도(m/s) */
+  /** 날아가는 속도(m/s). 사거리는 speed × lifeSeconds다 */
   speed: number;
-  /** 수명(초). 사거리는 speed × lifeSeconds다 */
   lifeSeconds: number;
   /** 나가는 높이(m) — 아이 가슴 높이 */
   spawnHeight: number;
   /** 명중 판정 반경(m) */
   hitRadius: number;
+  /** 무지개 자국을 남기는지. **활만** — 35m를 나는 탄이라 어디로 갔는지가 안 읽혔다 */
+  rainbow?: boolean;
 }
 
 export interface Weapon {
@@ -65,7 +66,7 @@ export interface Weapon {
 }
 
 /**
- * 여섯 자루 — 근접 셋, 원거리 셋.
+ * 여섯 자루 — 드는 것은 둘이다(`WEAPON_ORDER`).
  *
  * 늘릴 때마다 **정말 다른가**를 먼저 본다. 이름만 다른 무기가 다섯 있는
  * 것보다 손맛이 갈리는 셋이 낫다 — `tests/weapons.test.ts`가 「다른 축이
@@ -217,7 +218,7 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
     damage: 2,
     knockbackScale: 0.35,
     /** 사거리 35.2m — 도시 한 블록 건너까지 닿는다 */
-    bolt: { speed: 22, lifeSeconds: 1.6, spawnHeight: 1.15, hitRadius: 0.7 },
+    bolt: { speed: 22, lifeSeconds: 1.6, spawnHeight: 1.15, hitRadius: 0.7, rainbow: true },
   },
 };
 

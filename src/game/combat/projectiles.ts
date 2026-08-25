@@ -165,6 +165,8 @@ export interface PlayerBolt extends Projectile {
   radius: number;
   /** 맞으면 깎는 체력 */
   damage: number;
+  /** 뒤에 무지개 자국을 남기는지. 무기가 정한다(`BoltSpec.rainbow`) */
+  rainbow: boolean;
 }
 
 /** 동시에 떠 있을 수 있는 플레이어 탄 수. 후딜이 있어 많이 쌓이지 않는다 */
@@ -209,6 +211,7 @@ export function fireWeaponBolt(
     life: spec.lifeSeconds,
     radius: spec.hitRadius,
     damage,
+    rainbow: spec.rainbow === true,
   };
 
   // 오래된 것부터 밀어낸다. 상한이 없으면 인스턴스 버퍼를 넘긴다.
