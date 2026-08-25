@@ -7,7 +7,7 @@
  * 하나뿐이라 로봇 한 기를 상대하는 방법이 한 가지였다.
  *
  * 무기별로 코드 분기를 두지 않는다. 도깨비 능력을 배율 몇 개로 기술해 둔
- * 것과 같은 방식이다 — **전투 규칙은 이 표를 읽기만 하고**, 셋째 무기를
+ * 것과 같은 방식이다 — **전투 규칙은 이 표를 읽기만 하고**, 다음 무기를
  * 더할 때 전투 코드를 고치지 않는다.
  *
  * three.js도 React도 모른다.
@@ -65,7 +65,7 @@ export interface Weapon {
 }
 
 /**
- * 세 자루 — 근접 둘, 원거리 하나.
+ * 여섯 자루 — 근접 셋, 원거리 셋.
  *
  * 늘릴 때마다 **정말 다른가**를 먼저 본다. 이름만 다른 무기가 다섯 있는
  * 것보다 손맛이 갈리는 셋이 낫다 — `tests/weapons.test.ts`가 「다른 축이
@@ -277,4 +277,18 @@ export function weaponRange(weapon: Weapon): number {
 /** 한 번의 휘두르기 전체 길이(초) */
 export function swingSeconds(weapon: Weapon): number {
   return weapon.timing.windupSeconds + weapon.timing.activeSeconds + weapon.timing.recoverySeconds;
+}
+
+/**
+ * 화면에 쓰는 이름 — 무기 이름에 **사거리**를 붙인다.
+ *
+ * 이름만으로는 딱총이 얼마나 멀리 닿는지 알 수 없다. 근접은 부채꼴 사거리,
+ * 원거리는 탄이 나는 거리 — `weaponRange`가 그 둘을 한 값으로 답한다.
+ *
+ * HUD 알림과 성능 패널이 함께 쓴다. 둘이 각자 만들면 같은 무기가 화면 두 곳에
+ * 다른 이름으로 뜬다.
+ */
+export function weaponLabel(id: WeaponId): string {
+  const weapon = WEAPONS[id];
+  return `${weapon.name} · ${weaponRange(weapon).toFixed(0)}m`;
 }

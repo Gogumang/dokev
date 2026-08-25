@@ -18,17 +18,16 @@ import {
   findGrappleTarget,
   createLocomotionState,
   horizontalSpeed,
-  projectMotionView,
   resolveHorizontalCollisions,
   resolveMode,
   stepLocomotion,
   type Aabb,
   type GrappleAnchor,
   type LocomotionState,
-  type MotionView,
   type MoveInput,
   type Vec3,
 } from "@/game/player/locomotion";
+import { projectMotionView, type MotionView } from "@/game/player/motionView";
 
 const FRAME = 1 / 60;
 
@@ -137,7 +136,12 @@ describe("stepLocomotion — 가감속", () => {
     const state = makeState();
 
     // Act
-    const result = stepLocomotion(state, makeInput({ moveZ: 1, vehicle: "skateboard" as const }), 5, 0);
+    const result = stepLocomotion(
+      state,
+      makeInput({ moveZ: 1, vehicle: "skateboard" as const }),
+      5,
+      0,
+    );
 
     // Assert
     const speed = horizontalSpeed(result.velocity);
@@ -170,7 +174,8 @@ describe("stepLocomotion — 가감속", () => {
 
   it("cameraYaw를 90도 돌리면 이동 방향도 정확히 90도 돌아간다", () => {
     // Arrange — 카메라가 돌아간 만큼 입력 방향도 같이 돌아야 한다
-    const input = (cameraYaw: number) => makeInput({ moveZ: 1, vehicle: "skateboard" as const, cameraYaw });
+    const input = (cameraYaw: number) =>
+      makeInput({ moveZ: 1, vehicle: "skateboard" as const, cameraYaw });
 
     // Act
     const straight = run(makeState(), input(0), 240);
@@ -182,8 +187,10 @@ describe("stepLocomotion — 가감속", () => {
       dot,
       `straight=${JSON.stringify(straight.velocity)}, turned=${JSON.stringify(turned.velocity)}`,
     ).toBeCloseTo(0, 6);
-    expect(horizontalSpeed(turned.velocity), `speed was: ${horizontalSpeed(turned.velocity)}`)
-      .toBeCloseTo(horizontalSpeed(straight.velocity), 6);
+    expect(
+      horizontalSpeed(turned.velocity),
+      `speed was: ${horizontalSpeed(turned.velocity)}`,
+    ).toBeCloseTo(horizontalSpeed(straight.velocity), 6);
   });
 
   /**
@@ -219,7 +226,10 @@ describe("stepLocomotion — 점프", () => {
     const result = stepLocomotion(state, makeInput({ jump: true }), FRAME, 0);
 
     // Assert
-    expect(result.velocity.y, `velocity.y was: ${result.velocity.y}`).toBeCloseTo(JUMP_VELOCITY, 12);
+    expect(result.velocity.y, `velocity.y was: ${result.velocity.y}`).toBeCloseTo(
+      JUMP_VELOCITY,
+      12,
+    );
     expect(result.grounded, `grounded was: ${result.grounded}`).toBe(false);
     expect(result.landingImpact, `landingImpact was: ${result.landingImpact}`).toBe(0);
   });
@@ -239,9 +249,9 @@ describe("stepLocomotion — 점프", () => {
     // Act
     const result = stepLocomotion(state, makeInput({ jump: true }), FRAME, 0);
 
-    // Assert — 중력만 먹고 계속 떨어져야 한다
+    // Assert — 다시 뛰지 않고 자동 활강 중력을 받으며 계속 떨어져야 한다
     expect(result.velocity.y, `velocity.y was: ${result.velocity.y}`).toBeCloseTo(
-      -2 - GRAVITY * FRAME,
+      -2 - GRAVITY * GLIDE.gravityScale * FRAME,
       12,
     );
   });
@@ -259,7 +269,10 @@ describe("stepLocomotion — 점프", () => {
     const result = stepLocomotion(state, makeInput({ jump: true }), FRAME, 0);
 
     // Assert
-    expect(result.velocity.y, `velocity.y was: ${result.velocity.y}`).toBeCloseTo(JUMP_VELOCITY, 12);
+    expect(result.velocity.y, `velocity.y was: ${result.velocity.y}`).toBeCloseTo(
+      JUMP_VELOCITY,
+      12,
+    );
     expect(result.coyoteRemaining, `coyoteRemaining was: ${result.coyoteRemaining}`).toBe(0);
   });
 
@@ -303,10 +316,10 @@ describe("stepLocomotion — 점프", () => {
       landed.jumpBufferRemaining,
       `jumpBufferRemaining was: ${landed.jumpBufferRemaining}`,
     ).toBeCloseTo(JUMP_BUFFER_SECONDS, 12);
-    expect(
-      afterLanding.velocity.y,
-      `velocity.y was: ${afterLanding.velocity.y}`,
-    ).toBeCloseTo(JUMP_VELOCITY, 12);
+    expect(afterLanding.velocity.y, `velocity.y was: ${afterLanding.velocity.y}`).toBeCloseTo(
+      JUMP_VELOCITY,
+      12,
+    );
   });
 
   it("버퍼 유효 시간이 지난 뒤 착지하면 점프가 살아나지 않는다", () => {
@@ -324,9 +337,10 @@ describe("stepLocomotion — 점프", () => {
     const afterLanding = stepLocomotion(landed, makeInput(), FRAME, 0);
 
     // Assert — 위로 튀면 안 된다
-    expect(afterLanding.velocity.y, `velocity.y was: ${afterLanding.velocity.y}`).toBeLessThanOrEqual(
-      0,
-    );
+    expect(
+      afterLanding.velocity.y,
+      `velocity.y was: ${afterLanding.velocity.y}`,
+    ).toBeLessThanOrEqual(0);
     expect(afterLanding.grounded, `grounded was: ${afterLanding.grounded}`).toBe(true);
   });
 
@@ -677,6 +691,41 @@ describe("stepLocomotion — 도깨비 능력: 이단 점프", () => {
 });
 
 describe("stepLocomotion — 도깨비 능력: 활강", () => {
+  it("낙하 중 이단 점프를 누른 프레임에는 우산을 펼치지 않는다", () => {
+    // Arrange — 첫 점프 정점 뒤, 아직 공중 점프를 쓰지 않은 상태
+    const falling = makeState({
+      position: { x: 0, y: 4, z: 0 },
+      velocity: { x: 0, y: -3, z: 0 },
+      grounded: false,
+      coyoteRemaining: 0,
+      airJumpsUsed: 0,
+    });
+
+    // Act — 스페이스를 눌러 이단 점프를 발동한다
+    const result = stepLocomotion(falling, makeInput({ jump: true, jumpHeld: true }), FRAME, 0);
+
+    // Assert — 상승 속도는 붙지만, 하강 전까지 우산은 닫혀 있어야 한다
+    expect(result.velocity.y, `velocity.y was: ${result.velocity.y}`).toBe(AIR_JUMP_VELOCITY);
+    expect(result.gliding, `gliding was: ${result.gliding}`).toBe(false);
+  });
+
+  it("이단 점프를 쓴 뒤에는 키를 놓아도 하강하며 자동으로 활강한다", () => {
+    // Given — 두 번째 점프를 이미 썼고 정점에서 내려오기 시작했다
+    const afterAirJump = makeState({
+      grounded: false,
+      coyoteRemaining: 0,
+      airJumpsUsed: 1,
+      velocity: { x: 0, y: -3, z: 0 },
+      position: { x: 0, y: 10, z: 0 },
+    });
+
+    // When — 점프 키에서는 손을 뗀 상태다
+    const result = stepLocomotion(afterAirJump, makeInput({ jumpHeld: false }), FRAME, 0);
+
+    // Then
+    expect(result.gliding, `gliding was: ${result.gliding}`).toBe(true);
+  });
+
   it("떨어지는 중에 점프를 잡고 있으면 활강한다", () => {
     // Arrange
     const falling = makeState({
@@ -803,13 +852,9 @@ describe("stepLocomotion — 그래플", () => {
   const anchor = { x: 0, y: 8, z: 12 };
 
   it("요청하면 걸린다", () => {
-    const result = stepLocomotion(
-      makeState(),
-      makeInput({ grappleRequested: true }),
-      FRAME,
-      0,
-      [anchor],
-    );
+    const result = stepLocomotion(makeState(), makeInput({ grappleRequested: true }), FRAME, 0, [
+      anchor,
+    ]);
     expect(result.grapple, `grapple was: ${JSON.stringify(result.grapple)}`).toEqual(anchor);
   });
 
@@ -820,13 +865,9 @@ describe("stepLocomotion — 그래플", () => {
 
   it("걸린 뒤에는 지점 쪽으로 끌려간다", () => {
     // Arrange
-    let state = stepLocomotion(
-      makeState(),
-      makeInput({ grappleRequested: true }),
-      FRAME,
-      0,
-      [anchor],
-    );
+    let state = stepLocomotion(makeState(), makeInput({ grappleRequested: true }), FRAME, 0, [
+      anchor,
+    ]);
     const before = Math.hypot(anchor.x - state.position.x, anchor.z - state.position.z);
 
     // Act
@@ -839,13 +880,9 @@ describe("stepLocomotion — 그래플", () => {
 
   it("끌려가는 동안에는 중력에 떨어지지 않는다", () => {
     // 위쪽 지점으로 걸었으면 올라가야 한다
-    let state = stepLocomotion(
-      makeState(),
-      makeInput({ grappleRequested: true }),
-      FRAME,
-      0,
-      [anchor],
-    );
+    let state = stepLocomotion(makeState(), makeInput({ grappleRequested: true }), FRAME, 0, [
+      anchor,
+    ]);
     const startY = state.position.y;
     for (let i = 0; i < 10; i += 1) {
       state = stepLocomotion(state, makeInput(), FRAME, 0, [anchor]);
@@ -854,13 +891,9 @@ describe("stepLocomotion — 그래플", () => {
   });
 
   it("도착하면 자동으로 놓고 대기가 걸린다", () => {
-    let state = stepLocomotion(
-      makeState(),
-      makeInput({ grappleRequested: true }),
-      FRAME,
-      0,
-      [anchor],
-    );
+    let state = stepLocomotion(makeState(), makeInput({ grappleRequested: true }), FRAME, 0, [
+      anchor,
+    ]);
     for (let i = 0; i < 200 && state.grapple; i += 1) {
       state = stepLocomotion(state, makeInput(), FRAME, 0, [anchor]);
     }
@@ -869,13 +902,9 @@ describe("stepLocomotion — 그래플", () => {
   });
 
   it("점프로 중간에 취소할 수 있다", () => {
-    let state = stepLocomotion(
-      makeState(),
-      makeInput({ grappleRequested: true }),
-      FRAME,
-      0,
-      [anchor],
-    );
+    let state = stepLocomotion(makeState(), makeInput({ grappleRequested: true }), FRAME, 0, [
+      anchor,
+    ]);
     state = stepLocomotion(state, makeInput(), FRAME, 0, [anchor]);
     state = stepLocomotion(state, makeInput({ jump: true }), FRAME, 0, [anchor]);
     expect(state.grapple, "cancelled").toBeNull();
@@ -886,13 +915,9 @@ describe("stepLocomotion — 그래플", () => {
     const justReleased = makeState({ grappleCooldown: 0.4 });
 
     // Act
-    const result = stepLocomotion(
-      justReleased,
-      makeInput({ grappleRequested: true }),
-      FRAME,
-      0,
-      [anchor],
-    );
+    const result = stepLocomotion(justReleased, makeInput({ grappleRequested: true }), FRAME, 0, [
+      anchor,
+    ]);
 
     // Assert
     expect(result.grapple, "still cooling down").toBeNull();
@@ -923,6 +948,7 @@ describe("이동 상태가 화면으로 나가는가", () => {
       x: -999,
       z: -999,
       facing: -999,
+      viewYaw: 0,
     };
   }
 
@@ -935,7 +961,7 @@ describe("이동 상태가 화면으로 나가는가", () => {
       landingImpact: 6.5,
     };
     const view = unset();
-    projectMotionView(view, state, 7.4, "run");
+    projectMotionView(view, state, 7.4, "run", 0);
 
     expect(view.speed, "속도가 안 나갔다").toBe(7.4);
     expect(view.mode, "이동 방식이 안 나갔다 — 달려도 걷는 자세가 된다").toBe("run");
@@ -952,8 +978,8 @@ describe("이동 상태가 화면으로 나가는가", () => {
     const walking = unset();
     const running = unset();
 
-    projectMotionView(walking, state, 2, "walk");
-    projectMotionView(running, state, 7.4, "run");
+    projectMotionView(walking, state, 2, "walk", 0);
+    projectMotionView(running, state, 7.4, "run", 0);
 
     expect(walking.mode).toBe("walk");
     expect(running.mode).toBe("run");
@@ -962,10 +988,10 @@ describe("이동 상태가 화면으로 나가는가", () => {
 
   it("움직이면 자리가 따라간다 — 한 번만 채우면 지도가 멈춘다", () => {
     const view = unset();
-    projectMotionView(view, createLocomotionState({ x: 0, y: 0, z: 0 }), 0, "walk");
+    projectMotionView(view, createLocomotionState({ x: 0, y: 0, z: 0 }), 0, "walk", 0);
     const before = { x: view.x, z: view.z };
 
-    projectMotionView(view, createLocomotionState({ x: 30, y: 0, z: 40 }), 5, "run");
+    projectMotionView(view, createLocomotionState({ x: 30, y: 0, z: 40 }), 5, "run", 0);
     expect(view.x, `x ${before.x} → ${view.x}`).not.toBe(before.x);
     expect(view.z, `z ${before.z} → ${view.z}`).not.toBe(before.z);
   });
@@ -1032,9 +1058,10 @@ describe("진행 방향을 무엇으로 잡는가", () => {
     // +x로 가고 있으므로 facing이 PI/2 쪽으로 와야 한다
     const toVelocity = Math.abs(after.facing - Math.PI / 2);
     const toOld = Math.abs(after.facing - Math.PI);
-    expect(toVelocity, `facing ${after.facing} (진행 ${Math.PI / 2}, 이전 ${Math.PI})`).toBeLessThan(
-      toOld,
-    );
+    expect(
+      toVelocity,
+      `facing ${after.facing} (진행 ${Math.PI / 2}, 이전 ${Math.PI})`,
+    ).toBeLessThan(toOld);
   });
 
   it("멈춰 있으면 보던 방향을 지킨다 — 정지 중에 방향이 튀면 안 된다", () => {
@@ -1067,6 +1094,7 @@ describe("이동 상태의 칸을 검사가 다 보는가", () => {
       x: -999,
       z: -999,
       facing: -999,
+      viewYaw: 0,
     });
 
     const state = {
@@ -1076,7 +1104,7 @@ describe("이동 상태의 칸을 검사가 다 보는가", () => {
       gliding: false,
       landingImpact: 3.2,
     };
-    projectMotionView(view.watched, state, 5.5, "run");
+    projectMotionView(view.watched, state, 5.5, "run", 0);
 
     expect(view.watched.speed, "속도").toBe(5.5);
     expect(view.watched.mode, "이동 방식").toBe("run");
@@ -1085,7 +1113,12 @@ describe("이동 상태의 칸을 검사가 다 보는가", () => {
     expect(view.watched.landingImpact, "착지 충격").toBe(3.2);
     expect(view.watched.x, "자리 x").toBeCloseTo(4, 6);
     expect(view.watched.z, "자리 z").toBeCloseTo(-2, 6);
-    expect(view.watched.facing, "바라보는 방향").toBeCloseTo(0.8, 6);
+    expect(view.watched.facing, "몸이 향한 방향").toBeCloseTo(0.8, 6);
+    /*
+     * 화면이 보는 방향. 몸이 향한 쪽과 **다른 값**이어야 한다 — 둘이 같으면
+     * 제자리에서 시점만 돌렸을 때 지도가 안 도는 버그가 돌아온다.
+     */
+    expect(view.watched.viewYaw, "화면이 보는 방향").toBeCloseTo(0, 6);
 
     expect(view.unreadFields(), "아무도 안 보는 칸이 있다").toEqual([]);
   });

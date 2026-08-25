@@ -167,7 +167,10 @@ describe("자판기를 실제로 마주치는가", () => {
         if (gap < closest) closest = gap;
       }
     }
-    expect(VENDING.reachMeters, `반경 ${VENDING.reachMeters}m, 최소 간격 ${closest.toFixed(1)}m`).toBeLessThan(closest);
+    expect(
+      VENDING.reachMeters,
+      `반경 ${VENDING.reachMeters}m, 최소 간격 ${closest.toFixed(1)}m`,
+    ).toBeLessThan(closest);
   });
 });
 

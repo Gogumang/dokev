@@ -110,9 +110,10 @@ describe("돌아오는가", () => {
 describe("평상시와 절정이 실제로 다른가", () => {
   it("절정이 평상시보다 진하다", () => {
     // 백로그가 요구한 검사. 같으면 상수로 되돌아간 것이고, 그때 조용하면 안 된다
-    expect(GRADE.saturationPeak, `${GRADE.saturationPeak} vs ${GRADE.saturationCalm}`).toBeGreaterThan(
-      GRADE.saturationCalm,
-    );
+    expect(
+      GRADE.saturationPeak,
+      `${GRADE.saturationPeak} vs ${GRADE.saturationCalm}`,
+    ).toBeGreaterThan(GRADE.saturationCalm);
     expect(GRADE.contrastPeak, `${GRADE.contrastPeak} vs ${GRADE.contrastCalm}`).toBeGreaterThan(
       GRADE.contrastCalm,
     );

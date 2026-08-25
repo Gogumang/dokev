@@ -413,7 +413,12 @@ export function buildCityLayout(): CityLayout {
           top: terrainHeight(x, z) + height,
         });
 
-        addSetback(setbacks, colliders, { x, y: height / 2, z, width, height, depth, tone, blockIndex }, random);
+        addSetback(
+          setbacks,
+          colliders,
+          { x, y: height / 2, z, width, height, depth, tone, blockIndex },
+          random,
+        );
       }
     }
   }
@@ -556,8 +561,7 @@ export function buildCityLayout(): CityLayout {
        * `index + 1`은 다음 줄의 왼쪽 끝이다. 거기까지 시장이면 도로가 아니라
        * 월드를 가로질러 천막이 걸린다.
        */
-      hasEastNeighbour:
-        index % CITY.gridSize < CITY.gridSize - 1 && isMarket(index + 1),
+      hasEastNeighbour: index % CITY.gridSize < CITY.gridSize - 1 && isMarket(index + 1),
       buildings: buildingsByBlock.get(index) ?? [],
     }));
 
@@ -589,12 +593,12 @@ export function buildCityLayout(): CityLayout {
       ...blockCenter(index),
       buildings: buildingsByBlock.get(index) ?? [],
     }));
-  undergrowth.push(
-    ...buildUndergrowth(undergrowthBlocks, CITY.blockSize, treeExclusions, random),
-  );
+  undergrowth.push(...buildUndergrowth(undergrowthBlocks, CITY.blockSize, treeExclusions, random));
 
   neon.push(
-    ...buildNeon(buildings.filter((building) => zoneForBlock(building.blockIndex).id === "downtown")),
+    ...buildNeon(
+      buildings.filter((building) => zoneForBlock(building.blockIndex).id === "downtown"),
+    ),
   );
   /*
    * 도로를 따라 놓이는 것들은 격자 치수와 구역 판정을 인자로 받는다

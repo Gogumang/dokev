@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { DOKEBI, DOKEBI_ORDER } from "@/game/dokebi/roster";
 
+import { collectSources, readCode } from "./support/source";
+
 /*
  * 특정 도깨비 이름이 화면 문구에 박히지 않았는지.
  *
@@ -17,10 +19,7 @@ import { DOKEBI, DOKEBI_ORDER } from "@/game/dokebi/roster";
  */
 
 /** 이름 정의가 있어도 되는 곳 — 여기가 정본이다 */
-const DEFINITION_FILES = [
-  "src/game/dokebi/roster.ts",
-  "src/game/dokebi/companionMotion.ts",
-];
+const DEFINITION_FILES = ["src/game/dokebi/roster.ts", "src/game/dokebi/companionMotion.ts"];
 
 function collect(dir: string): string[] {
   const files: string[] = [];
@@ -70,13 +69,15 @@ describe("도깨비 이름", () => {
      * 이름을 못 쓰게만 하면 아무 데도 안 나오게 된다. HUD가 데이터에서
      * 받아 쓰는 경로가 실제로 있는지 확인한다.
      */
-    const hud = readFileSync("src/components/hud/WorldHud.tsx", "utf8");
+    const hud = collectSources("src/components/hud").map(readCode).join("\n");
     expect(hud).toContain("dokebiName");
 
-    const touch = readFileSync("src/components/hud/TouchControls.tsx", "utf8");
+    // 터치 버튼도 같은 경로를 쓴다 — 「초롱」을 박으면 다른 동료일 때 거짓말이 된다
+    const touch = readFileSync("src/components/hud/TouchButtons.tsx", "utf8");
     expect(touch).toContain("dokebiName");
 
-    const notices = readFileSync("src/components/hud/Notices.tsx", "utf8");
-    expect(notices).toContain("speaker");
+    // 말풍선의 화자 이름도 데이터에서 온다
+    const speech = readFileSync("src/components/hud/views/Speech.tsx", "utf8");
+    expect(speech).toContain("speaker");
   });
 });

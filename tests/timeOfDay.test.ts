@@ -21,7 +21,13 @@ describe("TIME_OF_DAY", () => {
 
   it("모든 색이 유효한 hex다", () => {
     for (const preset of Object.values(TIME_OF_DAY)) {
-      for (const key of ["sky", "hemisphereSky", "hemisphereGround", "sunColor", "fillColor"] as const) {
+      for (const key of [
+        "sky",
+        "hemisphereSky",
+        "hemisphereGround",
+        "sunColor",
+        "fillColor",
+      ] as const) {
         expect(HEX.test(preset[key]), `${preset.id}.${key} was: ${preset[key]}`).toBe(true);
       }
     }
@@ -150,9 +156,10 @@ describe("어느 시간대에도 세계가 보이는가", () => {
   it("모든 시간대에 해가 살아 있다", () => {
     for (const id of TIME_OF_DAY_ORDER) {
       const preset = TIME_OF_DAY[id];
-      expect(preset.sunIntensity, `${preset.name}의 해 밝기 ${preset.sunIntensity}`).toBeGreaterThan(
-        0.2,
-      );
+      expect(
+        preset.sunIntensity,
+        `${preset.name}의 해 밝기 ${preset.sunIntensity}`,
+      ).toBeGreaterThan(0.2);
     }
   });
 

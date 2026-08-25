@@ -186,7 +186,7 @@ describe("전체 지도가 읽히는가", () => {
    * 구역 색만 얹으니 뒤의 3D 월드가 그대로 비쳐, 지도 위로 캐릭터와 간판이
    * 보였다 — 열어 보고서야 알았다.
    */
-  const raw = readFileSync("src/components/hud/CityMap.tsx", "utf8");
+  const raw = readFileSync("src/game/systems/cityMapPaint.ts", "utf8");
   // 주석은 걷어낸다 — 왜 이렇게 고쳤는지 적어 둔 문장까지 걸리면 기록을 못 남긴다
   const map = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
 
@@ -213,7 +213,7 @@ describe("완주 화면이 다음 할 일을 알려 주는가", () => {
    * **남은 도깨비가 있다는 사실을 마지막 화면이 말해 주지 않았다** — 거기서
    * 모르면 게임을 닫는다.
    */
-  const panels = readFileSync("src/components/hud/StatusPanels.tsx", "utf8");
+  const panels = readFileSync("src/components/hud/ResultPanel.tsx", "utf8");
 
   it("두 번째 완주에도 화면이 뜬다", () => {
     /*
@@ -223,10 +223,13 @@ describe("완주 화면이 다음 할 일을 알려 주는가", () => {
      *
      * 여정이 끝나지 않은 동안(다음 여정 진행 중)에 되돌린다.
      */
-    expect(panels, "닫힘 표시가 다시 꺼지지 않는다").toContain("setDismissed(false)");
-    const at = panels.indexOf("setDismissed(false)");
-    const before = panels.slice(Math.max(0, at - 200), at);
-    expect(before, "완주 중에 닫힘을 되돌린다").toContain("if (!questView.completed)");
+    /*
+     * 규칙은 `hudViews`의 완주 걸쇠로 옮겼고, **값으로 재는 검사**가 그것을
+     * 지킨다(`tests/hudViews.test.ts`). 여기서는 화면이 그 걸쇠를 실제로
+     * 쓰는지만 본다 — 규칙을 옮겨 놓고 화면이 옛 길로 가면 소용이 없다.
+     */
+    expect(panels, "완주 걸쇠를 쓰지 않는다").toContain("stepResultLatch");
+    expect(panels, "닫는 길이 걸쇠를 지나지 않는다").toContain("dismissResult");
   });
 
   it("완주한 순간의 값을 굳힌다", () => {
@@ -237,12 +240,14 @@ describe("완주 화면이 다음 할 일을 알려 주는가", () => {
      *
      * 낭독기에도 아프다: 숫자가 계속 바뀌는 `aria-live` 영역은 끝없이 읽힌다.
      */
-    expect(panels, "완주 뒤에도 값을 다시 담는다").toContain("!captured.current");
-    expect(panels).toContain("captured.current = true");
-    // 다음 완주를 위해 되돌리기도 해야 한다 — 안 그러면 두 번째에 첫 숫자가 뜬다
-    expect(panels, "기록을 되돌리지 않아 두 번째 완주에 첫 숫자가 뜬다").toContain(
-      "captured.current = false",
-    );
+    /*
+     * 굳히는 규칙도 걸쇠가 들고 있다. 화면 쪽에서 볼 것은 **기록을 손으로 다시
+     * 만들지 않는가**뿐이다 — 여기서 `summary`를 그대로 그리면 걸쇠를 지나도
+     * 화면은 다시 시계가 된다.
+     */
+    expect(panels, "완주 걸쇠를 쓰지 않는다").toContain("stepResultLatch");
+    const view = readFileSync("src/components/hud/views/ResultPanel.tsx", "utf8");
+    expect(view, "모양 쪽이 살아 있는 값을 직접 읽는다").not.toContain("summary");
   });
 
   it("만난 도깨비 수를 보여 준다", () => {
@@ -265,7 +270,13 @@ describe("완주 화면이 다음 할 일을 알려 주는가", () => {
      * 목표 패널도 같은 문장을 보여 주고 있었다 — **한 화면에 같은 말이 두 번**
      * 있었다. 완주 화면을 처음 열어 보고 알았다.
      */
-    expect(panels).toContain("if (snapshot.completed) return null;");
+    /*
+     * 「다 마쳤으면 목표 패널을 비운다」는 이제 `questPanelView`의 `visible`이다.
+     * 그 규칙은 값으로 재고(`tests/hudViews.test.ts`), 여기서는 모양 쪽이 그
+     * 값을 실제로 따르는지 본다.
+     */
+    const quest = readFileSync("src/components/hud/views/QuestPanel.tsx", "utf8");
+    expect(quest).toContain("if (!view.visible) return null;");
   });
 
   it("숫자 칸이 좁은 화면에서 접히지 않는다", () => {
@@ -335,10 +346,14 @@ describe("위쪽 가운데가 겹치지 않는가", () => {
     expect(offenders, offenders.join("\n")).toEqual([]);
   });
 
-  it("한 컨테이너가 셋을 쌓는다", () => {
+  it("한 컨테이너가 좌하단을 쌓는다", () => {
     /*
-     * 이름 셋은 **의도한 배치**다(좌하단에 속도·체력·미니맵). 목록이 낡는
+     * 이름 둘은 **의도한 배치**다(좌하단에 체력·미니맵). 목록이 낡는
      * 종류가 아니라, 누가 하나를 컨테이너 밖으로 옮기는 것을 막는 검사다.
+     *
+     * 셋이던 것이 둘이 됐다 — 속도계는 만드는 사람이 읽는 계기라 성능 패널로
+     * 갔고, 무기는 바꾼 직후에만 뜨는 알림이 됐다 (DESIGN_GUIDE 「세계가 먼저,
+     * UI는 나중에」의 상시 노출 세 가지 밖이었다).
      *
      * 다만 본문을 「첫 `</div>`까지」로 자르고 있었다. 자식이 전부 자기닫음
      * 태그라 지금은 맞지만, 하나라도 `<div>`로 감싸면 본문이 거기서 끊겨
@@ -347,7 +362,7 @@ describe("위쪽 가운데가 겹치지 않는가", () => {
      * 변경을 막는 검사는 결국 지워진다. 깊이로 자른다.
      */
     const body = containerBody("flex-col-reverse items-start");
-    for (const name of ["SpeedReadout", "HealthPanel", "Minimap"]) {
+    for (const name of ["HealthPanel", "Minimap"]) {
       expect(body, `${name}이 컨테이너 밖에 있다`).toContain(`<${name}`);
     }
   });
@@ -364,11 +379,16 @@ describe("자리가 드러난 것을 알려 주는가", () => {
    * 잡아도, 지도를 직접 열어 보기 전에는 새 자리가 생긴 줄 모른다 —
    * 보상이 있는데 보상이 있다는 사실이 전달되지 않았다.
    */
-  const notice = readFileSync("src/components/hud/ShrineNotice.tsx", "utf8");
+  /*
+   * 규칙(무엇을 언제 알리는가)과 모양(무엇이라 적는가)이 나뉘었다. 둘 다 본다 —
+   * 한쪽만 보면 나머지 한쪽이 조용히 사라져도 통과한다.
+   */
+  const notice = readFileSync("src/components/hud/Prompts.tsx", "utf8");
+  const view = readFileSync("src/components/hud/views/Prompts.tsx", "utf8");
 
   it("만나기 전 단계를 알린다", () => {
     expect(notice).toContain("pendingDiscoveries");
-    expect(notice).toContain("찾아갈 자리가 생겼다");
+    expect(view).toContain("찾아갈 자리가 생겼다");
   });
 
   it("이름을 미리 밝히지 않는다", () => {
@@ -378,14 +398,23 @@ describe("자리가 드러난 것을 알려 주는가", () => {
      */
     // 넷을 손으로 적어 두었었다 — 다섯 번째 도깨비의 이름은 검사되지 않는다
     for (const id of DOKEBI_ORDER) {
-      expect(notice, `${DOKEBI[id].name}을 미리 밝힌다`).not.toContain(DOKEBI[id].name);
+      expect(view, `${DOKEBI[id].name}을 미리 밝힌다`).not.toContain(DOKEBI[id].name);
     }
-    expect(notice, "이름을 값으로 꺼내 쓴다").not.toContain("spirit.name");
+    expect(view, "이름을 값으로 꺼내 쓴다").not.toContain("spirit.name");
   });
 
   it("이어서 하는 판에서 옛 자리를 새 것처럼 알리지 않는다", () => {
-    // 첫 확인은 건너뛰어야 한다 — 안 그러면 들어갈 때마다 알림이 뜬다
-    expect(notice).toContain("known.current === null");
+    /*
+     * 첫 표본은 조용히 삼켜야 한다 — 안 그러면 들어갈 때마다 알림이 뜬다.
+     *
+     * 전에는 컴포넌트가 `known.current === null`로 직접 판단했다. 지금은
+     * 걸쇠(`hudHold`)에 `quietFirst`로 넘기고, 그 규칙 자체는 값으로 재는
+     * 검사가 따로 지킨다(`tests/hudHold.test.ts`).
+     */
+    const shrine = notice.slice(notice.indexOf("export function ShrineNotice"));
+    expect(shrine.slice(0, 1400), "첫 표본을 조용히 삼키지 않는다").toMatch(
+      /useHeld\([\s\S]*?,\s*true,?\s*\)/,
+    );
   });
 
   it("알림이 스스로 자리를 잡지 않는다", () => {
@@ -398,13 +427,16 @@ describe("자리가 드러난 것을 알려 주는가", () => {
      * 겹침이 돌아온다.
      */
     for (const path of [
-      "src/components/hud/ShrineNotice.tsx",
-      "src/components/hud/Notices.tsx",
+      "src/components/hud/views/Prompts.tsx",
+      "src/components/hud/views/Alerts.tsx",
     ]) {
       const source = readCode(path);
       const centered = source.match(/absolute left-1\/2 -translate-x-1\/2/g) ?? [];
       // Notices에는 위쪽 구역 배너가 하나 남아 있다
-      expect(centered.length, `${path}에 스스로 자리 잡는 알림이 ${centered.length}개`).toBeLessThan(2);
+      expect(
+        centered.length,
+        `${path}에 스스로 자리 잡는 알림이 ${centered.length}개`,
+      ).toBeLessThan(2);
     }
   });
 
@@ -419,9 +451,9 @@ describe("자리가 드러난 것을 알려 주는가", () => {
   it("HUD에 실제로 달려 있다", () => {
     // 만들어만 두고 안 걸면 아무 일도 일어나지 않는다
     const hud = readdirSync("src/components/hud")
-    .filter((name) => name.endsWith(".tsx"))
-    .map((name) => readFileSync(join("src/components/hud", name), "utf8"))
-    .join("\n");
+      .filter((name) => name.endsWith(".tsx"))
+      .map((name) => readFileSync(join("src/components/hud", name), "utf8"))
+      .join("\n");
     expect(hud).toContain("<ShrineNotice");
   });
 });
@@ -443,9 +475,9 @@ describe("우상단 패널이 포개지지 않는가", () => {
 
   it("한 컨테이너가 둘을 쌓는다", () => {
     const hud = readdirSync("src/components/hud")
-    .filter((name) => name.endsWith(".tsx"))
-    .map((name) => readFileSync(join("src/components/hud", name), "utf8"))
-    .join("\n");
+      .filter((name) => name.endsWith(".tsx"))
+      .map((name) => readFileSync(join("src/components/hud", name), "utf8"))
+      .join("\n");
     const stack = hud.slice(hud.indexOf("flex flex-col items-end"));
     const body = stack.slice(0, stack.indexOf("</div>"));
     expect(body).toContain("<PerfPanel");
@@ -501,7 +533,6 @@ describe("HUD 네 구역이 모두 컨테이너를 쓰는가", () => {
   });
 });
 
-
 /**
  * 쌓는 컨테이너 안에 놓인 컴포넌트 이름들.
  *
@@ -518,8 +549,10 @@ describe("HUD 네 구역이 모두 컨테이너를 쓰는가", () => {
  * 배치라 정상)의 좌표를 읽었다.
  */
 function definitionOf(name: string): string | null {
-  const path = `src/components/hud/${name}.tsx`;
-  if (existsSync(path)) return readCode(path);
+  for (const dir of ["src/components/hud", "src/components/hud/views"]) {
+    const path = `${dir}/${name}.tsx`;
+    if (existsSync(path)) return readCode(path);
+  }
 
   const hud = readCode("src/components/hud/WorldHud.tsx");
   const at = hud.search(new RegExp(`^function ${name}\\(`, "m"));
@@ -588,18 +621,31 @@ function bodyOf(source: string, openTagAt: number): string {
  * 같은 규칙을 받는다.
  */
 function stackContainers(): StackContainer[] {
-  const hud = readCode("src/components/hud/WorldHud.tsx");
-  const opener = /className="([^"]*\bflex-col(?:-reverse)?\b[^"]*)"/g;
+  /*
+   * `WorldHud.tsx` 한 파일만 훑고 있었다. 구역을 파일로 나누자 컨테이너가
+   * 전부 그쪽으로 옮겨갔고 검사는 「하나도 없다」고 했다 — 지키려는 것은
+   * **HUD의 쌓는 컨테이너**이지 그것이 어느 파일에 있는가가 아니다.
+   */
+  /*
+   * **자리를 잡는** 컨테이너만 본다(`absolute`). 파일을 나누고 한 폴더를
+   * 통째로 훑기 시작하자, 화살표 안쪽의 세로 정렬 같은 **그냥 레이아웃**까지
+   * 컨테이너로 잡혀 「누를 것이 없는데 뒤를 막는다」고 했다 — 그것들은 이미
+   * `pointer-events-none`인 상자 안에 있어 아무것도 막지 않는다.
+   */
+  const opener = /className="([^"]*\babsolute\b[^"]*\bflex-col(?:-reverse)?\b[^"]*)"/g;
 
-  return [...hud.matchAll(opener)].map((match) => ({
-    // 실패 메시지에서 어느 컨테이너인지 알아볼 수 있어야 한다
-    marker: match[1]
-      .split(/\s+/)
-      .filter((word) => word.startsWith("flex") || word.startsWith("items"))
-      .join(" "),
-    className: match[1],
-    body: bodyOf(hud, match.index),
-  }));
+  return collectSources("src/components/hud").flatMap((path) => {
+    const source = readCode(path);
+    return [...source.matchAll(opener)].map((match) => ({
+      // 실패 메시지에서 어느 컨테이너인지 알아볼 수 있어야 한다
+      marker: match[1]
+        .split(/\s+/)
+        .filter((word) => word.startsWith("flex") || word.startsWith("items"))
+        .join(" "),
+      className: match[1],
+      body: bodyOf(source, match.index),
+    }));
+  });
 }
 
 /**
@@ -609,12 +655,21 @@ function stackContainers(): StackContainer[] {
  * 누를 것이 있는 것이다 — 우상단 컨테이너에는 도감이 들어가고 도감 안에
  * 버튼이 넷 있다. 자식 파일까지 한 단계 들어가서 본다.
  */
-function hasClickable(body: string): boolean {
+function hasClickable(body: string, seen = new Set<string>()): boolean {
   if (/<(button|HudButton)\b/.test(body)) return true;
 
+  /*
+   * 한 겹만 따라가고 있었다. 도감이 항목 카드를 따로 떼자 버튼이 두 겹
+   * 아래로 내려갔고, 검사는 「누를 것이 없다」고 했다 — 화면은 그대로인데
+   * 파일이 하나 늘었다는 이유로.
+   *
+   * 본 파일은 다시 안 본다. 서로를 부르는 컴포넌트가 생기면 무한히 돈다.
+   */
   for (const tag of body.matchAll(/<([A-Z]\w+)/g)) {
     const path = `src/components/hud/${tag[1]}.tsx`;
-    if (existsSync(path) && /<button\b/.test(readCode(path))) return true;
+    if (seen.has(path) || !existsSync(path)) continue;
+    seen.add(path);
+    if (hasClickable(readCode(path), seen)) return true;
   }
   return false;
 }
@@ -629,7 +684,9 @@ describe("컨테이너가 클릭을 막지 않는가", () => {
    * 닫히는 것을 확인했다.
    */
   it("컨테이너를 실제로 찾았다", () => {
-    expect(stackContainers().length, `찾은 컨테이너 ${stackContainers().length}개`).toBeGreaterThan(3);
+    expect(stackContainers().length, `찾은 컨테이너 ${stackContainers().length}개`).toBeGreaterThan(
+      3,
+    );
   });
 
   it("버튼이 있으면 통과시키고 없으면 가로채지 않는다", () => {
@@ -669,7 +726,7 @@ describe("좌상단이 겹치지 않는가", () => {
      * 주석을 걷어낸 것으로 보는 편이 맞지만, 여기서는 **주석에 좌표를 적어
      * 두면 오히려 걸려야** 한다 — 스스로 자리를 잡지 말라는 규칙이다.
      */
-    const notices = readFileSync("src/components/hud/Notices.tsx", "utf8");
+    const notices = readFileSync("src/components/hud/views/Speech.tsx", "utf8");
     for (const name of ["CompanionSpeech", "ResidentSpeech"]) {
       const start = notices.indexOf(`export function ${name}`);
       expect(start, `${name}을 못 찾았다`).toBeGreaterThan(-1);
@@ -686,7 +743,7 @@ describe("좌상단이 겹치지 않는가", () => {
   });
 
   it("한 컨테이너가 말풍선을 쌓는다", () => {
-    const hud = readCode("src/components/hud/WorldHud.tsx");
+    const hud = readCode("src/components/hud/HudSpeech.tsx");
     const stack = hud.slice(hud.indexOf("flex flex-col gap-[var(--space-2)]"));
     const body = stack.slice(0, stack.indexOf("</div>"));
     expect(body, "동료 대사가 더미에 없다").toContain("<CompanionSpeech");
@@ -694,7 +751,7 @@ describe("좌상단이 겹치지 않는가", () => {
   });
 
   it("말풍선 더미가 목표 패널 아래에서 시작한다", () => {
-    const hud = readCode("src/components/hud/WorldHud.tsx");
+    const hud = readCode("src/components/hud/HudSpeech.tsx");
     const stack = hud.slice(hud.indexOf("flex flex-col gap-[var(--space-2)]"));
     const offset = Number(stack.match(/top: "calc\(var\(--safe-top\) \+ (\d+)px\)"/)?.[1] ?? 0);
     expect(offset, "말풍선 더미 위치를 찾지 못했다").toBeGreaterThan(0);
@@ -706,9 +763,14 @@ describe("좌상단이 겹치지 않는가", () => {
 
   it("목표 패널이 화면 맨 위에 붙는다", () => {
     // 아래로 내려오면 대사와의 간격 계산이 통째로 어긋난다
-    const panels = readCode("src/components/hud/StatusPanels.tsx");
-    const quest = panels.slice(panels.indexOf("export function QuestPanel"));
-    expect(quest.slice(0, 1200)).toContain('top: "var(--safe-top)"');
+    /*
+     * 접힌 모습과 펼친 모습 **둘 다** 맨 위에 붙어야 한다. 앞에서부터 1,200자만
+     * 보던 검사라, 접힘이 생기면서 펼친 쪽이 창 밖으로 밀려났다 — 글자 수는
+     * 규칙이 아니다.
+     */
+    const quest = readCode("src/components/hud/views/QuestPanel.tsx");
+    const tops = quest.match(/top: "var\(--safe-top\)"/g) ?? [];
+    expect(tops.length, "목표 패널이 화면 맨 위에 안 붙는다").toBe(2);
   });
 });
 
@@ -739,10 +801,14 @@ describe("완주 화면이 대화창과 부딪히지 않는가", () => {
      * 반대로 풀면(대화창을 숨기면) 사람이 방금 누른 것이 안 열려 고장으로
      * 보인다. 대화창 쪽에는 그런 조건이 붙지 않아야 한다.
      */
+    /*
+     * 도감은 우상단 구역으로 옮겨갔다 — 대화창이 어느 파일에 있든 규칙은 같다.
+     */
+    const sources = [hud, readCode("src/components/hud/HudTopRight.tsx")].join("\n");
     for (const tag of ["<CityMap", "<Codex"]) {
-      const at = hud.indexOf(tag);
+      const at = sources.indexOf(tag);
       expect(at, `${tag}을 못 찾았다`).toBeGreaterThan(-1);
-      const before = hud.slice(Math.max(0, at - 160), at);
+      const before = sources.slice(Math.max(0, at - 160), at);
       expect(before, `${tag}이 완주 화면에 밀린다`).not.toContain("questView.completed");
     }
   });
@@ -798,7 +864,8 @@ describe("저감 모션 장치가 조용히 사라지지 않는가", () => {
   const GATES = 20;
 
   const gates = collectSources("src").flatMap((path) => {
-    const found = readCode(path).match(/reducedMotion \?|if \(reducedMotion\)|!reducedMotion/g) ?? [];
+    const found =
+      readCode(path).match(/reducedMotion \?|if \(reducedMotion\)|!reducedMotion/g) ?? [];
     return found.map(() => path);
   });
 
@@ -811,9 +878,10 @@ describe("저감 모션 장치가 조용히 사라지지 않는가", () => {
     const byFile = [...new Set(gates)]
       .map((path) => `${path} (${gates.filter((g) => g === path).length})`)
       .join("\n");
-    expect(gates.length, `저감 모션 장치 ${gates.length}개 (기준 ${GATES}):\n${byFile}`).toBeGreaterThanOrEqual(
-      GATES,
-    );
+    expect(
+      gates.length,
+      `저감 모션 장치 ${gates.length}개 (기준 ${GATES}):\n${byFile}`,
+    ).toBeGreaterThanOrEqual(GATES);
   });
 });
 

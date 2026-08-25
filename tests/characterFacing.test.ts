@@ -61,7 +61,9 @@ describe("모델 방향 보정", () => {
      */
     const primitive = source.slice(source.lastIndexOf("<primitive"));
     expect(primitive, "primitive를 찾지 못했다").toContain("object={loaded.scene}");
-    expect(primitive, "y축 보정이 다시 붙었다").not.toMatch(/rotation=\{\[[^\]]*Math\.PI[^\]]*\]\}/);
+    expect(primitive, "y축 보정이 다시 붙었다").not.toMatch(
+      /rotation=\{\[[^\]]*Math\.PI[^\]]*\]\}/,
+    );
   });
 
   it("발바닥 기준을 가운데로 내리는 보정은 남아 있다", () => {

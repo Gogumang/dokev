@@ -48,9 +48,10 @@ describe("가까우면 캐릭터가 사라진다", () => {
      * 키보다 먼 데서 사라지면 멀쩡히 서 있는데도 몸이 없어진다. 카메라가
      * 사실상 몸 안에 들어왔을 때만 지워야 한다.
      */
-    expect(CHARACTER_FADE.end, `사라지는 거리 ${CHARACTER_FADE.end}m / 키 ${PLAYER_HEIGHT}m`).toBeLessThan(
-      PLAYER_HEIGHT,
-    );
+    expect(
+      CHARACTER_FADE.end,
+      `사라지는 거리 ${CHARACTER_FADE.end}m / 키 ${PLAYER_HEIGHT}m`,
+    ).toBeLessThan(PLAYER_HEIGHT);
   });
 
   it("씬이 실제로 값을 먹인다", () => {

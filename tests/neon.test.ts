@@ -62,7 +62,10 @@ describe("자리가 맞는가", () => {
           Math.abs(tube.x - b.x) <= b.width / 2 + 0.01 &&
           Math.abs(tube.z - b.z) <= b.depth / 2 + 0.01,
       );
-      expect(host, `(${tube.x.toFixed(1)}, ${tube.z.toFixed(1)}) 관에 짝이 되는 건물이 없다`).toBeDefined();
+      expect(
+        host,
+        `(${tube.x.toFixed(1)}, ${tube.z.toFixed(1)}) 관에 짝이 되는 건물이 없다`,
+      ).toBeDefined();
     }
   });
 

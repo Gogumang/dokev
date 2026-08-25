@@ -162,7 +162,9 @@ describe("화면과 사진이 갈라지지 않는다", () => {
 
   it("옮기다 실패해도 사진은 나온다", () => {
     // 색이 다른 사진이라도 사진이 없는 것보다 낫다
-    expect(capture, "사본 실패 시 원본으로 돌아가지 않는다").toMatch(/toned\([^)]*\)\s*\?\?\s*canvas/);
+    expect(capture, "사본 실패 시 원본으로 돌아가지 않는다").toMatch(
+      /toned\([^)]*\)\s*\?\?\s*canvas/,
+    );
   });
 
   it("정본 기록을 밖에서 직접 꺼내 쓰지 않는다", () => {
@@ -184,9 +186,7 @@ describe("화면과 사진이 갈라지지 않는다", () => {
       .filter((file) => /\bPHOTO_FILTERS\[[a-z]/.test(readFileSync(file, "utf8")))
       .map((file) => file.replace(/\\/g, "/"));
 
-    expect(offenders, `해석을 건너뛰고 정본에서 바로 꺼낸다:\n${offenders.join("\n")}`).toEqual(
-      [],
-    );
+    expect(offenders, `해석을 건너뛰고 정본에서 바로 꺼낸다:\n${offenders.join("\n")}`).toEqual([]);
   });
 
   it("화면은 포토 모드에서만 톤을 건다", () => {
@@ -235,7 +235,10 @@ describe("클립도 화면과 같아야 한다", () => {
      * 걸어 두면 창 크기가 바뀌는 순간 조용히 컬러로 돌아간다.
      */
     const mirror = capture.slice(capture.indexOf("function mirrorCanvas"));
-    const draw = mirror.slice(mirror.indexOf("const draw = ()"), mirror.indexOf("requestAnimationFrame(draw);\n    };"));
+    const draw = mirror.slice(
+      mirror.indexOf("const draw = ()"),
+      mirror.indexOf("requestAnimationFrame(draw);\n    };"),
+    );
     expect(draw, "그릴 때마다 톤을 다시 걸지 않는다").toContain("ctx.filter = tone;");
     expect(draw, "크기 변화를 보지 않는다").toContain("copy.width !== source.width");
   });

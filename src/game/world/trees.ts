@@ -161,9 +161,7 @@ function clearsExclusions(
   scale: number,
 ): boolean {
   const crown = WALL_MARGIN_PER_SCALE * scale;
-  return !exclusions.some(
-    (spot) => Math.hypot(spot.x - x, spot.z - z) < spot.radius + crown,
-  );
+  return !exclusions.some((spot) => Math.hypot(spot.x - x, spot.z - z) < spot.radius + crown);
 }
 
 /** 구역 번호 → 그 구역 건물들. 매 나무마다 전체를 훑지 않으려고 한 번만 만든다 */
@@ -279,7 +277,16 @@ function pushTree(
    * 않고 색만 바꾸면 전자가 되어 오류로 보인다.
    */
   if (blossomAt(x, z) < zone.blossomChance) {
-    pushBroadleafCrown(details, x, z, trunkHeight, crownSize, random, blockIndex, CROWN_TONE.blossom);
+    pushBroadleafCrown(
+      details,
+      x,
+      z,
+      trunkHeight,
+      crownSize,
+      random,
+      blockIndex,
+      CROWN_TONE.blossom,
+    );
     return;
   }
   if (zone.treeSpecies === "conifer") {
@@ -489,4 +496,3 @@ export function addStreetTrees(
     }
   }
 }
-

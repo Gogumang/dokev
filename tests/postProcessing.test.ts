@@ -108,8 +108,9 @@ describe("만든 자원을 놓는가", () => {
      * 렌더타깃은 화면 크기가 바뀔 때마다 다시 만든다. 놓지 않으면 창을
      * 몇 번 줄였다 늘리는 것만으로 GPU 메모리가 쌓인다.
      */
-    const created = (source.match(/new THREE\.(WebGLRenderTarget|ShaderMaterial|BufferGeometry)\(/g) ?? [])
-      .length;
+    const created = (
+      source.match(/new THREE\.(WebGLRenderTarget|ShaderMaterial|BufferGeometry)\(/g) ?? []
+    ).length;
     const disposed = (source.match(/\.dispose\(\)/g) ?? []).length;
     expect(disposed, `만든 ${created}개 / 놓은 ${disposed}개`).toBeGreaterThanOrEqual(created);
   });

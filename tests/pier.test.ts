@@ -45,9 +45,10 @@ describe("어디에 서 있는가", () => {
      */
     const start = pierStartX(layout.halfExtent);
     const deck = pierDeckY(layout.halfExtent);
-    expect(deck, `데크 ${deck.toFixed(2)}, 땅 ${terrainHeight(start, 0).toFixed(2)}`).toBeGreaterThan(
-      terrainHeight(start, 0),
-    );
+    expect(
+      deck,
+      `데크 ${deck.toFixed(2)}, 땅 ${terrainHeight(start, 0).toFixed(2)}`,
+    ).toBeGreaterThan(terrainHeight(start, 0));
   });
 });
 

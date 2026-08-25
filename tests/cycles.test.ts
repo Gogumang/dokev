@@ -4,7 +4,11 @@ import { collectSources, readCode } from "./support/source";
 
 import { DOKEBI_ORDER, nextDokebi } from "@/game/dokebi/roster";
 import { PHOTO_POSE_ORDER, nextPhotoPose } from "@/game/player/photoPose";
-import { PHOTO_FILTER_ORDER, nextPhotoFilter, photoFilterOrder } from "@/game/systems/photoFilter";
+import {
+  type PHOTO_FILTER_ORDER,
+  nextPhotoFilter,
+  photoFilterOrder,
+} from "@/game/systems/photoFilter";
 import { TIME_OF_DAY_ORDER, nextTimeOfDay } from "@/game/world/timeOfDay";
 import { WEAPON_ORDER, nextWeapon } from "@/game/combat/weapons";
 
@@ -104,7 +108,9 @@ describe("돌리는 것을 빠뜨리지 않았는가", () => {
 
   it("예외 목록이 낡지 않았다", () => {
     // 사라진 함수를 계속 면제해 두면 목록이 거짓이 된다
-    const sources = collectSources("src").map((path) => readCode(path)).join("\n");
+    const sources = collectSources("src")
+      .map((path) => readCode(path))
+      .join("\n");
     for (const name of Object.keys(HANDLED_ELSEWHERE)) {
       expect(sources, `${name}이 없다`).toContain(`export function ${name}`);
     }
@@ -150,7 +156,10 @@ describe("동료 바꾸기가 해금된 것만 돈다", () => {
       seen.add(current);
       current = nextDokebi(current, ALL, met);
     }
-    expect([...DOKEBI_ORDER].filter((id) => !seen.has(id)), "못 보는 도깨비").toEqual([]);
+    expect(
+      [...DOKEBI_ORDER].filter((id) => !seen.has(id)),
+      "못 보는 도깨비",
+    ).toEqual([]);
   });
 
   it("잠긴 것은 나오지 않는다", () => {

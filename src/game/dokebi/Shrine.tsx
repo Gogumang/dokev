@@ -152,14 +152,36 @@ function Shrine({
   const geometry = useMemo(
     () => ({
       // 돌무더기 — 아래로 갈수록 넓다. 세 단이면 쌓았다는 인상이 난다.
-      base: new THREE.CylinderGeometry(SHRINE_BODY.baseTopRadius, SHRINE_BODY.baseBottomRadius, SHRINE_BODY.baseHeight, 12),
-      middle: new THREE.CylinderGeometry(SHRINE_BODY.middleTopRadius, SHRINE_BODY.middleBottomRadius, SHRINE_BODY.middleHeight, 10),
-      top: new THREE.CylinderGeometry(SHRINE_BODY.topTopRadius, SHRINE_BODY.topBottomRadius, SHRINE_BODY.topHeight, 8),
+      base: new THREE.CylinderGeometry(
+        SHRINE_BODY.baseTopRadius,
+        SHRINE_BODY.baseBottomRadius,
+        SHRINE_BODY.baseHeight,
+        12,
+      ),
+      middle: new THREE.CylinderGeometry(
+        SHRINE_BODY.middleTopRadius,
+        SHRINE_BODY.middleBottomRadius,
+        SHRINE_BODY.middleHeight,
+        10,
+      ),
+      top: new THREE.CylinderGeometry(
+        SHRINE_BODY.topTopRadius,
+        SHRINE_BODY.topBottomRadius,
+        SHRINE_BODY.topHeight,
+        8,
+      ),
       orb: new THREE.SphereGeometry(SHRINE_BODY.orbRadius, 16, 12),
       // 알갱이는 아주 작아 면 수를 최소로 줄인다.
       mote: new THREE.SphereGeometry(SHRINE_BODY.moteRadius, 6, 4),
       // 위가 열린 원통. 뚜껑이 있으면 위에서 볼 때 원판이 떠 보인다.
-      beam: new THREE.CylinderGeometry(SHRINE_BODY.beamTopRadius, SHRINE_BODY.beamBottomRadius, BEAM_HEIGHT, 12, 1, true),
+      beam: new THREE.CylinderGeometry(
+        SHRINE_BODY.beamTopRadius,
+        SHRINE_BODY.beamBottomRadius,
+        BEAM_HEIGHT,
+        12,
+        1,
+        true,
+      ),
     }),
     [],
   );
@@ -177,7 +199,6 @@ function Shrine({
       for (const item of created) item.dispose();
     };
   }, [geometry]);
-
 
   useFrame((_, rawDelta) => {
     const root = rootRef.current;
@@ -198,7 +219,9 @@ function Shrine({
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
     elapsed.current += dt;
 
-    const fade = dissolving ? dissolveState((dissolveElapsed.current += dt)) : null;
+    // 누적과 사용을 나눈다 — 한 줄에 묶으면 「값을 읽는 줄」이 조용히 값을 바꾼다
+    if (dissolving) dissolveElapsed.current += dt;
+    const fade = dissolving ? dissolveState(dissolveElapsed.current) : null;
 
     if (orbRef.current) {
       const bob = reducedMotion ? 0 : Math.sin(elapsed.current * 1.6) * BOB_AMPLITUDE;

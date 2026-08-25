@@ -8,8 +8,8 @@
  * 사람이 무슨 일이 벌어지는지 읽는 곳이다.
  */
 
-import { useEffect, useState } from "react";
-
+import { shallowEqual, useSampled } from "@/components/hud/useSampled";
+import { weaponLabel } from "@/game/combat/weapons";
 import type { RuntimeStats } from "@/game/scene/sceneTypes";
 import type { QualityLevel } from "@/game/systems/quality";
 
@@ -22,18 +22,12 @@ export function PerfPanel({
   quality: QualityLevel;
   boss: { distance: number; phase: string };
 }) {
-  const [snapshot, setSnapshot] = useState<
-    (RuntimeStats & { bossDistance: number; bossPhase: string }) | null
-  >(null);
-
-  useEffect(() => {
-    // 4Hz면 읽기에 충분하고 리렌더 비용도 무시할 수 있다.
-    const id = window.setInterval(
-      () => setSnapshot({ ...stats, bossDistance: boss.distance, bossPhase: boss.phase }),
-      250,
-    );
-    return () => window.clearInterval(id);
-  }, [stats, boss]);
+  // 4Hz면 읽기에 충분하고 리렌더 비용도 무시할 수 있다.
+  const snapshot = useSampled(
+    () => ({ ...stats, bossDistance: boss.distance, bossPhase: boss.phase }),
+    250,
+    shallowEqual,
+  );
 
   /*
    * 아직 한 번도 측정되지 않은 상태를 0으로 보여 주면 안 된다.
@@ -53,25 +47,35 @@ export function PerfPanel({
           ["품질", quality],
         ]
       : [
-        ["FPS", snapshot.fps.toFixed(0)],
-        ["프레임", `${snapshot.frameMs.toFixed(1)} ms`],
-        ["드로우콜", String(snapshot.drawCalls)],
-        ["삼각형", snapshot.triangles.toLocaleString("ko-KR")],
-        ["힙", snapshot.heapMb > 0 ? `${snapshot.heapMb.toFixed(0)} MB` : "미지원"],
-        ["품질", quality],
-        /*
-         * 보스 상태.
-         *
-         * 브라우저에서 보스가 다가오지 않는 것을 40초간 보고도 원인을 못 찾았다 —
-         * 눈에 보이는 것이 "안 움직인다"뿐이라 매번 계측을 새로 붙여야 했다.
-         * 거리와 단계가 보이면 인지 범위 밖인지, 쫓다 멈춘 것인지 즉시 갈린다.
-         */
-        [
-          "보스",
-          Number.isFinite(snapshot.bossDistance)
-            ? `${snapshot.bossDistance.toFixed(1)}m ${snapshot.bossPhase}`
-            : "미접속",
-        ],
+          ["FPS", snapshot.fps.toFixed(0)],
+          ["프레임", `${snapshot.frameMs.toFixed(1)} ms`],
+          ["드로우콜", String(snapshot.drawCalls)],
+          ["삼각형", snapshot.triangles.toLocaleString("ko-KR")],
+          ["힙", snapshot.heapMb > 0 ? `${snapshot.heapMb.toFixed(0)} MB` : "미지원"],
+          ["품질", quality],
+          /*
+           * 속도와 무기.
+           *
+           * 둘 다 좌하단에 **늘** 붙어 있었다. 속도계는 주석부터 「튜닝 중 수치를
+           * 눈으로 확인하기 위한 임시 표시」였는데 그대로 남아, 플레이하는 사람의
+           * 화면에서 만드는 사람의 계기가 자리를 차지하고 있었다 — 그 자리가
+           * 여기다. 무기는 바꾼 직후 알림으로 따로 뜬다.
+           */
+          ["속도", `${snapshot.speed.toFixed(1)} m/s`],
+          ["무기", weaponLabel(snapshot.weapon)],
+          /*
+           * 보스 상태.
+           *
+           * 브라우저에서 보스가 다가오지 않는 것을 40초간 보고도 원인을 못 찾았다 —
+           * 눈에 보이는 것이 "안 움직인다"뿐이라 매번 계측을 새로 붙여야 했다.
+           * 거리와 단계가 보이면 인지 범위 밖인지, 쫓다 멈춘 것인지 즉시 갈린다.
+           */
+          [
+            "보스",
+            Number.isFinite(snapshot.bossDistance)
+              ? `${snapshot.bossDistance.toFixed(1)}m ${snapshot.bossPhase}`
+              : "미접속",
+          ],
         ];
 
   return (

@@ -53,9 +53,10 @@ describe("인도가 깔린 자리", () => {
       const col = Math.round(x / (CITY.blockSize + CITY.roadWidth) + (CITY.gridSize - 1) / 2);
       const row = Math.round(z / (CITY.blockSize + CITY.roadWidth) + (CITY.gridSize - 1) / 2);
       const index = row * CITY.gridSize + col;
-      expect(isUrbanBlock(index), `(${x.toFixed(1)}, ${z.toFixed(1)})의 인도가 자연 구역에 있다`).toBe(
-        true,
-      );
+      expect(
+        isUrbanBlock(index),
+        `(${x.toFixed(1)}, ${z.toFixed(1)})의 인도가 자연 구역에 있다`,
+      ).toBe(true);
       covered.add(index);
     }
 
@@ -104,7 +105,8 @@ describe("인도가 깔린 자리", () => {
       }
     }
     expect(worst, `${worstAt}에서 ${worst.toFixed(2)}m 어긋난다`).toBeLessThan(0.01);
-  });});
+  });
+});
 
 describe("사람이 딛는 면", () => {
   /*
@@ -167,9 +169,8 @@ describe("사람이 딛는 면", () => {
      */
     const source = readFileSync("src/game/scene/PlayerRig.tsx", "utf8");
     expect(source, "PlayerRig가 딛는 면을 읽지 않는다").toContain("surfaceHeight(");
-    expect(
-      source,
-      "발 높이를 아직 지형에서 읽는다",
-    ).not.toMatch(/groundHeight\s*=\s*terrainHeight\(/);
+    expect(source, "발 높이를 아직 지형에서 읽는다").not.toMatch(
+      /groundHeight\s*=\s*terrainHeight\(/,
+    );
   });
 });

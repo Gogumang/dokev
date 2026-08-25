@@ -12,7 +12,7 @@
  */
 
 import { attackElapsed, type AttackState, type EnemyState } from "@/game/combat/combatSim";
-import { type PlayerCombatState } from "@/game/combat/playerCombat";
+import type { PlayerCombatState } from "@/game/combat/playerCombat";
 import type { Weapon } from "@/game/combat/weapons";
 
 /** HUD가 읽는 플레이어 활력 — 하트와 쓰러짐 표시가 여기서 온다 */

@@ -16,7 +16,11 @@ import { describe, expect, it } from "vitest";
  * 어긋나면 여기서 잡힌다.
  */
 
-const DOCS = ["docs/PROJECT_PLAN.md", "docs/DESIGN_GUIDE.md", "docs/TRAILER_FEATURE_ANALYSIS.md"] as const;
+const DOCS = [
+  "docs/PROJECT_PLAN.md",
+  "docs/DESIGN_GUIDE.md",
+  "docs/TRAILER_FEATURE_ANALYSIS.md",
+] as const;
 
 function collect(dir: string): string[] {
   const files: string[] = [];
@@ -54,7 +58,8 @@ function headings(doc: string): Set<string> {
 describe("문서 인용", () => {
   it("행 번호로 인용하지 않는다", () => {
     const offenders: string[] = [];
-    const pattern = /(PROJECT_PLAN|DESIGN_GUIDE|TRAILER_FEATURE_ANALYSIS)[^\n]{0,16}?\d+\s*~?\s*\d*행/g;
+    const pattern =
+      /(PROJECT_PLAN|DESIGN_GUIDE|TRAILER_FEATURE_ANALYSIS)[^\n]{0,16}?\d+\s*~?\s*\d*행/g;
 
     for (const { path, text } of sources) {
       for (const match of text.match(pattern) ?? []) offenders.push(`${path}: ${match}`);

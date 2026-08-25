@@ -125,10 +125,9 @@ describe("소리 자원 정리", () => {
     for (const file of makers) {
       const created = file.source.match(/create(Oscillator|BufferSource)\(/g)?.length ?? 0;
       const stopped = file.source.match(/\.stop\(/g)?.length ?? 0;
-      expect(
-        stopped,
-        `${file.name}: 생성 ${created}개, 정지 ${stopped}개`,
-      ).toBeGreaterThanOrEqual(created);
+      expect(stopped, `${file.name}: 생성 ${created}개, 정지 ${stopped}개`).toBeGreaterThanOrEqual(
+        created,
+      );
     }
   });
 });

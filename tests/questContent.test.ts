@@ -14,7 +14,6 @@ import { buildCityLayout, ROAD_CENTERS } from "@/game/world/cityLayout";
 import { BOSS_QUEST, FIRST_RUN_QUEST } from "@/game/quest/questContent";
 import { CONTROL_CODES, CONTROLS } from "@/game/systems/controls";
 
-
 describe("안내문이 실제 규칙과 맞는가", () => {
   /*
    * 랜딩에 「진행 상황은 저장되지 않습니다」가 남아 있던 것과 같은 종류다.
@@ -73,7 +72,7 @@ describe("안내문이 실제 규칙과 맞는가", () => {
     expect(said, `힌트가 표식 모양을 말하지 않는다:\n${hints}`).toBeDefined();
     if (!said) return;
 
-    const map = readFileSync("src/components/hud/CityMap.tsx", "utf8");
+    const map = readFileSync("src/game/systems/cityMapPaint.ts", "utf8");
     const marks = map.slice(map.indexOf("const MARKS = {"), map.indexOf("} as const;"));
     const boss = /boss: \{ color: "(#[0-9a-fA-F]{6})", shape: "(\w+)"/.exec(marks);
     expect(boss, "지도의 대장 표식을 못 읽었다").toBeTruthy();
@@ -89,7 +88,7 @@ describe("안내문이 실제 규칙과 맞는가", () => {
      * 직접 가리킨다 — 앵커는 **그 코드에만 있는 모양**이어야 한다(예전에
      * 「BOSS_HOME.x의 첫 등장」으로 잘랐다가 엉뚱한 데를 검사했다).
      */
-    const bossDraw = map.slice(map.indexOf("toFullMapPixel(BOSS_HOME.x"));
+    const bossDraw = map.slice(map.indexOf("toFullMapPixel(boss.x"));
     const body = bossDraw.slice(0, 400);
     expect(body, "보스 표식이 삼각형이 아니다").toContain("lineTo");
     expect(body, "보스가 표식 상수를 쓰지 않는다").toContain("MARKS.boss.color");
@@ -172,12 +171,13 @@ describe("활강 목표에 실제로 닿을 수 있는가", () => {
     return gliding;
   }
 
-  const target =
-    FIRST_RUN_QUEST.steps.find((step) => step.objective.kind === "glide")?.objective.kind ===
-    "glide"
-      ? (FIRST_RUN_QUEST.steps.find((step) => step.objective.kind === "glide")
-          ?.objective as { kind: "glide"; seconds: number }).seconds
-      : 0;
+  /*
+   * 같은 단계를 두 번 찾아 놓고 한 번은 옵셔널로, 한 번은 단언으로 읽고 있었다 —
+   * 단계가 사라지면 앞은 undefined를 흘리고 뒤는 그것을 객체로 우겼다. 한 번만
+   * 찾고, 좁히는 일은 타입이 하게 둔다.
+   */
+  const glideStep = FIRST_RUN_QUEST.steps.find((step) => step.objective.kind === "glide");
+  const target = glideStep?.objective.kind === "glide" ? glideStep.objective.seconds : 0;
 
   it("활강 목표가 실제로 있다", () => {
     // 단계가 사라지면 아래 검사들이 0을 상대로 조용히 통과한다
@@ -397,7 +397,9 @@ describe("힌트가 말하는 키가 실제로 묶여 있는가", () => {
       if (!code) continue;
       checked += 1;
       const letter = /^Key([A-Z])$/.exec(code)?.[1] ?? code;
-      expect(row.keyboard, `${row.id}: 표는 "${row.keyboard}"인데 코드는 ${code}`).toContain(letter);
+      expect(row.keyboard, `${row.id}: 표는 "${row.keyboard}"인데 코드는 ${code}`).toContain(
+        letter,
+      );
     }
     expect(checked, `대조한 항목 ${checked}개`).toBeGreaterThan(8);
   });
@@ -411,11 +413,9 @@ describe("안내가 말하는 표식이 지도에 실제로 있는가", () => {
    *
    * 안내에 모양이 나오면 그 모양이 실제 표식에 있어야 한다.
    */
-  const map = readCode("src/components/hud/CityMap.tsx");
+  const map = readCode("src/game/systems/cityMapPaint.ts");
   const marks = map.slice(map.indexOf("const MARKS = {"), map.indexOf("} as const;"));
-  const shapes = new Set(
-    [...marks.matchAll(/shape: "(\w+)"/g)].map((match) => match[1]),
-  );
+  const shapes = new Set([...marks.matchAll(/shape: "(\w+)"/g)].map((match) => match[1]));
 
   /** 안내에 쓰는 말 → 표식의 모양 이름 */
   const SHAPE_WORDS: Record<string, string> = {
@@ -480,7 +480,7 @@ describe("여러 번 해야 하는 목표에 계수기가 있는가", () => {
 
   it("각 단계가 화면에 진행 수를 낸다", () => {
     const runner = readCode("src/game/quest/questRunner.ts");
-    const start = runner.indexOf("let counter = \"\";");
+    const start = runner.indexOf('let counter = "";');
     expect(start, "계수기를 만드는 곳을 못 찾았다").toBeGreaterThan(-1);
     const body = runner.slice(start, runner.indexOf("return {", start));
     expect(body.length, `잘라낸 길이 ${body.length}`).toBeGreaterThan(80);

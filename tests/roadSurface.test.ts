@@ -129,9 +129,10 @@ describe("차도 색", () => {
     const asphaltBase = luminance("#6f6e73");
     const road = asphaltBase * luminance(ROAD_SURFACE_COLOR);
     for (const id of ["plaza", "market"] as const) {
-      expect(road, `도로 ${road.toFixed(2)} vs ${id} ${luminance(ZONES[id].groundColor).toFixed(2)}`).toBeLessThan(
-        luminance(ZONES[id].groundColor),
-      );
+      expect(
+        road,
+        `도로 ${road.toFixed(2)} vs ${id} ${luminance(ZONES[id].groundColor).toFixed(2)}`,
+      ).toBeLessThan(luminance(ZONES[id].groundColor));
     }
   });
 });

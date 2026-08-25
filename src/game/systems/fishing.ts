@@ -43,13 +43,7 @@ export const FISHING = {
  * 모델을 만들지 않는다 — 이름으로 족하다(웹 다운로드 예산). 이 동네 바다에서
  * 나올 법한 것들로 고르고, 하나는 물고기가 아니다. 늘 성공만 하면 놀이가 아니다.
  */
-export const FISH_NAMES: readonly string[] = [
-  "감성돔",
-  "우럭",
-  "노래미",
-  "학꽁치",
-  "장화 한 짝",
-];
+export const FISH_NAMES: readonly string[] = ["감성돔", "우럭", "노래미", "학꽁치", "장화 한 짝"];
 
 export type FishingPhase = "idle" | "waiting" | "bite" | "caught" | "missed";
 

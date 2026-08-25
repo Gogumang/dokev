@@ -24,11 +24,9 @@ interface FakeStorage {
  * jsdom을 끌어오지 않는 이유: settings.ts가 쓰는 브라우저 API는 localStorage 하나뿐이라
  * DOM 전체를 띄우면 테스트가 느려지기만 하고 검증되는 것은 늘지 않는다.
  */
-function stubStorage(options: {
-  stored?: string | null;
-  getItemThrows?: boolean;
-  setItemThrows?: boolean;
-} = {}): FakeStorage {
+function stubStorage(
+  options: { stored?: string | null; getItemThrows?: boolean; setItemThrows?: boolean } = {},
+): FakeStorage {
   const storage: FakeStorage = {
     getItem: vi.fn(() => {
       if (options.getItemThrows) throw new DOMException("SecurityError");

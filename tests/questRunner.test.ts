@@ -28,8 +28,8 @@ function makeSignals(overrides: Partial<QuestSignals> = {}): QuestSignals {
     gliding: false,
     onBoard: false,
     defeatedTotal: 0,
-  bossDefeated: false,
-  cluesFound: 0,
+    bossDefeated: false,
+    cluesFound: 0,
     ...overrides,
   };
 }

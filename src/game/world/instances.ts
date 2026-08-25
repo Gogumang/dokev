@@ -63,4 +63,3 @@ export function projectInstances(
   // 절두체 컬링이 동작하려면 인스턴스 전체를 감싸는 경계구가 필요하다.
   mesh.computeBoundingSphere();
 }
-

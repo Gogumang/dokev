@@ -194,7 +194,7 @@ export const ZONES: Record<ZoneId, Zone> = {
     treeScale: 1.0,
     /* 광장은 첫 화면이다 — 여기 색이 월드의 첫인상을 정한다 */
     blossomChance: 0.55,
-    mood: { fogNearScale: 1, fogFarScale: 1, tint: "#ffe6c4", tintStrength: 0.10 },
+    mood: { fogNearScale: 1, fogFarScale: 1, tint: "#ffe6c4", tintStrength: 0.1 },
     build: { minLots: 2, maxLots: 2, minHeight: 6, maxHeight: 10, gapChance: 1, tones: [0] },
   },
   downtown: {
@@ -209,7 +209,14 @@ export const ZONES: Record<ZoneId, Zone> = {
     treeScale: 1.0,
     blossomChance: 0.35,
     mood: { fogNearScale: 0.92, fogFarScale: 0.94, tint: "#cfd8e8", tintStrength: 0.16 },
-    build: { minLots: 2, maxLots: 3, minHeight: 16, maxHeight: 34, gapChance: 0.08, tones: [0, 1, 2] },
+    build: {
+      minLots: 2,
+      maxLots: 3,
+      minHeight: 16,
+      maxHeight: 34,
+      gapChance: 0.08,
+      tones: [0, 1, 2],
+    },
   },
   market: {
     id: "market",
@@ -238,7 +245,14 @@ export const ZONES: Record<ZoneId, Zone> = {
     /* 골목마다 담 너머로 가지가 넘어오는 동네 */
     blossomChance: 0.5,
     mood: { fogNearScale: 1, fogFarScale: 1, tint: "#e4dcd2", tintStrength: 0.12 },
-    build: { minLots: 3, maxLots: 4, minHeight: 5, maxHeight: 12, gapChance: 0.18, tones: [3, 4, 5] },
+    build: {
+      minLots: 3,
+      maxLots: 4,
+      minHeight: 5,
+      maxHeight: 12,
+      gapChance: 0.18,
+      tones: [3, 4, 5],
+    },
   },
   shrine: {
     id: "shrine",

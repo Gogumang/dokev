@@ -129,7 +129,11 @@ export function stepBoss(
   }
 
   const facing =
-    state.facing + Math.max(-BOSS.turnRate * dt, Math.min(BOSS.turnRate * dt, shortestDelta(state.facing, Math.atan2(dx, dz))));
+    state.facing +
+    Math.max(
+      -BOSS.turnRate * dt,
+      Math.min(BOSS.turnRate * dt, shortestDelta(state.facing, Math.atan2(dx, dz))),
+    );
 
   if (distance <= BOSS.slamRange) {
     return { ...state, facing, phase: "windup", timer: BOSS.windupSeconds };
@@ -226,7 +230,35 @@ export interface BossView {
   healthRatio: number;
   telegraph: boolean;
   distance: number;
-  phase: string;
+  phase: BossPhase; // 화면이 이 값으로 동작을 고른다 — `string`이면 오타가 통과한다
+  /**
+   * 지금 서 있는 자리.
+   *
+   * 지도 둘과 화살표가 `BOSS_HOME`(처음 세운 자리)을 그리고 있었다 — 대장은
+   * 인지 반경 안에서 플레이어를 쫓아 움직이므로, 표식만 제자리에 남아 **지도가
+   * 가리킨 곳에 대장이 없었다.** 좌표를 두 번 적지 않기 위해 여기로 흘린다.
+   */
+  x: number;
+  z: number;
+}
+
+/**
+ * 화면이 들고 다닐 빈 상태를 만든다.
+ *
+ * 칸 목록을 `PlayClient`에 손으로 적어 두었더니 여기 칸이 늘어도 따라오지
+ * 않았다 — 좌표를 더할 때 실제로 그랬다. 처음 값도 정본이 정한다.
+ */
+export function createBossView(): BossView {
+  return {
+    engaged: false,
+    healthRatio: 1,
+    telegraph: false,
+    distance: Number.POSITIVE_INFINITY,
+    phase: "idle",
+    // 씬이 붙기 전에는 세워 둔 자리를 쓴다 — 0,0이면 지도가 도시 한가운데를 가리킨다
+    x: BOSS_HOME.x,
+    z: BOSS_HOME.z,
+  };
 }
 
 /**
@@ -253,6 +285,8 @@ export function projectBossView(
   view.telegraph = state.phase === "windup";
   view.distance = Math.hypot(playerX - state.x, playerZ - state.z);
   view.phase = state.phase;
+  view.x = state.x;
+  view.z = state.z;
 }
 
 /** 대장을 때린 결과가 흘러가는 곳 — 소리·퀘스트·해금이 여기서 읽는다 */

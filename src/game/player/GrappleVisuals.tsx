@@ -13,11 +13,7 @@ import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import {
-  ropePoints,
-  SEGMENT_FLOAT_COUNT,
-  toSegmentPositions,
-} from "@/game/player/grappleRope";
+import { ropePoints, SEGMENT_FLOAT_COUNT, toSegmentPositions } from "@/game/player/grappleRope";
 
 /** 씬이 매 프레임 채워 넣는 그래플 표시 상태 */
 export interface GrappleView {
@@ -96,7 +92,11 @@ export function projectGrappleView(
      * 장력 — 가까워질수록 1에 가까워져 줄이 펴진다. 걸린 직후에는 늘어져
      * 있다가 당겨지면서 팽팽해지는 변화가 「지금 끌려간다」를 말해 준다.
      */
-    const distance = Math.hypot(anchor.x - position.x, anchor.y - position.y, anchor.z - position.z);
+    const distance = Math.hypot(
+      anchor.x - position.x,
+      anchor.y - position.y,
+      anchor.z - position.z,
+    );
     view.tension = 1 - Math.min(1, Math.max(0, distance / maxRange));
     return;
   }

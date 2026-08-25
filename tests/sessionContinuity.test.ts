@@ -56,7 +56,12 @@ describe("퀘스트 이어가기", () => {
   it("저장한 단계에서 다시 시작한다", () => {
     memoryStorage();
 
-    saveProgress({ questStepIndex: 2, questCompleted: false, defeatedTotal: 7, questId: "first-run" });
+    saveProgress({
+      questStepIndex: 2,
+      questCompleted: false,
+      defeatedTotal: 7,
+      questId: "first-run",
+    });
     const restored = loadProgress();
 
     expect(restored, "저장한 진행을 읽지 못했다").not.toBeNull();
@@ -77,7 +82,12 @@ describe("퀘스트 이어가기", () => {
   it("두 번째 여정도 이어진다", () => {
     memoryStorage();
 
-    saveProgress({ questStepIndex: 1, questCompleted: false, defeatedTotal: 20, questId: "boss-hunt" });
+    saveProgress({
+      questStepIndex: 1,
+      questCompleted: false,
+      defeatedTotal: 20,
+      questId: "boss-hunt",
+    });
     const restored = loadProgress();
 
     expect(questById(restored?.questId ?? "").id, "여정 id를 잃어버렸다").toBe("boss-hunt");
@@ -101,7 +111,12 @@ describe("퀘스트 이어가기", () => {
 
   it("이어서 진행하면 완주까지 간다", () => {
     memoryStorage();
-    saveProgress({ questStepIndex: 3, questCompleted: false, defeatedTotal: 5, questId: "first-run" });
+    saveProgress({
+      questStepIndex: 3,
+      questCompleted: false,
+      defeatedTotal: 5,
+      questId: "first-run",
+    });
 
     const restored = loadProgress();
     let progress = {
@@ -563,8 +578,9 @@ describe("손상된 만남 기록", () => {
     withSettings([...DOKEBI_ORDER, ...DOKEBI_ORDER]);
     const met = loadSettings().metDokebi;
     const counted = met.filter((id) => DOKEBI[id].home).length;
-    expect(counted, `센 수 ${counted}, 셀 수 있는 수 ${FINDABLE_DOKEBI.length}`).toBeLessThanOrEqual(
-      FINDABLE_DOKEBI.length,
-    );
+    expect(
+      counted,
+      `센 수 ${counted}, 셀 수 있는 수 ${FINDABLE_DOKEBI.length}`,
+    ).toBeLessThanOrEqual(FINDABLE_DOKEBI.length);
   });
 });

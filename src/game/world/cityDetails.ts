@@ -174,12 +174,10 @@ const AWNING_DEPTH = 1.5;
 /** 차양이 처지는 각도. 수평이면 널빤지처럼 보인다 */
 const AWNING_TILT = 0.24;
 
-
 /** 벽면에서 살짝 띄우는 값. 정확히 붙이면 z-fighting이 난다 */
 const WALL_CLEARANCE = 0.08;
 /** 1층 상가 띠가 건물보다 튀어나온 정도의 절반 */
 const SHOPFRONT_OVERHANG = 0.25;
-
 
 /** 면 인덱스를 바깥 방향 각도로. 0=+Z, 1=+X, 2=-Z, 3=-X */
 function sideAngle(side: number): number {
@@ -514,8 +512,24 @@ function addRoadMarkings(details: CityDetails, halfExtent: number): void {
 
       // 중앙 황색 복선
       for (const gap of [-CENTER_LINE_GAP, CENTER_LINE_GAP]) {
-        pushMark(details, axis + gap, center, CENTER_LINE_WIDTH, segment, ROAD_MARK_TONE.yellow, index);
-        pushMark(details, center, axis + gap, segment, CENTER_LINE_WIDTH, ROAD_MARK_TONE.yellow, index);
+        pushMark(
+          details,
+          axis + gap,
+          center,
+          CENTER_LINE_WIDTH,
+          segment,
+          ROAD_MARK_TONE.yellow,
+          index,
+        );
+        pushMark(
+          details,
+          center,
+          axis + gap,
+          segment,
+          CENTER_LINE_WIDTH,
+          ROAD_MARK_TONE.yellow,
+          index,
+        );
       }
     }
 
@@ -525,8 +539,24 @@ function addRoadMarkings(details: CityDetails, halfExtent: number): void {
       if (isInsideIntersection(center, axes)) continue;
 
       for (const lane of [-LANE_LINE_OFFSET, LANE_LINE_OFFSET]) {
-        pushMark(details, axis + lane, center, LANE_LINE_WIDTH, DASH_LENGTH, ROAD_MARK_TONE.white, index);
-        pushMark(details, center, axis + lane, DASH_LENGTH, LANE_LINE_WIDTH, ROAD_MARK_TONE.white, index);
+        pushMark(
+          details,
+          axis + lane,
+          center,
+          LANE_LINE_WIDTH,
+          DASH_LENGTH,
+          ROAD_MARK_TONE.white,
+          index,
+        );
+        pushMark(
+          details,
+          center,
+          axis + lane,
+          DASH_LENGTH,
+          LANE_LINE_WIDTH,
+          ROAD_MARK_TONE.white,
+          index,
+        );
       }
     }
   });

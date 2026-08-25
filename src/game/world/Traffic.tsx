@@ -342,10 +342,7 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
 
     /* ---------------- 신호 색 ---------------- */
     const shown = shownSignal.current;
-    if (
-      lamp &&
-      (!shown || shown.alongZ !== signal.alongZ || shown.alongX !== signal.alongX)
-    ) {
+    if (lamp && (!shown || shown.alongZ !== signal.alongZ || shown.alongX !== signal.alongX)) {
       const color = new THREE.Color();
       const litZ = lampIndexOf(signal.alongZ);
       const litX = lampIndexOf(signal.alongX);
@@ -404,7 +401,10 @@ export function Traffic({ quality, reducedMotion, halfExtent, glow }: TrafficPro
         frustumCulled={false}
       >
         <boxGeometry args={[1, 1, 1]} />
-        <meshBasicMaterial color={mixHex(BEAM_OFF_COLOR, BEAM_LIT_COLOR, glow)} toneMapped={false} />
+        <meshBasicMaterial
+          color={mixHex(BEAM_OFF_COLOR, BEAM_LIT_COLOR, glow)}
+          toneMapped={false}
+        />
       </instancedMesh>
 
       {/* 램프는 조명을 받지 않는다 — 역광에서도 신호 색이 살아 있어야 한다 */}

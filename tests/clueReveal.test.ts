@@ -85,7 +85,7 @@ describe("흔적 표식이 지키는 약속", () => {
      * 지도에서 노란 마름모를 보고 찾아온 사람이 월드에서 다른 색을 만나면
      * 같은 것인 줄 모른다. 정본은 `CityMap`의 `MARKS.clue`다.
      */
-    const map = readCode("src/components/hud/CityMap.tsx");
+    const map = readCode("src/game/systems/cityMapPaint.ts");
     const marks = map.slice(map.indexOf("const MARKS = {"), map.indexOf("} as const;"));
     const clue = /clue: \{ color: "(#[0-9a-fA-F]{6})"/.exec(marks);
     expect(clue, "지도의 흔적 색을 못 읽었다").toBeTruthy();

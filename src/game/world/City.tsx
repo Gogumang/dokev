@@ -22,7 +22,12 @@ import * as THREE from "three";
 import { mixHex } from "@/game/core/color";
 import type { QualityPreset } from "@/game/systems/quality";
 import { atlasCellUv, getAtlas } from "@/game/world/atlasTextures";
-import { CAR_PALETTE, FIXTURE_TONE, type CityDetails, type DetailInstance } from "@/game/world/cityDetails";
+import {
+  CAR_PALETTE,
+  FIXTURE_TONE,
+  type CityDetails,
+  type DetailInstance,
+} from "@/game/world/cityDetails";
 import { Curbs, Ground, Sidewalks } from "@/game/world/GroundSurfaces";
 import { PondWater, Sea } from "@/game/world/Sea";
 import {
@@ -55,7 +60,12 @@ import { buildStandBoxes } from "@/game/world/vehicleStands";
 import { buildHanokRoofs, buildRoofs } from "@/game/world/roofs";
 import { HanokRoofs, Roofs } from "@/game/world/RoofMeshes";
 import { CITY, type BoxInstance, type CityLayout } from "@/game/world/cityLayout";
-import { collectVisible, partitionByBlock, visibleBlocks, visibleKey } from "@/game/world/streaming";
+import {
+  collectVisible,
+  partitionByBlock,
+  visibleBlocks,
+  visibleKey,
+} from "@/game/world/streaming";
 import { terrainHeight } from "@/game/world/terrain";
 import {
   FACADE_TONES,
@@ -64,12 +74,9 @@ import {
   getToonGradientTexture,
 } from "@/game/world/textures";
 
-
-
 /* ------------------------------------------------------------------ *
  * 인스턴스 채우기
  * ------------------------------------------------------------------ */
-
 
 /* ------------------------------------------------------------------ *
  * 공통 컴포넌트
@@ -117,23 +124,23 @@ function InstancedBoxes({
       receiveShadow={receiveShadow}
     >
       {/*
-        * 수관만 상자가 아니다.
-        *
-        * 도시의 모든 것이 축 정렬 상자라 그 결정이 일관돼 보였는데, **나무만은
-        * 상자가 나무로 안 읽힌다.** 숲에 서 보면 초록 벽이 늘어선 창고 단지고,
-        * 3인칭 카메라가 늘 수관 높이를 지나가니 매 순간 그게 보인다.
-        *
-        * 스무면체 1단 세분(80면)이면 실루엣이 둥글어지면서도 각이 남아 도시의
-        * 각진 결과 어울린다. 반지름을 0.5로 두어 **상자와 같은 스케일 규칙**을
-        * 쓴다 — `projectInstances`는 width/height/depth를 그대로 scale에 넣으므로
-        * 지름 1인 도형이어야 크기 값의 뜻이 바뀌지 않는다.
-        */}
+       * 수관만 상자가 아니다.
+       *
+       * 도시의 모든 것이 축 정렬 상자라 그 결정이 일관돼 보였는데, **나무만은
+       * 상자가 나무로 안 읽힌다.** 숲에 서 보면 초록 벽이 늘어선 창고 단지고,
+       * 3인칭 카메라가 늘 수관 높이를 지나가니 매 순간 그게 보인다.
+       *
+       * 스무면체 1단 세분(80면)이면 실루엣이 둥글어지면서도 각이 남아 도시의
+       * 각진 결과 어울린다. 반지름을 0.5로 두어 **상자와 같은 스케일 규칙**을
+       * 쓴다 — `projectInstances`는 width/height/depth를 그대로 scale에 넣으므로
+       * 지름 1인 도형이어야 크기 값의 뜻이 바뀌지 않는다.
+       */}
       {shape === "blob" && <icosahedronGeometry args={[0.5, 1]} />}
       {/*
-        * 침엽수. 반지름 0.5·높이 1이라 상자와 스케일 규칙이 같다.
-        * 옆면을 일곱으로 끊는다 — 매끈하면 이 월드의 각진 결에서 혼자 떠 보이고,
-        * 넷이면 종이 고깔이 된다.
-        */}
+       * 침엽수. 반지름 0.5·높이 1이라 상자와 스케일 규칙이 같다.
+       * 옆면을 일곱으로 끊는다 — 매끈하면 이 월드의 각진 결에서 혼자 떠 보이고,
+       * 넷이면 종이 고깔이 된다.
+       */}
       {shape === "cone" && <coneGeometry args={[0.5, 1, 7]} />}
       {shape === "box" && <boxGeometry args={[1, 1, 1]} />}
       {unlit ? (
@@ -204,7 +211,11 @@ function AtlasInstances({
     >
       <boxGeometry args={[1, 1, 1]} />
       {unlit ? (
-        <meshBasicMaterial map={atlas.texture} toneMapped={false} onBeforeCompile={injectUvTransform} />
+        <meshBasicMaterial
+          map={atlas.texture}
+          toneMapped={false}
+          onBeforeCompile={injectUvTransform}
+        />
       ) : (
         <meshToonMaterial
           map={atlas.texture}
@@ -280,7 +291,6 @@ function TiledInstances({
     </instancedMesh>
   );
 }
-
 
 /** 꺼진 가로등 갓 색 — 낮에는 그냥 금속 갓이다 */
 const LAMP_OFF_COLOR = "#6b6470";
@@ -367,7 +377,9 @@ export interface CityViewer {
  * 인스턴스를 다시 거르는 일을 피할 수 있다.
  */
 function useVisibleBlocks(viewer: CityViewer, radiusBlocks: number): number[] {
-  const [key, setKey] = useState(() => visibleKey(viewer.position.x, viewer.position.z, radiusBlocks));
+  const [key, setKey] = useState(() =>
+    visibleKey(viewer.position.x, viewer.position.z, radiusBlocks),
+  );
   const lastKey = useRef(key);
 
   useFrame(() => {
@@ -574,7 +586,12 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
         castShadow={shadows}
         receiveShadow={shadows}
       />
-      <InstancedBoxes items={layout.props} palette={PROP_PALETTE} castShadow={shadows} receiveShadow={shadows} />
+      <InstancedBoxes
+        items={layout.props}
+        palette={PROP_PALETTE}
+        castShadow={shadows}
+        receiveShadow={shadows}
+      />
       {/* 선돌 — 자연 구역의 그래플 지점이자 이정표. 각지면 건물처럼 보인다 */}
       <InstancedBoxes
         items={rocks}
@@ -590,11 +607,16 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
         castShadow={shadows}
         receiveShadow={shadows}
       />
-      <InstancedBoxes items={gates} palette={OLD_TOWN_PALETTE} castShadow={shadows} receiveShadow={shadows} />
+      <InstancedBoxes
+        items={gates}
+        palette={OLD_TOWN_PALETTE}
+        castShadow={shadows}
+        receiveShadow={shadows}
+      />
       {/*
-        * 담 아래 화분 — 나무 상자와 철쭉. 꽃은 `blob`이라 묶음이 따로다.
-        * 상자는 그림자를 드리우고, 꽃은 상자 위에 얹혀 받기만 한다.
-        */}
+       * 담 아래 화분 — 나무 상자와 철쭉. 꽃은 `blob`이라 묶음이 따로다.
+       * 상자는 그림자를 드리우고, 꽃은 상자 위에 얹혀 받기만 한다.
+       */}
       <InstancedBoxes
         items={wallPlanters}
         palette={PLANTER_PALETTE}
@@ -602,13 +624,13 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
         receiveShadow={shadows}
       />
       {/*
-        * 담에 붙는 식물 — 화분의 철쭉과 담쟁이. 둘 다 **둥근 덩어리**다.
-        * 상자로 두었더니 4m 거리에서 납작한 판으로 읽혔다 — 잡초의 철쭉은
-        * 둥근데 화분 꽃만 각져 있어 더 눈에 띄었다.
-        *
-        * 담쟁이는 **그림자를 드리운다** — 담 위에서 갓 위로 솟아 있어 그
-        * 그림자가 담 바깥면에 떨어지고, 그것이 담쟁이를 붙어 있는 것으로 만든다.
-        */}
+       * 담에 붙는 식물 — 화분의 철쭉과 담쟁이. 둘 다 **둥근 덩어리**다.
+       * 상자로 두었더니 4m 거리에서 납작한 판으로 읽혔다 — 잡초의 철쭉은
+       * 둥근데 화분 꽃만 각져 있어 더 눈에 띄었다.
+       *
+       * 담쟁이는 **그림자를 드리운다** — 담 위에서 갓 위로 솟아 있어 그
+       * 그림자가 담 바깥면에 떨어지고, 그것이 담쟁이를 붙어 있는 것으로 만든다.
+       */}
       <InstancedBoxes
         items={wallGreens}
         palette={WALL_GREEN_PALETTE}
@@ -617,16 +639,16 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
         shape="blob"
       />
       {/*
-        * 언덕 주택가의 골목 계단.
-        *
-        * 디딤판은 바닥에 눕는 판이라 **그림자를 드리우지 않는다** — 단이
-        * 20cm뿐이라 드리워 봐야 자기 밑에 검은 선만 남는다(공원 산책로와 같다).
-        * 대신 **받는다**: 골목은 양옆이 집이라 하루 대부분 그늘이고, 그 그늘이
-        * 지지 않으면 계단만 환하게 떠서 바닥에 붙어 보이지 않는다.
-        *
-        * 난간은 반대다. 가늘어도 서 있는 것이라 그림자가 계단을 가로지르는
-        * 줄무늬로 떨어진다 — 계단이 계단으로 읽히는 데 이쪽이 더 크게 쓰인다.
-        */}
+       * 언덕 주택가의 골목 계단.
+       *
+       * 디딤판은 바닥에 눕는 판이라 **그림자를 드리우지 않는다** — 단이
+       * 20cm뿐이라 드리워 봐야 자기 밑에 검은 선만 남는다(공원 산책로와 같다).
+       * 대신 **받는다**: 골목은 양옆이 집이라 하루 대부분 그늘이고, 그 그늘이
+       * 지지 않으면 계단만 환하게 떠서 바닥에 붙어 보이지 않는다.
+       *
+       * 난간은 반대다. 가늘어도 서 있는 것이라 그림자가 계단을 가로지르는
+       * 줄무늬로 떨어진다 — 계단이 계단으로 읽히는 데 이쪽이 더 크게 쓰인다.
+       */}
       <InstancedBoxes items={alleySteps} palette={HILLSIDE_PALETTE} receiveShadow={shadows} />
       <InstancedBoxes
         items={alleyRails}
@@ -635,9 +657,9 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
         receiveShadow={shadows}
       />
       {/*
-        * 노을 시장. 천막은 **그림자를 드리운다** — 그 그늘이 골목을 덮는 감각의
-        * 절반이다. 받지는 않는다(가장 위에 있어 받을 것이 없다).
-        */}
+       * 노을 시장. 천막은 **그림자를 드리운다** — 그 그늘이 골목을 덮는 감각의
+       * 절반이다. 받지는 않는다(가장 위에 있어 받을 것이 없다).
+       */}
       <InstancedBoxes items={marketCanopies} palette={MARKET_PALETTE} castShadow={shadows} />
       <InstancedBoxes
         items={marketStalls}
@@ -647,18 +669,18 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
       />
 
       {/*
-        * 너른 공원. 산책로와 연못은 바닥에 눕는 판이라 그림자를 드리우지
-        * 않는다 — 두께가 10cm라 드리워 봐야 자기 밑에 검은 선만 남는다.
-        */}
+       * 너른 공원. 산책로와 연못은 바닥에 눕는 판이라 그림자를 드리우지
+       * 않는다 — 두께가 10cm라 드리워 봐야 자기 밑에 검은 선만 남는다.
+       */}
       {/*
-        * 발밑 잡초. 그림자를 **드리우지 않는다** — 무릎 아래라 자기 밑에만
-        * 점이 찍히는데, 수백 개가 그림자 맵에 들어가면 그만큼 해상도를 먹어
-        * 정작 건물 그림자가 거칠어진다.
-        */}
+       * 발밑 잡초. 그림자를 **드리우지 않는다** — 무릎 아래라 자기 밑에만
+       * 점이 찍히는데, 수백 개가 그림자 맵에 들어가면 그만큼 해상도를 먹어
+       * 정작 건물 그림자가 거칠어진다.
+       */}
       {/*
-        * 번화가 네온. 조명을 받지 않는다 — 관 자체가 광원처럼 보여야 하고,
-        * 그림자도 드리우지 않는다(가느다란 관의 그림자는 얼룩으로만 남는다).
-        */}
+       * 번화가 네온. 조명을 받지 않는다 — 관 자체가 광원처럼 보여야 하고,
+       * 그림자도 드리우지 않는다(가느다란 관의 그림자는 얼룩으로만 남는다).
+       */}
       <InstancedBoxes items={neon} palette={neonPalette} unlit />
       <InstancedBoxes
         items={undergrowth}
@@ -677,9 +699,19 @@ export function City({ layout, details, quality, viewer, nightGlow }: CityProps)
         receiveShadow={shadows}
       />
       <InstancedBoxes items={treeTrunks} palette={TRUNK_PALETTE} castShadow={shadows} />
-      <InstancedBoxes items={treeCrowns} palette={CROWN_PALETTE} castShadow={shadows} shape="blob" />
+      <InstancedBoxes
+        items={treeCrowns}
+        palette={CROWN_PALETTE}
+        castShadow={shadows}
+        shape="blob"
+      />
       {/* 침엽수 — 숲과 옛 마을. 원뿔이라 묶음이 따로다 */}
-      <InstancedBoxes items={treeCones} palette={CONIFER_PALETTE} castShadow={shadows} shape="cone" />
+      <InstancedBoxes
+        items={treeCones}
+        palette={CONIFER_PALETTE}
+        castShadow={shadows}
+        shape="cone"
+      />
 
       {/* 주차 차량 */}
       <InstancedBoxes

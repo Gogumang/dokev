@@ -129,7 +129,8 @@ function drawSky(topColor: string, horizonColor: string, cloudiness: number): HT
     drawCloud(ctx, x, y, scale, random);
 
     // 가로로 이어 붙는 자리 — 한 바퀴 도는 텍스처라 가장자리를 넘는 구름을 반대편에도 그린다
-    if (x < scale * 4) drawCloud(ctx, x + SKY_WIDTH, y, scale, createSeededRandom(TEXTURE_SEED + i));
+    if (x < scale * 4)
+      drawCloud(ctx, x + SKY_WIDTH, y, scale, createSeededRandom(TEXTURE_SEED + i));
     if (x > SKY_WIDTH - scale * 4) {
       drawCloud(ctx, x - SKY_WIDTH, y, scale, createSeededRandom(TEXTURE_SEED + i));
     }

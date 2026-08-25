@@ -165,7 +165,10 @@ describe("건물이 땅에 붙는가", () => {
           Math.abs((box.minX + box.maxX) / 2 - building.x) < 0.001 &&
           Math.abs((box.minZ + box.maxZ) / 2 - building.z) < 0.001,
       );
-      expect(collider, `(${building.x.toFixed(0)}, ${building.z.toFixed(0)})에 충돌체가 없다`).toBeDefined();
+      expect(
+        collider,
+        `(${building.x.toFixed(0)}, ${building.z.toFixed(0)})에 충돌체가 없다`,
+      ).toBeDefined();
       if (!collider) continue;
 
       expect(collider.top).toBeCloseTo(terrainHeight(building.x, building.z) + building.height);

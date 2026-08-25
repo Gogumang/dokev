@@ -10,11 +10,7 @@
  */
 
 import { DEFAULT_DOKEBI, DOKEBI_ORDER, type DokebiId } from "@/game/dokebi/roster";
-import {
-  APPEARANCE_ORDER,
-  DEFAULT_APPEARANCE,
-  type AppearanceId,
-} from "@/game/player/appearance";
+import { APPEARANCE_ORDER, DEFAULT_APPEARANCE, type AppearanceId } from "@/game/player/appearance";
 import { DEFAULT_PHOTO_POSE, PHOTO_POSE_ORDER, type PhotoPoseId } from "@/game/player/photoPose";
 import {
   DEFAULT_PHOTO_FILTER,
@@ -185,9 +181,7 @@ export function loadSettings(): PlayerSettings {
       metDokebi: Array.isArray(candidate.metDokebi)
         ? ([
             ...new Set(
-              candidate.metDokebi.filter((id) =>
-                (DOKEBI_ORDER as readonly string[]).includes(id),
-              ),
+              candidate.metDokebi.filter((id) => (DOKEBI_ORDER as readonly string[]).includes(id)),
             ),
           ] as DokebiId[])
         : [],

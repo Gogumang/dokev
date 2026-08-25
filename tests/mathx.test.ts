@@ -28,10 +28,10 @@ describe("damp", () => {
     const twoHalfSteps = damp(halfStep, target, lambda, dt / 2);
 
     // Assert
-    expect(
-      twoHalfSteps,
-      `single=${singleStep}, twoHalves=${twoHalfSteps}`,
-    ).toBeCloseTo(singleStep, 10);
+    expect(twoHalfSteps, `single=${singleStep}, twoHalves=${twoHalfSteps}`).toBeCloseTo(
+      singleStep,
+      10,
+    );
   });
 
   it("같은 조건에서 naive lerp는 프레임률에 따라 결과가 달라진다 (damp가 존재하는 이유)", () => {
@@ -131,10 +131,9 @@ describe("shortestAngleDelta", () => {
     for (const from of samples) {
       for (const to of samples) {
         const delta = shortestAngleDelta(from, to);
-        expect(
-          Math.abs(delta),
-          `from=${from}, to=${to}, delta=${delta}`,
-        ).toBeLessThanOrEqual(Math.PI + 1e-12);
+        expect(Math.abs(delta), `from=${from}, to=${to}, delta=${delta}`).toBeLessThanOrEqual(
+          Math.PI + 1e-12,
+        );
       }
     }
   });
@@ -202,10 +201,9 @@ describe("normalizeAngle", () => {
     // Act & Assert
     for (const angle of samples) {
       const normalized = normalizeAngle(angle);
-      expect(
-        Math.abs(normalized),
-        `angle=${angle}, normalized=${normalized}`,
-      ).toBeLessThanOrEqual(Math.PI + 1e-12);
+      expect(Math.abs(normalized), `angle=${angle}, normalized=${normalized}`).toBeLessThanOrEqual(
+        Math.PI + 1e-12,
+      );
     }
   });
 });

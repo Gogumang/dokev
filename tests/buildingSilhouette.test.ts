@@ -39,7 +39,10 @@ describe("계단식 후퇴", () => {
           Math.abs(building.z - tower.z) < building.depth &&
           Math.abs(building.height - (tower.y - tower.height / 2)) < 0.001,
       );
-      expect(base, `옥탑 (${tower.x.toFixed(1)}, ${tower.z.toFixed(1)})의 아래층을 못 찾았다`).toBeDefined();
+      expect(
+        base,
+        `옥탑 (${tower.x.toFixed(1)}, ${tower.z.toFixed(1)})의 아래층을 못 찾았다`,
+      ).toBeDefined();
       if (!base) continue;
 
       expect(tower.width, `폭 ${tower.width} vs ${base.width}`).toBeLessThan(base.width);
@@ -51,7 +54,8 @@ describe("계단식 후퇴", () => {
     // 밖으로 나가면 허공에 걸린 상자가 된다
     for (const tower of layout.setbacks) {
       const base = layout.buildings.find(
-        (building) => Math.abs(building.height - (tower.y - tower.height / 2)) < 0.001 &&
+        (building) =>
+          Math.abs(building.height - (tower.y - tower.height / 2)) < 0.001 &&
           Math.abs(building.x - tower.x) < building.width &&
           Math.abs(building.z - tower.z) < building.depth,
       );
@@ -120,7 +124,10 @@ describe("계단식 후퇴", () => {
           Math.abs((box.minX + box.maxX) / 2 - tower.x) < 0.001 &&
           Math.abs((box.minZ + box.maxZ) / 2 - tower.z) < 0.001,
       );
-      expect(collider, `옥탑 (${tower.x.toFixed(1)}, ${tower.z.toFixed(1)})에 충돌체가 없다`).toBeDefined();
+      expect(
+        collider,
+        `옥탑 (${tower.x.toFixed(1)}, ${tower.z.toFixed(1)})에 충돌체가 없다`,
+      ).toBeDefined();
       // 충돌체는 그 자리의 지면 높이 위다 — 배치 데이터의 y는 평지 기준이다
       if (collider) expect(collider.top).toBeCloseTo(terrainHeight(tower.x, tower.z) + top);
     }

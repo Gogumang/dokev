@@ -50,11 +50,7 @@ export function mixHex(from: string, to: string, t: number): string {
   if (!a || !b) return from;
 
   const ratio = clamp01(t);
-  return toHex(
-    a.r + (b.r - a.r) * ratio,
-    a.g + (b.g - a.g) * ratio,
-    a.b + (b.b - a.b) * ratio,
-  );
+  return toHex(a.r + (b.r - a.r) * ratio, a.g + (b.g - a.g) * ratio, a.b + (b.b - a.b) * ratio);
 }
 
 /**
@@ -69,9 +65,7 @@ function relativeLuminance(hex: string): number | null {
 
   const channel = (value: number) => {
     const normalized = value / 255;
-    return normalized <= 0.03928
-      ? normalized / 12.92
-      : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
   };
 
   return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);

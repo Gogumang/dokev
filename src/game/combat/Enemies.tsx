@@ -22,9 +22,34 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { COMBAT_TUNING, createAttackState, createEnemies, markFired, readyToFire, resolveHits, stepAttack, stepEnemy, stepEnemyStrike, strikeEnemy, strikeWindupProgress, type AttackState, type EnemyState } from "@/game/combat/combatSim";
-import { createPlayerCombat, stepPlayerCombat, type PlayerCombatState } from "@/game/combat/playerCombat";
-import { consumeAttack, consumeSlam, consumeSummonHeal, projectAttackTiming, projectPlayerVitals, recordEnemyHits } from "@/game/combat/combatLink";
+import {
+  COMBAT_TUNING,
+  createAttackState,
+  createEnemies,
+  markFired,
+  readyToFire,
+  resolveHits,
+  stepAttack,
+  stepEnemy,
+  stepEnemyStrike,
+  strikeEnemy,
+  strikeWindupProgress,
+  type AttackState,
+  type EnemyState,
+} from "@/game/combat/combatSim";
+import {
+  createPlayerCombat,
+  stepPlayerCombat,
+  type PlayerCombatState,
+} from "@/game/combat/playerCombat";
+import {
+  consumeAttack,
+  consumeSlam,
+  consumeSummonHeal,
+  projectAttackTiming,
+  projectPlayerVitals,
+  recordEnemyHits,
+} from "@/game/combat/combatLink";
 import {
   fireProjectile,
   fireWeaponBolt,
@@ -332,8 +357,16 @@ export function Enemies({
 
   const geometry = useMemo(
     () => ({
-      body: new THREE.BoxGeometry(ENEMY_BODY.bodyWidth, ENEMY_BODY.bodyHeight, ENEMY_BODY.bodyDepth),
-      head: new THREE.BoxGeometry(ENEMY_BODY.headWidth, ENEMY_BODY.headHeight, ENEMY_BODY.headDepth),
+      body: new THREE.BoxGeometry(
+        ENEMY_BODY.bodyWidth,
+        ENEMY_BODY.bodyHeight,
+        ENEMY_BODY.bodyDepth,
+      ),
+      head: new THREE.BoxGeometry(
+        ENEMY_BODY.headWidth,
+        ENEMY_BODY.headHeight,
+        ENEMY_BODY.headDepth,
+      ),
       arm: new THREE.BoxGeometry(ENEMY_BODY.armWidth, ENEMY_BODY.armHeight, ENEMY_BODY.armDepth),
       confetti: new THREE.PlaneGeometry(ENEMY_BODY.confettiSize, ENEMY_BODY.confettiSize),
       // 8면체는 구보다 훨씬 싸고, 이 크기에서는 구분되지 않는다.
@@ -356,7 +389,6 @@ export function Enemies({
       for (const item of created) item.dispose();
     };
   }, [geometry]);
-
 
   const burst = (x: number, y: number, z: number) => {
     for (let i = 0; i < PARTICLES_PER_HIT; i += 1) {
@@ -410,7 +442,11 @@ export function Enemies({
      * 판정이 **켜지는 프레임에** 한 발 나간다. 「판정이 살아 있으면 쏜다」로
      * 두면 0.05초 동안 프레임 수만큼 쏟아져 딱총이 기관총이 된다.
      */
-    if (weapon.bolt !== null && attack.current.phase === "active" && lastPhase.current !== "active") {
+    if (
+      weapon.bolt !== null &&
+      attack.current.phase === "active" &&
+      lastPhase.current !== "active"
+    ) {
       playerBolts.current = fireWeaponBolt(
         playerBolts.current,
         px,
@@ -471,7 +507,8 @@ export function Enemies({
         else targets.push({ x: enemy.x, z: enemy.z, radius: ENEMY_BODY.bodyWidth });
       }
       const bossIndex = targets.length;
-      if (link.bossHittable) targets.push({ x: link.bossX, z: link.bossZ, radius: BOSS_HIT_RADIUS });
+      if (link.bossHittable)
+        targets.push({ x: link.bossX, z: link.bossZ, radius: BOSS_HIT_RADIUS });
 
       const shots = stepPlayerBolts(playerBolts.current, dt, targets, isBlocked);
       playerBolts.current = shots.bolts;

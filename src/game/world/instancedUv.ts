@@ -38,7 +38,9 @@ export function setUvAttributes(
  * 다시 컴파일한다.
  */
 function makeUvTransformInjector(varyings: readonly string[]) {
-  const assignments = varyings.map((name) => `${name} = ${name} * aUvScale + aUvOffset;`).join("\n");
+  const assignments = varyings
+    .map((name) => `${name} = ${name} * aUvScale + aUvOffset;`)
+    .join("\n");
   return (shader: THREE.WebGLProgramParametersWithUniforms): void => {
     shader.vertexShader = shader.vertexShader
       .replace(

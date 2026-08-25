@@ -1,10 +1,8 @@
 import { readFileSync } from "node:fs";
 
-
 import { describe, expect, it } from "vitest";
 
 import { readCode, collectSources } from "./support/source";
-
 
 import {
   companionParty,
@@ -549,9 +547,14 @@ describe("완주 화면의 수집 숫자가 도달 가능한가", () => {
 
   it("완주 화면이 그 분모를 쓴다", () => {
     // 정본을 만들어 두고 화면이 예전 숫자를 쓰면 고친 것이 아니다
-    const panel = readCode("src/components/hud/StatusPanels.tsx");
-    const row = panel.slice(panel.indexOf('"만난 도깨비"'), panel.indexOf('"만난 도깨비"') + 200);
-    expect(row, "찾을 수 있는 수를 분모로 쓰지 않는다").toContain("FINDABLE_DOKEBI.length");
+    /*
+     * 세는 일은 잇는 쪽이, 적는 일은 모양 쪽이 한다. 분모가 정본에서 오는지는
+     * 세는 쪽에서 본다 — 모양 쪽에는 이제 숫자가 없다.
+     */
+    const panel = readCode("src/components/hud/ResultPanel.tsx");
+    expect(panel, "찾을 수 있는 수를 분모로 쓰지 않는다").toContain("FINDABLE_DOKEBI.length");
+    const view = readCode("src/components/hud/views/ResultPanel.tsx");
+    expect(view, "모양 쪽이 분모를 스스로 정한다").toContain("findableCount");
   });
 });
 
@@ -784,7 +787,10 @@ describe("만난 목록을 빠뜨릴 수 없는가", () => {
      * 사라지면 **검사가 조용히 사라진다.** 지금 이 규칙을 지키는 도깨비가
      * 있다는 것 자체가 검사의 전제다.
      */
-    expect(questOnly, "여정 조건 + 자리를 가진 도깨비가 없다 — 검사가 아무것도 안 본다").toBeDefined();
+    expect(
+      questOnly,
+      "여정 조건 + 자리를 가진 도깨비가 없다 — 검사가 아무것도 안 본다",
+    ).toBeDefined();
     if (!questOnly) return;
     const ready = { defeatedTotal: 0, questCompleted: true };
     expect(unlockRatio(DOKEBI[questOnly], ready, [questOnly]), `${questOnly}`).toBe(1);
@@ -925,9 +931,10 @@ describe("만남이 신호로 올라가는가", () => {
     const found = projectDiscovery(view, spot.x, spot.z, locked, [], true);
     // 조건이 열린 도깨비가 있으면 그건 올라와도 맞다 — 잠긴 것이 올라오면 안 된다
     if (found) {
-      expect(pendingDiscoveries(locked, []).map((s) => s.id), `${found}가 잠겨 있다`).toContain(
-        found,
-      );
+      expect(
+        pendingDiscoveries(locked, []).map((s) => s.id),
+        `${found}가 잠겨 있다`,
+      ).toContain(found);
     }
   });
 });
@@ -1031,7 +1038,12 @@ describe("방어선이 왜 안 밟히는가", () => {
 
   it("자리 없는 도깨비는 도시 어디서도 안 만나진다", () => {
     const homeless = DOKEBI_ORDER.filter((id) => !DOKEBI[id].home);
-    for (const [x, z] of [[0, 0], [40, 40], [-30, 10], [117.5, -70.5]]) {
+    for (const [x, z] of [
+      [0, 0],
+      [40, 40],
+      [-30, 10],
+      [117.5, -70.5],
+    ]) {
       const found = discoverAt(x, z, OPEN, []);
       expect(homeless, `(${x}, ${z})에서 ${found}가 만나졌다`).not.toContain(found);
     }
@@ -1149,7 +1161,7 @@ describe("자리에 서면 화면이 알려 주는가", () => {
 
   it("화면이 그 값을 읽는다", () => {
     // 채워 두고 아무도 안 보면 없는 것과 같다
-    const hud = readFileSync("src/components/hud/WorldHud.tsx", "utf8");
-    expect(hud, "HUD가 자리 안내를 안 띄운다").toMatch(/discovery\.nearby/);
+    const prompts = readFileSync("src/components/hud/Prompts.tsx", "utf8");
+    expect(prompts, "HUD가 자리 안내를 안 띄운다").toMatch(/discovery\.nearby/);
   });
 });

@@ -57,10 +57,14 @@ describe("getQualityPreset", () => {
     const [low, medium, high] = LEVELS.map(getQualityPreset);
 
     // Act & Assert — 강등이 실제로 부하를 줄이지 못하면 자동 강등 자체가 무의미하다
-    expect(low.maxPixelRatio, `low=${low.maxPixelRatio}, medium=${medium.maxPixelRatio}`)
-      .toBeLessThan(medium.maxPixelRatio);
-    expect(medium.maxPixelRatio, `medium=${medium.maxPixelRatio}, high=${high.maxPixelRatio}`)
-      .toBeLessThan(high.maxPixelRatio);
+    expect(
+      low.maxPixelRatio,
+      `low=${low.maxPixelRatio}, medium=${medium.maxPixelRatio}`,
+    ).toBeLessThan(medium.maxPixelRatio);
+    expect(
+      medium.maxPixelRatio,
+      `medium=${medium.maxPixelRatio}, high=${high.maxPixelRatio}`,
+    ).toBeLessThan(high.maxPixelRatio);
 
     expect(low.shadowMapSize, `low=${low.shadowMapSize}`).toBeLessThan(medium.shadowMapSize);
     expect(medium.shadowMapSize, `medium=${medium.shadowMapSize}`).toBeLessThan(high.shadowMapSize);

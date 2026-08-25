@@ -74,9 +74,10 @@ describe("적", () => {
      * 두 색이 비슷하면 그 주장이 성립하지 않는다.
      */
     const distance = colorDistance(CHASER, GUNNER);
-    expect(distance, `chaser ${CHASER} vs gunner ${GUNNER}: ${distance.toFixed(0)}`).toBeGreaterThan(
-      70,
-    );
+    expect(
+      distance,
+      `chaser ${CHASER} vs gunner ${GUNNER}: ${distance.toFixed(0)}`,
+    ).toBeGreaterThan(70);
   });
 
   it("보스가 일반 적과 구분된다", () => {
@@ -166,7 +167,10 @@ describe("날아오는 탄이 보이는가", () => {
     for (const id of TIME_OF_DAY_ORDER) {
       const sky = TIME_OF_DAY[id].sky;
       const distance = colorDistance(BOLT ?? "", sky);
-      expect(distance, `${TIME_OF_DAY[id].name} 하늘 ${sky}과 색거리 ${distance.toFixed(0)}`).toBeGreaterThan(80);
+      expect(
+        distance,
+        `${TIME_OF_DAY[id].name} 하늘 ${sky}과 색거리 ${distance.toFixed(0)}`,
+      ).toBeGreaterThan(80);
     }
   });
 
@@ -227,7 +231,9 @@ describe("플레이어와 동료가 구분되는가", () => {
       for (const id of DOKEBI_ORDER) {
         const distance = colorDistance(APPEARANCES[look].hoodie, DOKEBI[id].bodyColor);
         if (distance <= MIN_DISTANCE) {
-          close.push(`${look}(${APPEARANCES[look].hoodie}) vs ${id}(${DOKEBI[id].bodyColor}): ${distance.toFixed(0)}`);
+          close.push(
+            `${look}(${APPEARANCES[look].hoodie}) vs ${id}(${DOKEBI[id].bodyColor}): ${distance.toFixed(0)}`,
+          );
         }
       }
     }

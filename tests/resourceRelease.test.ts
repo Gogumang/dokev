@@ -178,9 +178,7 @@ describe("한 프레임의 시간 상한", () => {
     // 함수 이름이 바뀌면 빈 목록을 훑으며 통과한다
     const users = collectSources("src").filter((path) => {
       const source = readCode(path);
-      return (
-        /\bstep[A-Z][A-Za-z]*\(/.test(source) && !/export function step\w+\(/.test(source)
-      );
+      return /\bstep[A-Z][A-Za-z]*\(/.test(source) && !/export function step\w+\(/.test(source);
     });
     expect(users.length, `찾은 파일 ${users.length}개`).toBeGreaterThan(2);
   });
@@ -264,14 +262,12 @@ describe("프레임 안에서 순서를 전제하는 곳", () => {
      * 한쪽만 검사가 있으면 다른 쪽이 조용히 사라진다 — 실제로 되돌리기 코드는
      * 지워도 아무도 모르는 상태였다.
      */
-    expect(
-      readCode("src/game/scene/PlayerRig.tsx"),
-      "되돌리는 일을 부르지 않는다",
-    ).toContain("resetCompanionEffects(");
-    expect(
-      readCode("src/game/dokebi/Companion.tsx"),
-      "동료가 합치는 일을 부르지 않는다",
-    ).toContain("projectCompanionEffects(");
+    expect(readCode("src/game/scene/PlayerRig.tsx"), "되돌리는 일을 부르지 않는다").toContain(
+      "resetCompanionEffects(",
+    );
+    expect(readCode("src/game/dokebi/Companion.tsx"), "동료가 합치는 일을 부르지 않는다").toContain(
+      "projectCompanionEffects(",
+    );
   });
 });
 

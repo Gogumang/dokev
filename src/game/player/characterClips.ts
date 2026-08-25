@@ -1,7 +1,7 @@
 /**
  * 지금 상태에 맞는 동작 고르기.
  *
- * 모델이 들고 온 동작은 여섯 개인데(달리기·걷기·공격·쓰러짐·일어서기·기술)
+ * 모델이 들고 온 동작은 여섯 개인데(달리기·걷기·공격·쓰러짐·서 있기·기술)
  * 게임의 상태는 그보다 많다 — 공중·활강·보드에는 맞는 동작이 없다. 무엇을
  * 무엇으로 대신할지가 이 파일의 전부다.
  *
@@ -22,17 +22,19 @@ import type { EmoteState } from "@/game/player/emote";
  *
  * 원본이 물려준 이름을 그대로 쓴다. **`public/character.glb`와 글자 그대로
  * 맞아야 하는 계약**이고, 어긋나면 재생이 조용히 안 된다 — 검사가 실제 파일의
- * 목록과 대조한다.
+ * 목록과 **양쪽으로** 대조한다: 여기 적힌 것이 파일에 다 있어야 하고, 파일에
+ * 있는데 안 쓰는 것도 없어야 한다(받기만 하고 안 트는 용량이다).
  */
 export const CLIP = {
-  run: "Armature|running|baselayer",
-  walk: "Armature|walking_man|baselayer",
-  attack: "Armature|Attack|baselayer",
-  dead: "Armature|Dead|baselayer",
-  /** 일어서는 동작. 끝 자세가 서 있는 모습이라 **가만히 있을 때**도 쓴다 */
-  idle: "Armature|Arise|baselayer",
+  run: "Running",
+  walk: "Walking",
+  /** 가드에서 뻗는 잽. 짧아서 휘두르는 길이와 맞는다 */
+  attack: "Left_Jab_from_Guard",
+  dead: "Knock_Down",
+  /** **진짜 서 있는 동작.** 예전 모델에는 없어서 일어서는 동작의 끝 자세로 때웠다 */
+  idle: "Idle_15",
   /** 도깨비 능력을 쓸 때. 감정 표현에도 같은 것을 쓴다 */
-  skill: "Armature|Skill_03|baselayer",
+  skill: "Lunge_Spin_Kick",
 } as const;
 
 export type ClipName = (typeof CLIP)[keyof typeof CLIP];

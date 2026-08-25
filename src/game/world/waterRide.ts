@@ -120,5 +120,13 @@ export function shoreLanding(
 /** 물가에서 바다 쪽을 보는 방향(rad). 뱃머리가 이쪽을 향한다 */
 export function shoreFacing(x: number, z: number): number {
   // 어느 변에 있는지는 절댓값이 큰 축이 정한다
-  return Math.abs(x) > Math.abs(z) ? (x > 0 ? Math.PI / 2 : -Math.PI / 2) : x === 0 && z > 0 ? 0 : z > 0 ? 0 : Math.PI;
+  return Math.abs(x) > Math.abs(z)
+    ? x > 0
+      ? Math.PI / 2
+      : -Math.PI / 2
+    : x === 0 && z > 0
+      ? 0
+      : z > 0
+        ? 0
+        : Math.PI;
 }

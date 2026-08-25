@@ -8,7 +8,7 @@
  * three.js와 React에 의존하지 않는다. 렌더러 없이 테스트할 수 있어야 한다.
  */
 
-import { clamp, damp, rotateToward } from "@/game/core/mathx";
+import { clamp, damp, lerp, rotateToward } from "@/game/core/mathx";
 import type { Vec3 } from "@/game/player/locomotion";
 
 /**
@@ -149,9 +149,10 @@ export function createCompanionState(
    * `?see=party`가 「자리 배치」를 보러 가는 지점인데 정작 그 배치가 없었다.
    */
   slot = 0,
+  formationScale = 1,
 ): CompanionState {
   const angle = slotAngle(slot);
-  const distance = slotDistance(slot);
+  const distance = slotDistance(slot) * formationScale;
   return {
     position: {
       x: playerPosition.x - Math.sin(angle) * distance,
@@ -215,8 +216,7 @@ const IDLE_ORBIT_SPEED = COMPANION_TUNING.idleOrbitRate * COMPANION_TUNING.follo
 export function slotAngle(slot: number): number {
   const sign = slot % 2 === 0 ? 1 : -1;
   return (
-    COMPANION_TUNING.sideAngle * sign +
-    Math.floor(slot / 2) * COMPANION_TUNING.slotAngleStep * sign
+    COMPANION_TUNING.sideAngle * sign + Math.floor(slot / 2) * COMPANION_TUNING.slotAngleStep * sign
   );
 }
 
@@ -230,13 +230,26 @@ function slotDistance(slot: number): number {
   return COMPANION_TUNING.followDistance + Math.floor(slot / 2) * COMPANION_TUNING.slotDistanceStep;
 }
 
-function desiredPosition(state: CompanionState, target: CompanionTarget, slot: number): Vec3 {
+export function companionFormationScale(viewportWidth: number): number {
+  const compact = 0.35;
+  const progress = clamp((viewportWidth - 360) / (900 - 360), 0, 1);
+  return lerp(compact, 1, progress);
+}
+
+function desiredPosition(
+  state: CompanionState,
+  target: CompanionTarget,
+  slot: number,
+  formationScale: number,
+): Vec3 {
   const speedRatio = clamp(target.speed / COMPANION_TUNING.runSpeedReference, 0, 1);
   // 뒤 자리일수록 조금 더 멀리 선다. 같은 거리면 옆으로만 벌어져 줄처럼 보인다.
-  const distance = slotDistance(slot) + COMPANION_TUNING.trailDistanceBonus * speedRatio;
+  const distance =
+    (slotDistance(slot) + COMPANION_TUNING.trailDistanceBonus * speedRatio) * formationScale;
 
   // 정지 중에는 궤도 각도를, 움직일 때는 진행 방향 기준 각도를 쓴다.
-  const angle = state.mood === "idle" ? state.orbitAngle : target.facing + Math.PI + slotAngle(slot);
+  const angle =
+    state.mood === "idle" ? state.orbitAngle : target.facing + Math.PI + slotAngle(slot);
 
   return {
     x: target.position.x + Math.sin(angle) * distance,
@@ -275,6 +288,7 @@ export function stepCompanion(
    * 겹치지 않게 한다 — 같은 지점을 목표로 삼으면 셋이 한 덩어리로 보인다.
    */
   slot = 0,
+  formationScale = 1,
 ): CompanionState {
   const mood = resolveMood(target);
 
@@ -315,7 +329,7 @@ export function stepCompanion(
       : target.facing + Math.PI + slotAngle(slot);
 
   const next: CompanionState = { ...state, mood, orbitAngle, seenAbilityRequest };
-  const goal = desiredPosition(next, target, slot);
+  const goal = desiredPosition(next, target, slot, formationScale);
 
   const gap = Math.hypot(
     goal.x - state.position.x,

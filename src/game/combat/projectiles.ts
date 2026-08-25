@@ -83,7 +83,8 @@ export function fireProjectile(
 
   // 오래된 것부터 밀어내 상한을 지킨다. 상한이 없으면 사수가 많을 때
   // 인스턴스 버퍼를 넘긴다.
-  const kept = list.length >= PROJECTILE.maxLive ? list.slice(list.length - PROJECTILE.maxLive + 1) : list;
+  const kept =
+    list.length >= PROJECTILE.maxLive ? list.slice(list.length - PROJECTILE.maxLive + 1) : list;
   return [...kept, bolt];
 }
 
@@ -130,7 +131,7 @@ export function stepProjectiles(
     };
 
     // 벽에 닿으면 사라진다. 관통하면 숨을 곳이 없다.
-    if (isBlocked && isBlocked(moved.x, moved.z)) continue;
+    if (isBlocked?.(moved.x, moved.z)) continue;
 
     const horizontal = Math.hypot(moved.x - playerX, moved.z - playerZ);
     if (horizontal <= PROJECTILE.hitRadius && Math.abs(moved.y - chestY) <= PROJECTILE.hitHeight) {
@@ -211,7 +212,8 @@ export function fireWeaponBolt(
   };
 
   // 오래된 것부터 밀어낸다. 상한이 없으면 인스턴스 버퍼를 넘긴다.
-  const kept = list.length >= PLAYER_BOLT_MAX ? list.slice(list.length - PLAYER_BOLT_MAX + 1) : list;
+  const kept =
+    list.length >= PLAYER_BOLT_MAX ? list.slice(list.length - PLAYER_BOLT_MAX + 1) : list;
   return [...kept, bolt];
 }
 
@@ -245,7 +247,7 @@ export function stepPlayerBolts(
       life,
     };
 
-    if (isBlocked && isBlocked(moved.x, moved.z)) continue;
+    if (isBlocked?.(moved.x, moved.z)) continue;
 
     /*
      * 가장 가까운 표적 하나만 맞힌다. 판정 안에 둘이 겹쳐 있어도 한 발은

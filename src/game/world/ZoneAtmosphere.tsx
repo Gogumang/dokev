@@ -81,14 +81,15 @@ export function ZoneAtmosphere({
     const fog = scene.fog;
     if (!(fog instanceof THREE.Fog)) return;
 
-    const state = (stateRef.current ??= {
+    stateRef.current ??= {
       base: new THREE.Color(),
       target: new THREE.Color(),
       tint: new THREE.Color(),
       near: quality.fogNear,
       far: quality.fogFar,
       started: false,
-    });
+    };
+    const state = stateRef.current;
     const mood = (ZONES[viewer.district] ?? ZONES.plaza).mood;
 
     // 시간대가 정한 색과 거리가 바탕이다. 구역은 그 위에 얹힌다.

@@ -12,20 +12,10 @@ import { Canvas } from "@react-three/fiber";
 import { useCallback, useMemo } from "react";
 import * as THREE from "three";
 
-import {
-  CAMERA,
-  } from "@/game/config/tuning";
-import {
-  } from "@/game/player/locomotion";
-import {
-  } from "@/game/systems/input";
+import { CAMERA } from "@/game/config/tuning";
 import { Enemies } from "@/game/combat/Enemies";
 import { dokebiPreset } from "@/game/dokebi/roster";
 import { watchContextLoss } from "@/game/systems/contextLoss";
-import {
-  } from "@/game/systems/vending";
-import {
-  } from "@/game/scene/cameraRig";
 import type { PlayerLink, SceneProps } from "@/game/scene/sceneTypes";
 
 /*
@@ -56,20 +46,10 @@ import { BOSS_HOME } from "@/game/combat/bossSim";
 import { Shrines } from "@/game/dokebi/Shrine";
 import { BLIP_FLOAT_COUNT } from "@/game/systems/minimap";
 import { PLAYER_COMBAT } from "@/game/combat/playerCombat";
-import {
-  } from "@/game/quest/dialogue";
-import {
-  isTransparentFilter,
-  photoFilterPreset,
-  } from "@/game/systems/photoFilter";
+import { isTransparentFilter, photoFilterPreset } from "@/game/systems/photoFilter";
 import { timeOfDayPreset } from "@/game/world/timeOfDay";
-import {
-  } from "@/game/quest/questRunner";
 import { Companion } from "@/game/dokebi/Companion";
-import {
-  createGrappleView,
-  GrappleVisuals,
-  } from "@/game/player/GrappleVisuals";
+import { createGrappleView, GrappleVisuals } from "@/game/player/GrappleVisuals";
 import { FilterOverlay } from "@/game/scene/FilterOverlay";
 import { City } from "@/game/world/City";
 import { SkyDome } from "@/game/world/SkyDome";
@@ -181,10 +161,7 @@ export function GameScene(props: SceneProps) {
    * 새 배열을 만들면 이것을 받는 리그가 매번 다른 참조를 보게 되고, 그러면
    * 참조가 바뀔 때마다 딸린 것들이 다시 만들어진다.
    */
-  const walkColliders = useMemo(
-    () => [...layout.colliders],
-    [layout.colliders],
-  );
+  const walkColliders = useMemo(() => [...layout.colliders], [layout.colliders]);
 
   const grappleView = useMemo(() => createGrappleView(), []);
 
@@ -285,11 +262,16 @@ export function GameScene(props: SceneProps) {
       <SkyDome preset={sky} viewDistance={quality.fogFar} />
       <fog attach="fog" args={[sky.sky, quality.fogNear, quality.fogFar]} />
       {/*
-        * 구역에 따라 안개 거리와 색을 옮긴다. 선언된 `fog`가 출발점이고,
-        * 이쪽이 매 프레임 그 값을 고친다 — 리렌더 없이.
-        */}
+       * 구역에 따라 안개 거리와 색을 옮긴다. 선언된 `fog`가 출발점이고,
+       * 이쪽이 매 프레임 그 값을 고친다 — 리렌더 없이.
+       */}
       <ZoneAtmosphere quality={quality} preset={sky} viewer={props.stats} />
-      <WorldLighting quality={quality} worldHalfExtent={layout.halfExtent} preset={sky} viewer={playerLink} />
+      <WorldLighting
+        quality={quality}
+        worldHalfExtent={layout.halfExtent}
+        preset={sky}
+        viewer={playerLink}
+      />
       <City
         layout={layout}
         details={details}

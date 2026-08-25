@@ -59,9 +59,10 @@ describe("아케이드 천막", () => {
     expect(roadCanopies.length, "도로 천막이 없다").toBeGreaterThan(0);
     const tallestLamp = Math.max(...layout.streetLamps.map((lamp) => lamp.y + lamp.height / 2));
     for (const piece of roadCanopies) {
-      expect(piece.y, `천막 ${piece.y}m vs 가로등 꼭대기 ${tallestLamp.toFixed(1)}m`).toBeGreaterThan(
-        tallestLamp,
-      );
+      expect(
+        piece.y,
+        `천막 ${piece.y}m vs 가로등 꼭대기 ${tallestLamp.toFixed(1)}m`,
+      ).toBeGreaterThan(tallestLamp);
     }
   });
 
@@ -131,12 +132,14 @@ describe("아케이드 천막", () => {
     const reach = CITY.blockSize / 2 + CITY.roadWidth;
     for (const piece of layout.marketCanopies) {
       const { cx, cz } = blockCenter(piece.blockIndex);
-      expect(Math.abs(piece.x - cx), `x가 ${Math.abs(piece.x - cx).toFixed(1)}m 떨어졌다`).toBeLessThan(
-        reach,
-      );
-      expect(Math.abs(piece.z - cz), `z가 ${Math.abs(piece.z - cz).toFixed(1)}m 떨어졌다`).toBeLessThan(
-        reach,
-      );
+      expect(
+        Math.abs(piece.x - cx),
+        `x가 ${Math.abs(piece.x - cx).toFixed(1)}m 떨어졌다`,
+      ).toBeLessThan(reach);
+      expect(
+        Math.abs(piece.z - cz),
+        `z가 ${Math.abs(piece.z - cz).toFixed(1)}m 떨어졌다`,
+      ).toBeLessThan(reach);
     }
   });
 });
@@ -198,9 +201,7 @@ describe("좌판", () => {
      * 상판에 충돌체가 없으면 시장을 **가로질러 달릴 수 있다.** 그러면 좌판이
      * 장식이지 물건이 아니다.
      */
-    const tables = layout.marketStalls.filter(
-      (piece) => piece.height > 0.8 && piece.height < 0.9,
-    );
+    const tables = layout.marketStalls.filter((piece) => piece.height > 0.8 && piece.height < 0.9);
     expect(tables.length, "좌판 상판을 못 찾았다").toBeGreaterThan(10);
 
     for (const table of tables.slice(0, 20)) {
@@ -209,7 +210,10 @@ describe("좌판", () => {
           Math.abs((box.minX + box.maxX) / 2 - table.x) < 0.01 &&
           Math.abs((box.minZ + box.maxZ) / 2 - table.z) < 0.01,
       );
-      expect(collider, `좌판 (${table.x.toFixed(1)}, ${table.z.toFixed(1)})에 충돌체가 없다`).toBeDefined();
+      expect(
+        collider,
+        `좌판 (${table.x.toFixed(1)}, ${table.z.toFixed(1)})에 충돌체가 없다`,
+      ).toBeDefined();
     }
   });
 

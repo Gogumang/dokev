@@ -125,7 +125,12 @@ export function Pier({
         </mesh>
       ))}
       {/* 찌 — 던지기 전에는 안 보인다 */}
-      <mesh ref={bobber} geometry={geometry.bobber} visible={false} position={[tip.x, deckY, tip.z]}>
+      <mesh
+        ref={bobber}
+        geometry={geometry.bobber}
+        visible={false}
+        position={[tip.x, deckY, tip.z]}
+      >
         <meshBasicMaterial color={BOBBER} toneMapped={false} />
       </mesh>
     </group>

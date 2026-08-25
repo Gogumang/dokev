@@ -37,8 +37,7 @@ describe("samplePerimeter", () => {
     for (let step = 0; step < 64; step += 1) {
       const point = sample(radius, (perimeter * step) / 64);
       const onEdge =
-        Math.abs(Math.abs(point.x) - radius) < 1e-6 ||
-        Math.abs(Math.abs(point.z) - radius) < 1e-6;
+        Math.abs(Math.abs(point.x) - radius) < 1e-6 || Math.abs(Math.abs(point.z) - radius) < 1e-6;
       expect(onEdge, `u=${step} 지점이 경계를 벗어났다: (${point.x}, ${point.z})`).toBe(true);
       expect(Math.abs(point.x)).toBeLessThanOrEqual(radius + 1e-6);
       expect(Math.abs(point.z)).toBeLessThanOrEqual(radius + 1e-6);
@@ -119,12 +118,14 @@ describe("보행자가 사람 모양인가", () => {
    * 다리가 몸통보다 넓을 수는 없다.
    */
   it("굵기가 길이를 넘지 않는다", () => {
-    expect(PED_BODY.legWidth, `다리 폭 ${PED_BODY.legWidth} vs 길이 ${PED_BODY.legLength}`).toBeLessThan(
-      PED_BODY.legLength,
-    );
-    expect(PED_BODY.armWidth, `팔 폭 ${PED_BODY.armWidth} vs 길이 ${PED_BODY.armLength}`).toBeLessThan(
-      PED_BODY.armLength,
-    );
+    expect(
+      PED_BODY.legWidth,
+      `다리 폭 ${PED_BODY.legWidth} vs 길이 ${PED_BODY.legLength}`,
+    ).toBeLessThan(PED_BODY.legLength);
+    expect(
+      PED_BODY.armWidth,
+      `팔 폭 ${PED_BODY.armWidth} vs 길이 ${PED_BODY.armLength}`,
+    ).toBeLessThan(PED_BODY.armLength);
   });
 
   it("다리가 몸통보다 가늘다", () => {
@@ -134,9 +135,10 @@ describe("보행자가 사람 모양인가", () => {
   });
 
   it("머리가 몸통보다 작다", () => {
-    expect(PED_BODY.headSize, `머리 ${PED_BODY.headSize} vs 몸통 ${PED_BODY.torsoHeight}`).toBeLessThan(
-      PED_BODY.torsoHeight,
-    );
+    expect(
+      PED_BODY.headSize,
+      `머리 ${PED_BODY.headSize} vs 몸통 ${PED_BODY.torsoHeight}`,
+    ).toBeLessThan(PED_BODY.torsoHeight);
   });
 
   it("두 다리가 서로 겹치지 않는다", () => {
@@ -218,10 +220,9 @@ describe("가까이에 사람이 있다", () => {
        * 30m는 눈에 사람으로 보이는 거리다. 컬링 한계(120m)로 재면 도시 반대편도
        * 통과하므로 자가 되지 못한다.
        */
-      expect(
-        distances[0],
-        `가장 가까운 보행자가 ${distances[0]?.toFixed(1)}m에 있다`,
-      ).toBeLessThan(30);
+      expect(distances[0], `가장 가까운 보행자가 ${distances[0]?.toFixed(1)}m에 있다`).toBeLessThan(
+        30,
+      );
 
       // 한 명만 가까우면 「거리」가 아니라 「지나가는 사람」이다
       const near = distances.filter((distance) => distance <= 60).length;

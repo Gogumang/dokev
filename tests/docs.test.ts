@@ -43,7 +43,6 @@ function markdownFiles(): string[] {
   );
 }
 
-
 /**
  * 문서에 적힌 테스트 수와 비교할 기준값 — 소스에서 센다.
  *
@@ -58,7 +57,8 @@ function countTests(): number {
   return readdirSync("tests")
     .filter((name) => name.endsWith(".test.ts"))
     .reduce(
-      (total, name) => total + (readFileSync(`tests/${name}`, "utf8").match(/\bit\(/g)?.length ?? 0),
+      (total, name) =>
+        total + (readFileSync(`tests/${name}`, "utf8").match(/\bit\(/g)?.length ?? 0),
       0,
     );
 }
@@ -122,14 +122,13 @@ describe("PROJECT_PLAN 18절", () => {
      * 훑어 **말한 곳이면 어디든** 검사한다.
      */
     const counted = countTests();
-    const claims = markdownFiles()
-      .flatMap((name) => {
-        const text = readFileSync(name, "utf8");
-        return [...text.matchAll(/(?:테스트 \*\*|\*\*)?(\d{2,})개(?:\*\*)? 테스트/g)].map((m) => ({
-          name,
-          number: Number(m[1]),
-        }));
-      });
+    const claims = markdownFiles().flatMap((name) => {
+      const text = readFileSync(name, "utf8");
+      return [...text.matchAll(/(?:테스트 \*\*|\*\*)?(\d{2,})개(?:\*\*)? 테스트/g)].map((m) => ({
+        name,
+        number: Number(m[1]),
+      }));
+    });
 
     expect(claims.length, "테스트 수를 말하는 문서가 하나도 없다").toBeGreaterThan(0);
     for (const claim of claims) {
@@ -233,7 +232,9 @@ describe("문서가 적은 숫자가 상수와 맞는가", () => {
     expect(Number(claimed?.[2]), `첫 산책: 문서 ${claimed?.[2]}단계`).toBe(
       FIRST_RUN_QUEST.steps.length,
     );
-    expect(Number(claimed?.[3]), `고물 대장: 문서 ${claimed?.[3]}단계`).toBe(BOSS_QUEST.steps.length);
+    expect(Number(claimed?.[3]), `고물 대장: 문서 ${claimed?.[3]}단계`).toBe(
+      BOSS_QUEST.steps.length,
+    );
   });
 
   it("이동 속도", () => {
@@ -355,7 +356,11 @@ describe("백로그를 훑을 수 있는가", () => {
      */
     const numbers = [...backlog.matchAll(/^\| (\d+) \|/gm)].map((m) => Number(m[1]));
     const seen = new Set<number>();
-    const duplicated = numbers.filter((n) => (seen.has(n) ? true : (seen.add(n), false)));
+    const duplicated: number[] = [];
+    for (const n of numbers) {
+      if (seen.has(n)) duplicated.push(n);
+      else seen.add(n);
+    }
     expect(duplicated, `겹친 번호: ${[...new Set(duplicated)].join(", ")}`).toEqual([]);
   });
 
@@ -379,7 +384,9 @@ describe("백로그를 훑을 수 있는가", () => {
     ];
     expect(cited.length, `인용한 반복 ${cited.length}개`).toBeGreaterThan(5);
     for (const number of cited) {
-      expect(backlog, `반복 ${number} 행이 표에 없다`).toMatch(new RegExp(`\\|\\s*${number}\\s*\\|`));
+      expect(backlog, `반복 ${number} 행이 표에 없다`).toMatch(
+        new RegExp(`\\|\\s*${number}\\s*\\|`),
+      );
     }
   });
 });
@@ -530,7 +537,11 @@ describe("백로그 요약이 행 번호를 빠짐없이 덮는가", () => {
      */
     const rows = [...backlog.matchAll(/^\| (\d+) \|/gm)].map((match) => Number(match[1]));
     const seen = new Set<number>();
-    const duplicates = rows.filter((row) => (seen.has(row) ? true : (seen.add(row), false)));
+    const duplicates: number[] = [];
+    for (const row of rows) {
+      if (seen.has(row)) duplicates.push(row);
+      else seen.add(row);
+    }
     expect(duplicates, `번호가 겹친다: ${[...new Set(duplicates)].join(", ")}`).toEqual([]);
   });
 
@@ -538,9 +549,10 @@ describe("백로그 요약이 행 번호를 빠짐없이 덮는가", () => {
     const rows = [...backlog.matchAll(/^\| (\d+) \|/gm)].map((match) => Number(match[1]));
     const newest = Math.max(...rows);
     const last = headings[headings.length - 1];
-    expect(last.from, `마지막 요약은 ${last.from}~인데 행은 ${newest}까지 있다`).toBeLessThanOrEqual(
-      newest,
-    );
+    expect(
+      last.from,
+      `마지막 요약은 ${last.from}~인데 행은 ${newest}까지 있다`,
+    ).toBeLessThanOrEqual(newest);
   });
 });
 
@@ -570,9 +582,7 @@ describe("검사가 짚는 이정표가 실제로 있는가", () => {
     .filter((name) => name.endsWith(".test.ts"))
     .flatMap((name) =>
       [
-        ...readFileSync(join("tests", name), "utf8").matchAll(
-          /indexOf\("((?:[^"\\]|\\.){6,})"\)/g,
-        ),
+        ...readFileSync(join("tests", name), "utf8").matchAll(/indexOf\("((?:[^"\\]|\\.){6,})"\)/g),
       ].map((match) => ({
         file: name,
         literal: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'),

@@ -173,10 +173,7 @@ describe("충돌체 예산", () => {
      * 이동은 매 프레임 충돌체 전체를 훑는다. 공간 분할이 없으므로 개수가
      * 그대로 비용이다. 넘어가면 분할을 도입할 시점이다.
      */
-    expect(
-      layout.colliders.length,
-      `colliders: ${layout.colliders.length}`,
-    ).toBeLessThan(2000);
+    expect(layout.colliders.length, `colliders: ${layout.colliders.length}`).toBeLessThan(2000);
   });
 });
 
@@ -304,10 +301,9 @@ describe("모든 프레임 루프가 같은 시간을 사는가", () => {
         }
       }
     }
-    expect(
-      local,
-      `공유 상수(MAX_DELTA_SECONDS) 대신 숫자를 박은 곳:\n${local.join("\n")}`,
-    ).toEqual([]);
+    expect(local, `공유 상수(MAX_DELTA_SECONDS) 대신 숫자를 박은 곳:\n${local.join("\n")}`).toEqual(
+      [],
+    );
   });
 
   /*

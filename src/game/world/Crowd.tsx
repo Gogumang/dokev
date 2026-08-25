@@ -152,7 +152,15 @@ export interface CrowdProps {
   combat: { enemyBlips: Float32Array; enemyBlipCount: number };
 }
 
-export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat, playSpots }: CrowdProps) {
+export function Crowd({
+  quality,
+  reducedMotion,
+  talk,
+  timeOfDay,
+  emote,
+  combat,
+  playSpots,
+}: CrowdProps) {
   const { camera } = useThree();
 
   const specs = useMemo(() => {
@@ -204,11 +212,7 @@ export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat, 
       pitchQuat: new THREE.Quaternion(),
       up: new THREE.Vector3(0, 1, 0),
       right: new THREE.Vector3(1, 0, 0),
-      torsoScale: new THREE.Vector3(
-        PED_BODY.torsoWidth,
-        PED_BODY.torsoHeight,
-        PED_BODY.torsoDepth,
-      ),
+      torsoScale: new THREE.Vector3(PED_BODY.torsoWidth, PED_BODY.torsoHeight, PED_BODY.torsoDepth),
       headScale: new THREE.Vector3(PED_BODY.headSize, PED_BODY.headSize, PED_BODY.headSize),
       legScale: new THREE.Vector3(PED_BODY.legWidth, PED_BODY.legLength, PED_BODY.legDepth),
       armScale: new THREE.Vector3(PED_BODY.armWidth, PED_BODY.armLength, PED_BODY.armDepth),
@@ -436,15 +440,11 @@ export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat, 
         const legPitch = (side === 0 ? -swing : swing) * amplitude;
         const armPitch = -legPitch * 1.1;
 
-        scratch.offset
-          .set(lateral * PED_BODY.legSpread, 0, 0)
-          .applyQuaternion(scratch.yawQuat);
+        scratch.offset.set(lateral * PED_BODY.legSpread, 0, 0).applyQuaternion(scratch.yawQuat);
 
         scratch.pitchQuat.setFromAxisAngle(scratch.right, legPitch);
         scratch.limbQuat.multiplyQuaternions(scratch.yawQuat, scratch.pitchQuat);
-        scratch.limbOffset
-          .set(0, -PED_BODY.legLength / 2, 0)
-          .applyQuaternion(scratch.limbQuat);
+        scratch.limbOffset.set(0, -PED_BODY.legLength / 2, 0).applyQuaternion(scratch.limbQuat);
         scratch.position.set(
           x + scratch.offset.x + scratch.limbOffset.x,
           ground + hipY + scratch.limbOffset.y,
@@ -453,15 +453,11 @@ export function Crowd({ quality, reducedMotion, talk, timeOfDay, emote, combat, 
         scratch.matrix.compose(scratch.position, scratch.limbQuat, scratch.legScale);
         legs.setMatrixAt(index * 2 + side, scratch.matrix);
 
-        scratch.offset
-          .set(lateral * PED_BODY.armSpread, 0, 0)
-          .applyQuaternion(scratch.yawQuat);
+        scratch.offset.set(lateral * PED_BODY.armSpread, 0, 0).applyQuaternion(scratch.yawQuat);
 
         scratch.pitchQuat.setFromAxisAngle(scratch.right, armPitch);
         scratch.limbQuat.multiplyQuaternions(scratch.yawQuat, scratch.pitchQuat);
-        scratch.limbOffset
-          .set(0, -PED_BODY.armLength / 2, 0)
-          .applyQuaternion(scratch.limbQuat);
+        scratch.limbOffset.set(0, -PED_BODY.armLength / 2, 0).applyQuaternion(scratch.limbQuat);
         scratch.position.set(
           x + scratch.offset.x + scratch.limbOffset.x,
           ground + hipY + PED_BODY.armOffsetY + scratch.limbOffset.y,

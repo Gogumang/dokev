@@ -153,7 +153,9 @@ describe("터치 조작 동등성", () => {
 
   it("키로 되는 모든 기능에 터치 버튼이 있다", () => {
     for (const [id, marker] of Object.entries(TOUCH_MARKER)) {
-      expect(labels.includes(marker), `${id}: 「${marker}」라는 이름표를 단 버튼이 없다`).toBe(true);
+      expect(labels.includes(marker), `${id}: 「${marker}」라는 이름표를 단 버튼이 없다`).toBe(
+        true,
+      );
     }
   });
 
@@ -236,7 +238,10 @@ describe("문서가 조작 수를 맞게 말하는가", () => {
      * 역할이 아니다(정본은 `CONTROL_CODES` 하나다).
      */
     const guide = readFileSync("docs/DESIGN_GUIDE.md", "utf8");
-    const table = guide.slice(guide.indexOf("| 행동 | 키보드/마우스"), guide.indexOf("키 재설정은"));
+    const table = guide.slice(
+      guide.indexOf("| 행동 | 키보드/마우스"),
+      guide.indexOf("키 재설정은"),
+    );
     expect(table.length, "입력 표를 못 찾았다").toBeGreaterThan(80);
 
     // 리터럴 유니온이라 `has`가 넓은 문자열을 안 받는다 — 문자열로 낮춰 비교한다
@@ -245,9 +250,7 @@ describe("문서가 조작 수를 맞게 말하는가", () => {
     const letters = [...table.matchAll(/\| ([A-Z])(?=[ /|])/g)].map((match) => match[1]);
     expect(letters.length, `표에서 읽은 키 ${letters.length}개`).toBeGreaterThan(1);
 
-    const unknown = letters.filter(
-      (letter) => !bound.has(`Key${letter}`) && !named.has(letter),
-    );
+    const unknown = letters.filter((letter) => !bound.has(`Key${letter}`) && !named.has(letter));
     expect(unknown, `정본에 없는 키를 안내한다: ${unknown.join(", ")}`).toEqual([]);
   });
 

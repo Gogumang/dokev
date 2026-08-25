@@ -76,7 +76,12 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
       /** 킥보드 기둥과 자전거 안장 기둥이 함께 쓰는 가는 막대 */
       post: new THREE.BoxGeometry(V.postSide, V.postHeight, V.postSide),
       handlebar: new THREE.BoxGeometry(V.barWidth, V.barThickness, V.barThickness),
-      bikeWheel: new THREE.CylinderGeometry(V.bikeWheelRadius, V.bikeWheelRadius, V.bikeWheelWidth, 14),
+      bikeWheel: new THREE.CylinderGeometry(
+        V.bikeWheelRadius,
+        V.bikeWheelRadius,
+        V.bikeWheelWidth,
+        14,
+      ),
       bikeBar: new THREE.BoxGeometry(V.bikeBarSide, V.bikeBarSide, V.bikeBarLength),
       saddle: new THREE.BoxGeometry(V.saddleWidth, V.saddleHeight, V.saddleDepth),
       carBody: new THREE.BoxGeometry(V.carWidth, V.carHeight, V.carLength),

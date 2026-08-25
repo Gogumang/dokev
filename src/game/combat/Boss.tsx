@@ -25,6 +25,7 @@ import * as THREE from "three";
 
 import {
   BOSS,
+  type BossView,
   createBoss,
   damageBoss,
   projectBossView,
@@ -53,6 +54,8 @@ import {
 } from "@/game/combat/summonSim";
 import { WEAPONS } from "@/game/combat/weapons";
 import { getLampGlowTexture } from "@/game/world/textures";
+import { BossModel } from "@/game/combat/BossModel";
+import { BossSummons } from "@/game/combat/BossSummons";
 import { ToonMaterial } from "@/game/scene/ToonMaterial";
 import { terrainHeight } from "@/game/world/terrain";
 
@@ -71,7 +74,7 @@ export interface BossProps {
   home: { x: number; z: number };
   reducedMotion: boolean;
   /** HUD가 읽는 보스 상태. 이 컴포넌트가 매 프레임 채운다 */
-  view: { engaged: boolean; healthRatio: number; telegraph: boolean; distance: number; phase: string };
+  view: BossView;
   /**
    * 지금까지 만난 도깨비.
    *
@@ -90,13 +93,6 @@ export interface BossProps {
  */
 /** 대장 가슴의 점. 일반 로봇과 같은 색이어야 같은 것으로 읽힌다 */
 const BOSS_CORE_COLOR = "#7cf5c4";
-
-const SUMMON_COLOR: Record<SummonRole, string> = {
-  mark: "#ffe066",
-  lure: "#9b8aa6",
-  mend: "#5ad2ff",
-  burst: "#ff7ad9",
-};
 
 /** 화면에 동시에 나올 수 있는 도깨비 수. 로스터가 넷이라 넷이면 충분하다 */
 const SUMMON_SLOTS = DOKEBI_ORDER.length;
@@ -169,7 +165,6 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
       for (const item of created) item.dispose();
     };
   }, [geometry]);
-
 
   const ringTexture = useMemo(() => getLampGlowTexture(), []);
   const color = useMemo(() => new THREE.Color(), []);
@@ -382,29 +377,46 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
 
   return (
     <group ref={rootRef} position={[home.x, terrainHeight(home.x, home.z), home.z]}>
-      <mesh ref={bodyRef} geometry={geometry.body} position={[0, 1.6, 0]} castShadow>
-        <ToonMaterial color={COLOR.normal} />
-      </mesh>
       {/*
+        몸은 GLB다. 못 받았으면 상자 몸이 그대로 선다 — 대장이 사라지는 것보다
+        낫고, 크기도 `BOSS_BODY.height`로 같이 맞춰 둔다.
+      */}
+      <BossModel
+        source={view}
+        fallback={
+          <>
+            <mesh ref={bodyRef} geometry={geometry.body} position={[0, 1.6, 0]} castShadow>
+              <ToonMaterial color={COLOR.normal} />
+            </mesh>
+            {/*
         가슴의 점 — 일반 로봇과 **같은 조형**이다(`enemyBody.coreRadius`).
         대장만 없으면 「저 안에 갇혀 있다」는 규칙이 대장에게는 해당되지 않는
         것으로 읽힌다. 몸이 큰 만큼 점도 크다.
       */}
-      <mesh geometry={geometry.core} position={[0, 1.9, BOSS_BODY.bodyDepth / 2]}>
-        <meshBasicMaterial color={BOSS_CORE_COLOR} toneMapped={false} />
-      </mesh>
-      <mesh geometry={geometry.head} position={[0, 3, 0]} castShadow>
-        <ToonMaterial color="#6f6a7d" />
-      </mesh>
-      <mesh geometry={geometry.arm} position={[1.2, 1.7, 0]} castShadow>
-        <ToonMaterial color="#5f6a76" />
-      </mesh>
-      <mesh geometry={geometry.arm} position={[-1.2, 1.7, 0]} castShadow>
-        <ToonMaterial color="#5f6a76" />
-      </mesh>
+            <mesh geometry={geometry.core} position={[0, 1.9, BOSS_BODY.bodyDepth / 2]}>
+              <meshBasicMaterial color={BOSS_CORE_COLOR} toneMapped={false} />
+            </mesh>
+            <mesh geometry={geometry.head} position={[0, 3, 0]} castShadow>
+              <ToonMaterial color="#6f6a7d" />
+            </mesh>
+            <mesh geometry={geometry.arm} position={[1.2, 1.7, 0]} castShadow>
+              <ToonMaterial color="#5f6a76" />
+            </mesh>
+            <mesh geometry={geometry.arm} position={[-1.2, 1.7, 0]} castShadow>
+              <ToonMaterial color="#5f6a76" />
+            </mesh>
+          </>
+        }
+      />
 
       {/* 예고 링 — 가산 합성이라 깊이 기록을 끈다 (가로등 빛 웅덩이와 같은 이유) */}
-      <mesh ref={ringRef} geometry={geometry.ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} visible={false}>
+      <mesh
+        ref={ringRef}
+        geometry={geometry.ring}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.05, 0]}
+        visible={false}
+      >
         <meshBasicMaterial
           map={ringTexture}
           color="#ff6b4a"
@@ -416,45 +428,12 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
         />
       </mesh>
 
-      {/*
-        부른 도깨비와 능력 자국.
-        슬롯을 미리 잡아 두고 안 쓰는 것은 숨긴다 — 소환할 때마다 메시를 만들면
-        보스전 한복판에서 지오메트리를 올리게 되고, 그 순간이 곧 프레임 끊김이다.
-      */}
-      {DOKEBI_ORDER.map((id, slot) => {
-        const color = SUMMON_COLOR[roleForDokebi(id)];
-        return (
-          <group key={id}>
-            <mesh
-              ref={(mesh) => {
-                orbRefs.current[slot] = mesh;
-              }}
-              geometry={geometry.orb}
-              visible={false}
-            >
-              {/* 스스로 빛나는 존재다 — 조명을 받으면 그냥 떠다니는 공이 된다 */}
-              <meshBasicMaterial color={color} toneMapped={false} />
-            </mesh>
-            <mesh
-              ref={(mesh) => {
-                burstRefs.current[slot] = mesh;
-              }}
-              geometry={geometry.burst}
-              visible={false}
-            >
-              <meshBasicMaterial
-                map={ringTexture}
-                color={color}
-                transparent
-                opacity={0}
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-                toneMapped={false}
-              />
-            </mesh>
-          </group>
-        );
-      })}
+      <BossSummons
+        geometry={geometry}
+        ringTexture={ringTexture}
+        orbRefs={orbRefs}
+        burstRefs={burstRefs}
+      />
     </group>
   );
 }

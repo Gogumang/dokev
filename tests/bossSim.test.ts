@@ -202,9 +202,10 @@ describe("예고를 보고 실제로 피할 수 있는가", () => {
      * 사거리(4.6m)에서 예고가 시작되고 충격은 6.2m까지 닿는다. 즉 1.6m를
      * 1.1초 안에 벌면 된다 — 걷는 속도로도 여유가 있어야 한다.
      */
-    expect(needed, `초당 ${needed.toFixed(2)}m 필요, 걷기는 ${LOCOMOTION.walk.maxSpeed}`).toBeLessThan(
-      LOCOMOTION.walk.maxSpeed * 0.7,
-    );
+    expect(
+      needed,
+      `초당 ${needed.toFixed(2)}m 필요, 걷기는 ${LOCOMOTION.walk.maxSpeed}`,
+    ).toBeLessThan(LOCOMOTION.walk.maxSpeed * 0.7);
   });
 
   it("붙어 있어도 달리면 벗어난다", () => {
@@ -341,7 +342,15 @@ describe("대장 상태가 화면으로 나가는가", () => {
    * 알 수 없고, 사람 몫의 「보스 링 타이밍과 손맛」 판단도 뜻을 잃는다.
    */
   function emptyView(): BossView {
-    return { engaged: false, healthRatio: 0, telegraph: false, distance: 0, phase: "" };
+    return {
+      engaged: false,
+      healthRatio: 0,
+      telegraph: false,
+      distance: 0,
+      phase: "idle",
+      x: 0,
+      z: 0,
+    };
   }
 
   it("모든 칸이 채워진다 — 하나라도 비면 화면이 옛 값을 계속 보여 준다", () => {

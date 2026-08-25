@@ -81,9 +81,10 @@ describe("어디를 지나가는가", () => {
         const trail = swingTrail(t, weapon);
         if (trail.opacity === 0) continue;
         const edge = Math.abs(trail.centerAngle) + trail.halfWidth;
-        expect(edge, `${weapon.id} t=${t.toFixed(2)}: 끝 ${edge} > 부채꼴 ${weapon.halfAngle}`).toBeLessThanOrEqual(
-          weapon.halfAngle + 1e-6,
-        );
+        expect(
+          edge,
+          `${weapon.id} t=${t.toFixed(2)}: 끝 ${edge} > 부채꼴 ${weapon.halfAngle}`,
+        ).toBeLessThanOrEqual(weapon.halfAngle + 1e-6);
       }
     }
   });

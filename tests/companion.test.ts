@@ -10,6 +10,7 @@ import type { Vec3 } from "@/game/player/locomotion";
 
 import {
   bobOffset,
+  companionFormationScale,
   slotAngle,
   COMPANION_TUNING,
   createCompanionState,
@@ -73,6 +74,12 @@ function tightestGap(spots: readonly Vec3[]): { gap: number; pair: string } {
 }
 
 describe("createCompanionState", () => {
+  it("좁은 세로 화면일수록 동료 대열이 안쪽으로 모인다", () => {
+    expect(companionFormationScale(375)).toBeLessThan(companionFormationScale(768));
+    expect(companionFormationScale(768)).toBeLessThan(companionFormationScale(1280));
+    expect(companionFormationScale(1280)).toBe(1);
+  });
+
   it("생성 직후에도 플레이어 근처에 있다", () => {
     // Arrange
     const target = makeTarget({ position: { x: 40, y: 0, z: -25 } });
@@ -101,7 +108,9 @@ describe("createCompanionState", () => {
 
     // Assert — 가장 가까운 쌍도 실루엣보다 벌어져야 둘로 보인다
     const { gap, pair } = tightestGap(spots.map((s) => s.position));
-    expect(gap, `자리 ${pair}이 ${gap.toFixed(2)}m로 가장 가깝다`).toBeGreaterThan(SILHOUETTE_WIDTH);
+    expect(gap, `자리 ${pair}이 ${gap.toFixed(2)}m로 가장 가깝다`).toBeGreaterThan(
+      SILHOUETTE_WIDTH,
+    );
   });
 
   it("제자리에 서 있어도 자리가 유지된다", () => {
@@ -243,9 +252,7 @@ describe("stepCompanion — 추적", () => {
 
     // Assert
     const distance = distanceToTarget(result, target);
-    expect(distance, `distance was: ${distance}`).toBeLessThan(
-      COMPANION_TUNING.followDistance + 2,
-    );
+    expect(distance, `distance was: ${distance}`).toBeLessThan(COMPANION_TUNING.followDistance + 2);
     expect(result.velocity.x, `velocity was: ${JSON.stringify(result.velocity)}`).toBe(0);
   });
 
@@ -617,7 +624,9 @@ describe("무작위 60초 동안 동료가 붙어 있는가", () => {
         ] as const) {
           expect(Number.isFinite(value), `frame ${frame}: ${name}=${value}`).toBe(true);
         }
-        expect(state.presence, `frame ${frame}: presence=${state.presence}`).toBeGreaterThanOrEqual(0);
+        expect(state.presence, `frame ${frame}: presence=${state.presence}`).toBeGreaterThanOrEqual(
+          0,
+        );
         expect(state.presence, `frame ${frame}: presence=${state.presence}`).toBeLessThanOrEqual(1);
 
         if (summoned && state.presence > 0.9) {
@@ -641,7 +650,7 @@ describe("능력을 쓸 수 있는지 알려 주는가", () => {
    * 죽은 export 검사는 이걸 못 잡았다: 테스트가 import하고 있으면 「쓰이는
    * 중」으로 센다. 제품 코드에서 죽어도 테스트가 살려 둔다.
    */
-  const touch = readCode("src/components/hud/TouchControls.tsx");
+  const touch = readCode("src/components/hud/TouchButtons.tsx");
 
   /*
    * 원래는 `Companion.tsx`가 특정 글자를 담고 있는지로 봤다. 그 코드를
@@ -758,7 +767,12 @@ describe("능력과 등장이 시간을 지키는가", () => {
     let state = createCompanionState({ x: 0, y: 0, z: 0 }, 0);
     // 소환 상태를 안정시킨다 — presence가 차야 능력을 쓸 수 있다
     state = run(state, target, 120);
-    state = stepCompanion(state, target, FRAME, makeCommand({ summoned: true, abilityRequests: 1 }));
+    state = stepCompanion(
+      state,
+      target,
+      FRAME,
+      makeCommand({ summoned: true, abilityRequests: 1 }),
+    );
     expect(state.abilityRemaining, "능력이 켜지지 않았다").toBeGreaterThan(0);
 
     for (let i = 0; i < 60 * 60; i += 1) {
@@ -996,7 +1010,9 @@ describe("동료 술어가 실제로 갈리는가", () => {
   });
 
   it("두 문턱이 같지 않다 — 같으면 「점은 찍히는데 아직 못 쓴다」 구간이 없다", () => {
-    const onlyDot = PRESENCES.filter((p) => showsOnMap(withPresence(p)) && !canUseAbility(withPresence(p)));
+    const onlyDot = PRESENCES.filter(
+      (p) => showsOnMap(withPresence(p)) && !canUseAbility(withPresence(p)),
+    );
     expect(onlyDot.length, `점만 찍히는 구간: ${onlyDot.join(", ")}`).toBeGreaterThan(0);
   });
 });
@@ -1081,7 +1097,12 @@ describe("능력을 대기 중에 또 쓸 수 있는가", () => {
   const target = makeTarget();
 
   function pressAbility(state: CompanionState, requests: number): CompanionState {
-    return stepCompanion(state, target, FRAME, makeCommand({ summoned: true, abilityRequests: requests }));
+    return stepCompanion(
+      state,
+      target,
+      FRAME,
+      makeCommand({ summoned: true, abilityRequests: requests }),
+    );
   }
 
   it("쓰는 중에 또 누르면 시간이 안 늘어난다", () => {

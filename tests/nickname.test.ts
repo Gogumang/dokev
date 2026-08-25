@@ -110,15 +110,17 @@ describe("이름이 화면에 닿아 있는가", () => {
     const hud = readCode("src/components/hud/TouchMenu.tsx");
 
     const anywhere = title.includes('id="nickname"') || hud.includes('id="nickname"');
-    expect(
-      anywhere,
-      "입력칸이 되살아났다 — 이 검사를 「그 자리에서 입력한다」로 바꾸라",
-    ).toBe(false);
+    expect(anywhere, "입력칸이 되살아났다 — 이 검사를 「그 자리에서 입력한다」로 바꾸라").toBe(
+      false,
+    );
   });
 
   it("완주 화면이 이름을 부른다", () => {
-    const panels = readCode("src/components/hud/StatusPanels.tsx");
-    expect(panels, "완주 화면이 이름을 쓰지 않는다").toContain("의 완주");
+    const view = readCode("src/components/hud/views/ResultPanel.tsx");
+    expect(view, "완주 화면이 이름을 쓰지 않는다").toContain("의 완주");
+    // 잇는 쪽이 실제로 넘겨야 한다 — 모양만 있고 값이 안 오면 늘 「완주」다
+    const panels = readCode("src/components/hud/ResultPanel.tsx");
+    expect(panels, "이름을 넘기지 않는다").toContain("nickname={nickname}");
   });
 
   it("사진과 클립 모두 이름을 넘긴다", () => {

@@ -46,9 +46,10 @@ describe("반경이 화면과 맞는가", () => {
      * 안 보이는 사람이 춤추는 것은 아무 의미가 없다. 컬링 거리의 절반만
      * 넘어도 「보이지 않는 곳에서 벌어지는 일」을 계산하는 셈이다.
      */
-    expect(CROWD.danceRadius, `합류 ${CROWD.danceRadius}m vs 컬링 ${CROWD.cullDistance}m`).toBeLessThan(
-      CROWD.cullDistance / 4,
-    );
+    expect(
+      CROWD.danceRadius,
+      `합류 ${CROWD.danceRadius}m vs 컬링 ${CROWD.cullDistance}m`,
+    ).toBeLessThan(CROWD.cullDistance / 4);
   });
 
   it("한 구역 안에 머문다 — 옆 동네까지 번지면 인과가 사라진다", () => {

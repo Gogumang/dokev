@@ -89,8 +89,8 @@
  */
 html {
   font-family:
-    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
-    "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR",
+    "Malgun Gothic", system-ui, sans-serif;
   background: var(--color-bg-canvas);
   color: var(--color-text-primary);
   -webkit-text-size-adjust: 100%;

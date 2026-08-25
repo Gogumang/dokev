@@ -24,12 +24,7 @@ export interface MusicVoice {
    * @param companionPresent 초롱이 곁에 있으면 종소리 레이어가 얹힌다
    * @param district 현재 구역. 화음 진행이 바뀐다 (마디 경계에서만 반영)
    */
-  update(
-    intensity: number,
-    now: number,
-    companionPresent?: boolean,
-    district?: DistrictId,
-  ): void;
+  update(intensity: number, now: number, companionPresent?: boolean, district?: DistrictId): void;
   dispose(): void;
 }
 
@@ -167,7 +162,7 @@ export const LAYER_THRESHOLD = {
 } as const;
 
 function semitoneToHz(semitone: number): number {
-  return ROOT_HZ * Math.pow(2, semitone / 12);
+  return ROOT_HZ * 2 ** (semitone / 12);
 }
 
 /**

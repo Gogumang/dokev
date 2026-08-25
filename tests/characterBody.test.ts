@@ -151,9 +151,10 @@ describe("동료가 도깨비 모양인가", () => {
      * 몸통 지름이 플레이어 키의 절반을 넘지 않아야 한다.
      */
     const diameter = COMPANION_BODY.bodyRadius * 2;
-    expect(diameter, `동료 지름 ${diameter.toFixed(2)}m vs 플레이어 키 ${PLAYER_HEIGHT}m`).toBeLessThan(
-      PLAYER_HEIGHT / 2,
-    );
+    expect(
+      diameter,
+      `동료 지름 ${diameter.toFixed(2)}m vs 플레이어 키 ${PLAYER_HEIGHT}m`,
+    ).toBeLessThan(PLAYER_HEIGHT / 2);
   });
 });
 

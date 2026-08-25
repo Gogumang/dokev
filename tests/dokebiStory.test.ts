@@ -70,7 +70,7 @@ describe("만나기 전에는 넘어가지 않는가", () => {
      * 도감이 `DOKEBI[id].story`를 직접 읽으면 이 문은 장식이 된다. 화면이
      * **없는 것을 그릴 수 없게** 하려면 반드시 여기를 지나야 한다.
      */
-    const codex = readCode("src/components/hud/Codex.tsx");
+    const codex = readCode("src/components/hud/CodexEntryBody.tsx");
     expect(codex, "도감이 사연 문을 안 쓴다").toMatch(/storyFor\(/);
     expect(codex, "도감이 사연을 직접 읽는다").not.toMatch(/\.story\b/);
   });

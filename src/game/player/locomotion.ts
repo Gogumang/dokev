@@ -215,10 +215,13 @@ export function stepLocomotion(
    * 활강 판정.
    *
    * 상승 중에는 걸리지 않는다 — 점프하자마자 활강이 시작되면 점프가 뜨는
-   * 느낌을 잃는다. 충분히 떨어지기 시작한 뒤부터 점프 키를 잡고 있으면 켜진다.
+   * 느낌을 잃는다. 충분히 떨어지기 시작한 뒤, 이단 점프를 썼으면 자동으로
+   * 켜지고 그 전에는 점프 키를 잡고 있을 때만 켜진다.
    */
-  const gliding =
-    !state.grounded && input.jumpHeld && state.velocity.y < -GLIDE.minFallSpeed;
+  let gliding =
+    !state.grounded &&
+    (input.jumpHeld || state.airJumpsUsed > 0) &&
+    state.velocity.y < -GLIDE.minFallSpeed;
 
   const airFactor = state.grounded ? 1 : AIR_CONTROL * (gliding ? GLIDE.airControlScale : 1);
   let speed = horizontalSpeed(state.velocity);
@@ -306,6 +309,7 @@ export function stepLocomotion(
 
   if (jumpBufferRemaining > 0 && coyoteRemaining > 0) {
     velocity.y = JUMP_VELOCITY;
+    gliding = false;
     jumpBufferRemaining = 0;
     coyoteRemaining = 0;
   } else if (jumpBufferRemaining > 0 && airJumpsUsed < AIR_JUMP_COUNT) {
@@ -316,6 +320,7 @@ export function stepLocomotion(
      * 중이었든 같은 높이만큼 다시 올라가 예측이 가능하다.
      */
     velocity.y = AIR_JUMP_VELOCITY;
+    gliding = false;
     airJumpsUsed += 1;
     jumpBufferRemaining = 0;
   }
@@ -606,45 +611,4 @@ export function clampToBounds(position: Vec3, halfExtent: number, radius: number
     y: position.y,
     z: clamp(position.z, -limit, limit),
   };
-}
-
-/** 캐릭터 자세·소리·성능 패널이 읽는 이동 상태 */
-export interface MotionView {
-  speed: number;
-  mode: LocomotionMode;
-  grounded: boolean;
-  gliding: boolean;
-  landingImpact: number;
-  x: number;
-  z: number;
-  facing: number;
-}
-
-/**
- * 이동 상태를 화면이 읽는 모양으로 옮긴다.
- *
- * 화면 안(프레임 루프)에서 칸마다 손으로 적을 때는 **한 줄을 지워도 아무도
- * 몰랐다.** 여기가 끊기면 증상이 곧바로 눈에 띄는데도 그렇다:
- *
- *   - `mode`가 안 나가면 **달려도 걷는 자세**로 보이고 발소리도 걷기로 난다.
- *   - `grounded`가 안 나가면 땅에 서서 공중 자세를 하거나 그 반대가 된다.
- *   - `x`·`z`가 안 나가면 **지도의 내 점이 안 움직인다.**
- *   - `landingImpact`가 안 나가면 아무리 높이 떨어져도 카메라가 안 흔들린다.
- *
- * 제자리에서 채운다 — 새 객체를 만들면 HUD와 캐릭터가 보던 것과 갈라진다.
- */
-export function projectMotionView(
-  view: MotionView,
-  state: LocomotionState,
-  speed: number,
-  mode: LocomotionMode,
-): void {
-  view.speed = speed;
-  view.mode = mode;
-  view.grounded = state.grounded;
-  view.gliding = state.gliding;
-  view.landingImpact = state.landingImpact;
-  view.x = state.position.x;
-  view.z = state.position.z;
-  view.facing = state.facing;
 }

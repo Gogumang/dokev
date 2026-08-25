@@ -63,7 +63,9 @@ describe("구역별 안개", () => {
       for (const mood of moods) {
         const near = quality.fogNear * mood.fogNearScale;
         const far = quality.fogFar * mood.fogFarScale;
-        expect(near, `${mood.id} @ near ${near.toFixed(1)} / far ${far.toFixed(1)}`).toBeLessThan(far);
+        expect(near, `${mood.id} @ near ${near.toFixed(1)} / far ${far.toFixed(1)}`).toBeLessThan(
+          far,
+        );
       }
     }
   });
@@ -75,7 +77,9 @@ describe("구역별 안개", () => {
      */
     for (const mood of moods) {
       expect(mood.tintStrength, `${mood.id} 색조 세기 ${mood.tintStrength}`).toBeGreaterThan(0);
-      expect(mood.tintStrength, `${mood.id} 색조 세기 ${mood.tintStrength}`).toBeLessThanOrEqual(0.35);
+      expect(mood.tintStrength, `${mood.id} 색조 세기 ${mood.tintStrength}`).toBeLessThanOrEqual(
+        0.35,
+      );
     }
   });
 

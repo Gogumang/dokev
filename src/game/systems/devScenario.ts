@@ -94,6 +94,18 @@ export const SCENARIOS: Record<string, Scenario> = {
     label: "보스전 합동 공격 — 도깨비 넷이 도는지, 능력 자국이 보이는지",
     spawn: { x: BOSS_HOME.x, z: BOSS_HOME.z + 14 },
     metDokebi: [...DOKEBI_ORDER],
+    defeatedTotal: 99,
+    questCompleted: true,
+    bossDefeated: true,
+  },
+  ability: {
+    id: "ability",
+    label: "도깨비 능력 VFX — 장애물 없는 시작 지점에서 단독 확인",
+    spawn: { x: BOSS_HOME.x + 14, z: BOSS_HOME.z },
+    metDokebi: [...DOKEBI_ORDER],
+    defeatedTotal: 99,
+    questCompleted: true,
+    bossDefeated: true,
   },
   /**
    * 1분 30초 시연 — 코스 첫 장면에서, 전부 열린 채로 시작한다.
@@ -212,9 +224,15 @@ export const SCENARIOS: Record<string, Scenario> = {
      */
     label: "도깨비 자리 앞 — 빛기둥이 눈길을 끄는지 (보이는 것은 확인됨)",
     defeatedTotal: DOKEBI.geueum.requiredDefeats,
-    spawn: DOKEBI.geueum.home ? { x: DOKEBI.geueum.home.x, z: DOKEBI.geueum.home.z + 22 } : undefined,
+    spawn: DOKEBI.geueum.home
+      ? { x: DOKEBI.geueum.home.x, z: DOKEBI.geueum.home.z + 22 }
+      : undefined,
   },
 };
+
+function isDokebiId(value: string): value is DokebiId {
+  return Object.hasOwn(DOKEBI, value);
+}
 
 /**
  * 주소에서 확인 지점을 읽는다.
@@ -225,7 +243,8 @@ export const SCENARIOS: Record<string, Scenario> = {
 export function parseScenario(search: string, isDevelopment: boolean): Scenario | null {
   if (!isDevelopment) return null;
 
-  const value = new URLSearchParams(search).get("see");
+  const params = new URLSearchParams(search);
+  const value = params.get("see");
   if (!value) return null;
 
   /*
@@ -236,5 +255,20 @@ export function parseScenario(search: string, isDevelopment: boolean): Scenario 
    * 뒤쪽 코드는 `scenario.timeOfDay`·`scenario.metDokebi`를 읽으므로 전부
    * undefined가 되어 조용히 이상한 상태로 시작한다. 자기 것만 본다.
    */
-  return Object.hasOwn(SCENARIOS, value) ? SCENARIOS[value] : null;
+  if (!Object.hasOwn(SCENARIOS, value)) return null;
+
+  const scenario = SCENARIOS[value];
+  const requestedDokebi = params.get("dokebi");
+  const isolatesDokebi = scenario.id === "summon" || scenario.id === "ability";
+  if (!isolatesDokebi || requestedDokebi === null) {
+    return scenario;
+  }
+  if (!isDokebiId(requestedDokebi)) return null;
+
+  return {
+    ...scenario,
+    label: `${DOKEBI[requestedDokebi].name} 능력 VFX 단독 확인`,
+    dokebi: requestedDokebi,
+    metDokebi: [requestedDokebi],
+  };
 }

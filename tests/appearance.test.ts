@@ -69,7 +69,9 @@ describe("APPEARANCES", () => {
     }
 
     // 시간대나 외형이 사라지면 빈 조합을 훑으며 통과한다
-    expect(checked, `확인한 조합 ${checked}가지`).toBe(TIME_OF_DAY_ORDER.length * APPEARANCE_ORDER.length);
+    expect(checked, `확인한 조합 ${checked}가지`).toBe(
+      TIME_OF_DAY_ORDER.length * APPEARANCE_ORDER.length,
+    );
   });
 
   it("후드 그늘색이 본색보다 어둡다", () => {
@@ -151,9 +153,10 @@ describe("외형이 바닥과 구분되는가", () => {
     for (const [when, ground] of MEASURED_GROUND) {
       it(`${preset.name} 후드가 ${when} 바닥과 떨어져 있다`, () => {
         const distance = colorDistance(preset.hoodie, ground);
-        expect(distance, `색거리 ${distance.toFixed(1)} (후드 ${preset.hoodie}, 바닥 ${ground})`).toBeGreaterThan(
-          MIN_DISTANCE,
-        );
+        expect(
+          distance,
+          `색거리 ${distance.toFixed(1)} (후드 ${preset.hoodie}, 바닥 ${ground})`,
+        ).toBeGreaterThan(MIN_DISTANCE);
       });
     }
   }
@@ -177,9 +180,10 @@ describe("동료를 나와 구분할 수 있는가", () => {
         const hoodie = APPEARANCES[appearanceId].hoodie;
         const body = DOKEBI[dokebiId].bodyColor;
         const distance = colorDistance(hoodie, body);
-        expect(distance, `색거리 ${distance.toFixed(0)} (후드 ${hoodie}, 도깨비 ${body})`).toBeGreaterThan(
-          MIN_DISTANCE,
-        );
+        expect(
+          distance,
+          `색거리 ${distance.toFixed(0)} (후드 ${hoodie}, 도깨비 ${body})`,
+        ).toBeGreaterThan(MIN_DISTANCE);
       });
     }
   }

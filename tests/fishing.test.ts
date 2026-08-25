@@ -122,6 +122,9 @@ describe("재현되는가", () => {
       state = advance(state, FISHING.maxWaitSeconds + FISHING.biteWindowSeconds + 0.2);
       state = advance(state, FISHING.resultSeconds + 0.1);
     }
-    expect(new Set(timers).size, `대기 시간들 ${timers.map((t) => t.toFixed(2)).join(", ")}`).toBeGreaterThan(1);
+    expect(
+      new Set(timers).size,
+      `대기 시간들 ${timers.map((t) => t.toFixed(2)).join(", ")}`,
+    ).toBeGreaterThan(1);
   });
 });

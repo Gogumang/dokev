@@ -286,12 +286,23 @@ describe("보스 표식", () => {
     /*
      * 표식과 실제 위치가 어긋나면 지도를 보고 찾아간 사람이 빈 교차로에
      * 선다. 좌표는 bossSim이 정본이다.
+     *
+     * **`BOSS_HOME`을 요구하던 검사였다.** 그 상수는 대장을 처음 세운 자리이고,
+     * 대장은 인지 반경 안에서 플레이어를 쫓아 움직인다 — 두 지도가 상수를
+     * 그리는 동안 표식은 제자리에 남아 있었다. 검사가 그 어긋남을 지키고 있었던
+     * 셈이라, 이제 **매 프레임 흘러오는 자리**(`BossView.x`/`z`)를 요구한다.
      */
     const source = readFileSync("src/components/hud/Minimap.tsx", "utf8");
-    const full = readFileSync("src/components/hud/CityMap.tsx", "utf8");
+    const full = readFileSync("src/game/systems/cityMapPaint.ts", "utf8");
 
-    expect(source, "미니맵이 보스 좌표를 직접 적고 있다").toContain("BOSS_HOME");
-    expect(full, "전체 지도가 보스 좌표를 직접 적고 있다").toContain("BOSS_HOME");
+    for (const [name, text] of [
+      ["미니맵", source],
+      ["전체 지도", full],
+    ] as const) {
+      expect(text, `${name}이 대장의 지금 자리를 안 쓴다`).toContain("boss.x");
+      expect(text, `${name}이 대장의 지금 자리를 안 쓴다`).toContain("boss.z");
+      expect(text, `${name}이 세워 둔 자리를 그린다`).not.toMatch(/BOSS_HOME\.[xz]/);
+    }
   });
 
   it("보스가 지도 어디에도 없지 않다", () => {
@@ -311,8 +322,12 @@ describe("전체 지도 범례가 지도와 맞는가", () => {
    * 색을 캔버스에 직접 쓰면 범례가 조용히 어긋난다. 표식을 한 곳에서 만들고,
    * 캔버스가 정말 그 상수를 쓰는지 본다.
    */
-  const map = readCode("src/components/hud/CityMap.tsx");
-  const draw = map.slice(map.indexOf("const draw = () => {"), map.indexOf("    draw();"));
+  /*
+   * 범례는 컴포넌트가 그리고, 캔버스는 그림 쪽이 칠한다. 어긋나는지 보려면
+   * 둘 다 읽어야 한다 — 전에는 한 파일이라 잘라내기만 하면 됐다.
+   */
+  const _map = readCode("src/components/hud/CityMap.tsx");
+  const draw = readCode("src/game/systems/cityMapPaint.ts");
 
   it("그리는 코드를 실제로 잘라냈다", () => {
     // 함수 이름이 바뀌면 빈 문자열을 검사하며 통과한다
@@ -341,7 +356,8 @@ describe("전체 지도 범례가 지도와 맞는가", () => {
      * 색만으로 구분하면 색각 이상에서 무너진다. 실제로 두 표식은 같은 값이라
      * 모양이 유일한 단서다 — 범례 조각도 같은 모양이어야 한다.
      */
-    const marks = map.slice(map.indexOf("const MARKS = {"), map.indexOf("} as const;"));
+    // 표식 상수는 그림 쪽이 정본이고 범례가 그것을 읽는다
+    const marks = draw.slice(draw.indexOf("MARKS = {"), draw.indexOf("} as const;"));
     const enemy = /enemy: \{ color: "(#[0-9a-fA-F]{6})", shape: "(\w+)"/.exec(marks);
     const boss = /boss: \{ color: "(#[0-9a-fA-F]{6})", shape: "(\w+)"/.exec(marks);
     expect(enemy, "enemy 표식을 못 읽었다").toBeTruthy();
@@ -362,7 +378,7 @@ describe("지도에서 구역이 갈리는가", () => {
    * 검사가 아예 없어서 남아 있었다. 구역 색은 **반투명**이므로 원색끼리
    * 비교하면 안 된다 — 바탕 위에 얹은 결과로 재야 실제로 보이는 것과 같다.
    */
-  const source = readCode("src/components/hud/CityMap.tsx");
+  const source = readCode("src/game/systems/cityMapPaint.ts");
   const background = /const MAP_BACKGROUND = "(#[0-9a-f]{6})"/i.exec(source)?.[1] ?? "";
   const alpha = Number(/const DISTRICT_FILL_ALPHA = ([\d.]+);/.exec(source)?.[1] ?? NaN);
 
@@ -461,7 +477,15 @@ describe("적 표식이 지도로 가는가", () => {
 
   it("가까운 적 수가 넘어간다", () => {
     const out = link();
-    projectEnemyBlips(out, [{ x: 2, z: 0 }, { x: 0, z: 3 }], 0, 0);
+    projectEnemyBlips(
+      out,
+      [
+        { x: 2, z: 0 },
+        { x: 0, z: 3 },
+      ],
+      0,
+      0,
+    );
 
     expect(out.enemyBlipCount, "지도에 적이 안 뜬다").toBe(2);
   });

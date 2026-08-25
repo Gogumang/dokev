@@ -65,10 +65,9 @@ describe("어디서든 그래플을 걸 수 있는가", () => {
      * 사거리를 줄이거나 앵커를 솎아 내면 위 검사가 먼저 걸린다. 다만
      * 「왜 24m인가」는 배치에서 나온 값이라는 것을 여기서 남긴다.
      */
-    expect(
-      layout.grappleAnchors.length,
-      `앵커 ${layout.grappleAnchors.length}개`,
-    ).toBeGreaterThan(100);
+    expect(layout.grappleAnchors.length, `앵커 ${layout.grappleAnchors.length}개`).toBeGreaterThan(
+      100,
+    );
   });
 
   it("자연 구역에도 걸 것이 있다", () => {
@@ -77,10 +76,9 @@ describe("어디서든 그래플을 걸 수 있는가", () => {
      * 좋으면 지나간다. 자연 구역마다 하나 이상 있는지를 따로 못 박는다 —
      * 없으면 그 숲에서 이동이 막힌다.
      */
-    const natureBlocks = Array.from(
-      { length: CITY.gridSize * CITY.gridSize },
-      (_, i) => i,
-    ).filter((i) => !isUrbanBlock(i));
+    const natureBlocks = Array.from({ length: CITY.gridSize * CITY.gridSize }, (_, i) => i).filter(
+      (i) => !isUrbanBlock(i),
+    );
 
     for (const blockIndex of natureBlocks) {
       const { cx, cz } = blockCenter(blockIndex);

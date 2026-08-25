@@ -31,6 +31,16 @@ const IMPLICIT = new Set([
   "@types/react",
   "@types/react-dom",
   "@types/three",
+  /*
+   * 도구는 **이름으로 실행**된다 — `tsc`, `biome`. 소스 어디에도 import가
+   * 없는 것이 정상이고, 그렇다고 지우면 `pnpm verify`가 통째로 멈춘다.
+   *
+   * 전에는 `typescript`가 우연히 걸렸다: ESLint 설정이
+   * `eslint-config-next/typescript`를 가져와서 글자가 맞았을 뿐이다. 우연이
+   * 사라지자 검사가 「안 쓴다」고 했다.
+   */
+  "typescript",
+  "@biomejs/biome",
 ]);
 
 function collect(dir: string, extensions: string[]): string[] {
@@ -47,7 +57,7 @@ const blob = [
   ...collect("src", [".ts", ".tsx", ".css"]),
   ...collect("tests", [".ts"]),
   "next.config.ts",
-  "eslint.config.mjs",
+  "biome.jsonc",
   "vitest.config.ts",
   "postcss.config.mjs",
 ]

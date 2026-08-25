@@ -129,7 +129,8 @@ pnpm verify
 | 명령 | 하는 일 |
 |---|---|
 | `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm lint` | `eslint src tests` |
+| `pnpm lint` | `biome check src tests` (서식 + 린트) |
+| `pnpm format` | 같은 것을 고쳐 쓴다 (`--write`) |
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm test` | vitest 1회 실행 (번들 검사는 `.next`가 있어야 돈다) |
 | `pnpm test:watch` | 파일 변경 감시 |
@@ -140,6 +141,7 @@ pnpm verify
 /play?see=demo    시연 1분 30초 — 코스 첫 장면에서, 전부 열린 채로
 /play?see=boss    미니 보스 앞 — 예고 링과 크기감
 /play?see=summon  보스전 합동 공격 — 도깨비 넷이 도는지, 능력 자국이 보이는지
+/play?see=ability 도깨비 능력 VFX — 장애물 없는 시작 지점에서 단독 확인
 /play?see=night   밤 — 창문·가로등·전조등 밝기
 /play?see=noon    한낮 — 색이 날아가는지, 그림자 길이
 /play?see=air     공중 — 높은 곳에서 떨어지고 활강하는 감각 (실루엣이 묻히지 않는 것은 확인됨)
@@ -148,6 +150,10 @@ pnpm verify
 /play?see=clues   흔적 조사 — 흔적 원반의 크기가 알맞은지 (마름모·살펴보기는 확인됨)
 /play?see=shrine  도깨비 자리 앞 — 빛기둥이 눈길을 끄는지 (보이는 것은 확인됨)
 ```
+
+능력 VFX를 하나씩 볼 때는 능력 확인 주소에 도깨비 id를 붙인다. 예를 들어
+`/play?see=ability&dokebi=mulbineul`은 물비늘만 동행한 상태로 연다. 쓸 수 있는
+id는 `chorong`, `geueum`, `mulbineul`, `jajeong`이다.
 
 프로덕션 빌드에서는 동작하지 않는다. 이 목록은 `devScenario.ts`의 정본과
 어긋나면 테스트가 막는다 — 실제로 한 번 낡았다.

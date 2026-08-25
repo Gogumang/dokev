@@ -252,10 +252,7 @@ export function findCameraDistance(
  *
  * 한 지점에서 켜고 끄지 않는다. 벽을 스칠 때마다 캐릭터가 깜빡인다.
  */
-export function characterAlpha(
-  distance: number,
-  range: { start: number; end: number },
-): number {
+export function characterAlpha(distance: number, range: { start: number; end: number }): number {
   return inverseLerpClamped(range.end, range.start, distance);
 }
 

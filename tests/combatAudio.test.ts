@@ -67,13 +67,13 @@ describe("소리가 서로 구분되는가", () => {
   const source = readCode("src/game/systems/audio/combat.ts");
 
   /** `play` 안의 네 신호를 순서대로 뽑는다 */
-  const cues = [...source.matchAll(/frequency: (\d+),\s*duration: ([\d.]+),\s*peak: ([\d.]+),/g)].map(
-    (match) => ({
-      frequency: Number(match[1]),
-      duration: Number(match[2]),
-      peak: Number(match[3]),
-    }),
-  );
+  const cues = [
+    ...source.matchAll(/frequency: (\d+),\s*duration: ([\d.]+),\s*peak: ([\d.]+),/g),
+  ].map((match) => ({
+    frequency: Number(match[1]),
+    duration: Number(match[2]),
+    peak: Number(match[3]),
+  }));
 
   it("네 신호를 실제로 읽었다", () => {
     // 형태가 바뀌면 빈 목록을 훑으며 통과한다

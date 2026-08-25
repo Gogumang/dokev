@@ -9,7 +9,7 @@
  */
 
 import { useLayoutEffect, useMemo, useRef } from "react";
-import * as THREE from "three";
+import type * as THREE from "three";
 
 import type { QualityPreset } from "@/game/systems/quality";
 import type { BoxInstance } from "@/game/world/cityLayout";

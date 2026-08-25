@@ -186,7 +186,10 @@ describe("실제 바닥 위를 달린다", () => {
         const dz = Math.max(box.minZ - z, 0, z - box.maxZ);
         return Math.hypot(dx, dz) < PLAYER_RADIUS - 1e-6;
       });
-      expect(inside, `${((angle * 180) / Math.PI).toFixed(0)}°로 달려 벽 안에서 멈췄다`).toBeUndefined();
+      expect(
+        inside,
+        `${((angle * 180) / Math.PI).toFixed(0)}°로 달려 벽 안에서 멈췄다`,
+      ).toBeUndefined();
     }
   });
 });
@@ -201,9 +204,10 @@ describe("보드로 달려도 같다", () => {
 
   it("걷기보다 멀리 간다 — 실제로 보드를 탔는지 먼저 확인한다", () => {
     const onFoot = walk(layout.spawn, input({ moveZ: 1, run: true }), 12);
-    expect(trace.traveled, `보드 ${trace.traveled.toFixed(1)}m / 달리기 ${onFoot.traveled.toFixed(1)}m`).toBeGreaterThan(
-      onFoot.traveled,
-    );
+    expect(
+      trace.traveled,
+      `보드 ${trace.traveled.toFixed(1)}m / 달리기 ${onFoot.traveled.toFixed(1)}m`,
+    ).toBeGreaterThan(onFoot.traveled);
   });
 
   it("땅에 빠지지 않는다", () => {
@@ -214,6 +218,8 @@ describe("보드로 달려도 같다", () => {
   it("바닥이 한 프레임에 크게 뛰지 않는다", () => {
     // 빠른 만큼 여유를 더 준다 — 한 프레임에 지나는 거리가 길다
     const worst = Math.max(...trace.jumps);
-    expect(worst, `한 프레임에 ${worst.toFixed(3)}m 뛰었다`).toBeLessThan(CITY.sidewalkHeight + 0.25);
+    expect(worst, `한 프레임에 ${worst.toFixed(3)}m 뛰었다`).toBeLessThan(
+      CITY.sidewalkHeight + 0.25,
+    );
   });
 });

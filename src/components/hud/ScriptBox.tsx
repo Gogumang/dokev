@@ -37,10 +37,7 @@ export function ScriptBox({ line }: { line: ScriptLine | null }) {
       }}
     >
       {!narration && (
-        <span
-          className="block text-sm font-bold"
-          style={{ color: "var(--color-action-primary)" }}
-        >
+        <span className="block text-sm font-bold" style={{ color: "var(--color-action-primary)" }}>
           {line.speaker}
         </span>
       )}

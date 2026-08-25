@@ -53,7 +53,9 @@ describe("chordRootForBar", () => {
 describe("구역별 화음", () => {
   it("구역이 다르면 진행도 다르다", () => {
     const plaza = [0, 1, 2, 3, 4, 5, 6, 7].map((bar) => chordRootForBar(bar, "plaza")).join(",");
-    const outer = [0, 1, 2, 3, 4, 5, 6, 7].map((bar) => chordRootForBar(bar, "residential")).join(",");
+    const outer = [0, 1, 2, 3, 4, 5, 6, 7]
+      .map((bar) => chordRootForBar(bar, "residential"))
+      .join(",");
     expect(outer, `plaza=${plaza}, residential=${outer}`).not.toBe(plaza);
   });
 
@@ -169,10 +171,10 @@ describe("박자 위상", () => {
 
   it("마디가 박보다 느리게 돈다 — 같으면 마디를 나눈 뜻이 없다", () => {
     const quarter = MUSIC_TEMPO.secondsPerBeat;
-    expect(barPhase(quarter), `마디 ${barPhase(quarter)} vs 박 ${beatPhase(quarter)}`).not.toBeCloseTo(
-      beatPhase(quarter),
-      3,
-    );
+    expect(
+      barPhase(quarter),
+      `마디 ${barPhase(quarter)} vs 박 ${beatPhase(quarter)}`,
+    ).not.toBeCloseTo(beatPhase(quarter), 3);
   });
 });
 
@@ -221,7 +223,10 @@ describe("화면이 실제로 읽는가", () => {
      * 사는 파일에서 `AudioContext`를 새로 만드는 코드가 위상 근처에 없어야 한다.
      */
     const source = readFileSync("src/game/systems/audio/music.ts", "utf8");
-    const phaseBlock = source.slice(source.indexOf("export function beatPhase"), source.indexOf("export function beatPulse"));
+    const phaseBlock = source.slice(
+      source.indexOf("export function beatPhase"),
+      source.indexOf("export function beatPulse"),
+    );
     expect(phaseBlock, "위상 계산이 오디오를 건드린다").not.toMatch(/AudioContext|currentTime/);
   });
 });

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { BOSS_HOME } from "@/game/combat/bossSim";
-import { DOKEBI_ORDER, revealedDokebi } from "@/game/dokebi/roster";
+import { companionParty, DOKEBI_ORDER, revealedDokebi } from "@/game/dokebi/roster";
 import { CLUES } from "@/game/quest/clues";
 import { FIRST_RUN_QUEST } from "@/game/quest/questContent";
 import { readCode } from "./support/source";
@@ -49,6 +49,37 @@ describe("parseScenario", () => {
 
   it("다른 파라미터에 반응하지 않는다", () => {
     expect(parseScenario("?debug=1&x=2", true)).toBeNull();
+  });
+
+  it.each(["summon", "ability"])("%s 확인 지점은 한 도깨비의 능력만 떼어 볼 수 있다", (id) => {
+    // Given
+    const search = `?see=${id}&dokebi=mulbineul`;
+
+    // When
+    const scenario = parseScenario(search, true);
+
+    // Then
+    expect(scenario?.dokebi).toBe("mulbineul");
+    expect(scenario?.metDokebi).toEqual(["mulbineul"]);
+    expect(
+      scenario
+        ? companionParty(
+            "mulbineul",
+            {
+              defeatedTotal: scenario.defeatedTotal ?? 0,
+              questCompleted: scenario.questCompleted === true,
+              bossDefeated: scenario.bossDefeated,
+            },
+            scenario.metDokebi ?? [],
+          )
+        : [],
+    ).toContain("mulbineul");
+  });
+
+  it("모르는 도깨비로 능력 확인을 열지 않는다", () => {
+    // Given / When / Then
+    expect(parseScenario("?see=summon&dokebi=unknown", true)).toBeNull();
+    expect(parseScenario("?see=ability&dokebi=unknown", true)).toBeNull();
   });
 
   it("프로토타입에 있는 이름도 없는 것으로 본다", () => {

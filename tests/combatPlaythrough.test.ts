@@ -1,8 +1,23 @@
 import { describe, expect, it } from "vitest";
 
 import { BOSS, BOSS_HOME, createBoss, damageBoss, slamHits, stepBoss } from "@/game/combat/bossSim";
-import { COMBAT_TUNING, createAttackState, createEnemies, isAttackActive, resolveHits, stepAttack, stepEnemy, stepEnemyStrike, type EnemyState } from "@/game/combat/combatSim";
-import { createPlayerCombat, PLAYER_COMBAT, stepPlayerCombat, type PlayerCombatState } from "@/game/combat/playerCombat";
+import {
+  COMBAT_TUNING,
+  createAttackState,
+  createEnemies,
+  isAttackActive,
+  resolveHits,
+  stepAttack,
+  stepEnemy,
+  stepEnemyStrike,
+  type EnemyState,
+} from "@/game/combat/combatSim";
+import {
+  createPlayerCombat,
+  PLAYER_COMBAT,
+  stepPlayerCombat,
+  type PlayerCombatState,
+} from "@/game/combat/playerCombat";
 import { swingSeconds, WEAPONS } from "@/game/combat/weapons";
 import { LOCOMOTION } from "@/game/config/tuning";
 
@@ -168,7 +183,11 @@ describe("미니 보스", () => {
       // 사거리 안이고 쉬고 있으면 휘두른다
       const inReach = Math.abs(playerZ - boss.z) <= WEAPONS.bat.reachMeters;
       attack = stepAttack(attack, attack.phase === "ready" && inReach, FRAME);
-      if (isAttackActive(attack) && inReach && attack.timer > WEAPONS.bat.timing.activeSeconds - FRAME) {
+      if (
+        isAttackActive(attack) &&
+        inReach &&
+        attack.timer > WEAPONS.bat.timing.activeSeconds - FRAME
+      ) {
         boss = damageBoss(boss).state;
       }
     }
@@ -228,10 +247,7 @@ describe("보스가 확인 지점에서 실제로 다가오는가", () => {
     }
 
     const distance = Math.hypot(px - state.x, pz - state.z);
-    expect(
-      telegraphed,
-      `10초 뒤 거리 ${distance.toFixed(1)}m, 상태 ${state.phase}`,
-    ).toBe(true);
+    expect(telegraphed, `10초 뒤 거리 ${distance.toFixed(1)}m, 상태 ${state.phase}`).toBe(true);
   });
 
   it("쫓는 동안 실제로 가까워진다", () => {
@@ -310,9 +326,10 @@ describe("무작위 전투 60초", () => {
         );
         expect(enemies.length, `frame ${frame}: 적이 ${enemies.length}기로 변했다`).toBe(6);
         expect(PHASES, `frame ${frame}: 보스 단계 ${boss.phase}`).toContain(boss.phase);
-        expect(Number.isFinite(boss.x) && Number.isFinite(boss.z), `frame ${frame}: 보스 좌표`).toBe(
-          true,
-        );
+        expect(
+          Number.isFinite(boss.x) && Number.isFinite(boss.z),
+          `frame ${frame}: 보스 좌표`,
+        ).toBe(true);
       }
 
       expect(defeated, `처치 수 ${defeated}`).toBeGreaterThanOrEqual(0);

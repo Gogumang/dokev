@@ -146,14 +146,14 @@ describe("퀘스트 목표", () => {
   });
 
   it("월드 경계 안이다", () => {
-    if (!reach || reach.kind !== "reach") return;
+    if (reach?.kind !== "reach") return;
     expect(Math.abs(reach.x), `x=${reach.x}`).toBeLessThan(layout.halfExtent);
     expect(Math.abs(reach.z), `z=${reach.z}`).toBeLessThan(layout.halfExtent);
   });
 
   it("스폰에서 충분히 멀다", () => {
     // 가까우면 걸어서 끝나 버려 이동 능력을 쓸 이유가 없다 (questContent의 의도)
-    if (!reach || reach.kind !== "reach") return;
+    if (reach?.kind !== "reach") return;
     const distance = Math.hypot(reach.x - layout.spawn.x, reach.z - layout.spawn.z);
     expect(distance, `distance was: ${distance.toFixed(1)}m`).toBeGreaterThan(100);
   });
@@ -163,7 +163,7 @@ describe("퀘스트 목표", () => {
      * 목적지는 구역 중심이고 구역 중심에는 건물이 선다. 반경 안이 전부
      * 건물이면 이 단계는 영영 끝나지 않는다 — 정적 타입으로는 절대 안 잡힌다.
      */
-    if (!reach || reach.kind !== "reach") return;
+    if (reach?.kind !== "reach") return;
 
     const free = sampleFreePoints(reach.x, reach.z, reach.radius);
     expect(
@@ -177,18 +177,17 @@ describe("퀘스트 목표", () => {
      * 반경 안이 비어 있어도 사방이 건물로 둘러싸인 안뜰이면 들어갈 수 없다.
      * 1m 격자로 실제로 걸어가 본다.
      */
-    if (!reach || reach.kind !== "reach") return;
+    if (reach?.kind !== "reach") return;
 
     const reachable = walkableFrom(layout.spawn.x, layout.spawn.z, reach.x, reach.z, reach.radius);
-    expect(
-      reachable,
-      `cannot walk from spawn to within ${reach.radius}m of the destination`,
-    ).toBe(true);
+    expect(reachable, `cannot walk from spawn to within ${reach.radius}m of the destination`).toBe(
+      true,
+    );
   });
 
   it("도달 반경이 목표를 덮는다", () => {
     // 반경이 너무 작으면 좌표 위에 정확히 서야 해서 통과가 안 된다
-    if (!reach || reach.kind !== "reach") return;
+    if (reach?.kind !== "reach") return;
     expect(reach.radius).toBeGreaterThan(5);
   });
 });
@@ -304,9 +303,10 @@ describe("도로 좌표를 유도하는 곳이 서로 맞는가", () => {
       for (const offset of [-TRAFFIC.laneOffset, TRAFFIC.laneOffset]) {
         const lane = center + offset;
         const blocking = blockedBy(lane, 0, 0);
-        expect(blocking.length, `lane ${lane} blocked by ${blocking.map(describeBox).join(", ")}`).toBe(
-          0,
-        );
+        expect(
+          blocking.length,
+          `lane ${lane} blocked by ${blocking.map(describeBox).join(", ")}`,
+        ).toBe(0);
       }
     }
   });
@@ -331,9 +331,10 @@ describe("가로등", () => {
       .filter((entry) => entry.hits !== 1)
       .map((entry) => `(${entry.pole.x.toFixed(1)}, ${entry.pole.z.toFixed(1)}) ${entry.hits}개`);
 
-    expect(overlapping.slice(0, 5), `자기 것 아닌 충돌체에 걸린 기둥 ${overlapping.length}개`).toEqual(
-      [],
-    );
+    expect(
+      overlapping.slice(0, 5),
+      `자기 것 아닌 충돌체에 걸린 기둥 ${overlapping.length}개`,
+    ).toEqual([]);
   });
 
   it("도로 폭 안에 있다", () => {
@@ -453,9 +454,7 @@ describe("가로수", () => {
   it("가로등·소품과 같은 자리에 서지 않는다", () => {
     const clash = trunks
       .map((trunk) => {
-        const hit = layout.props.find(
-          (prop) => Math.hypot(trunk.x - prop.x, trunk.z - prop.z) < 1,
-        );
+        const hit = layout.props.find((prop) => Math.hypot(trunk.x - prop.x, trunk.z - prop.z) < 1);
         return hit ? `(${trunk.x.toFixed(1)}, ${trunk.z.toFixed(1)})` : null;
       })
       .filter(Boolean);
@@ -482,7 +481,9 @@ describe("거리 소품", () => {
   /** 90도 배수로 돌아 있는 상자의 월드 축 크기 */
   function extents(item: { width: number; depth: number; rotationY?: number }) {
     const turned = Math.abs(Math.sin(item.rotationY ?? 0)) > 0.5;
-    return turned ? { width: item.depth, depth: item.width } : { width: item.width, depth: item.depth };
+    return turned
+      ? { width: item.depth, depth: item.width }
+      : { width: item.width, depth: item.depth };
   }
 
   function intoBuilding(item: {
@@ -517,7 +518,9 @@ describe("거리 소품", () => {
       const buried = items
         .map((item) => ({ item, depth: intoBuilding(item) }))
         .filter((hit) => hit.depth > 1)
-        .map((hit) => `(${hit.item.x.toFixed(1)}, ${hit.item.z.toFixed(1)}) ${hit.depth.toFixed(2)}m`);
+        .map(
+          (hit) => `(${hit.item.x.toFixed(1)}, ${hit.item.z.toFixed(1)}) ${hit.depth.toFixed(2)}m`,
+        );
       expect(buried.slice(0, 5), `${name} 중 묻힌 것 ${buried.length}개`).toEqual([]);
     }
   });
@@ -803,9 +806,10 @@ describe("조용히 비는 것이 없는가", () => {
 
   it("레이어를 손으로 적지 않고 찾아냈다", () => {
     // 훑기가 망가지면 빈 목록이 되고, 아래 검사는 통과하면서 아무것도 안 본다
-    expect(Object.keys(layers).length, `찾은 레이어 ${Object.keys(layers).length}개`).toBeGreaterThan(
-      15,
-    );
+    expect(
+      Object.keys(layers).length,
+      `찾은 레이어 ${Object.keys(layers).length}개`,
+    ).toBeGreaterThan(15);
   });
 
   it("모든 레이어에 무언가 들어 있다", () => {
@@ -960,7 +964,6 @@ describe("구역 중심을 유도하는 곳이 서로 맞는가", () => {
       expect(cell.z, `구역 ${cell.index}`).toBeCloseTo(canonical.cz, 6);
     }
   });
-
 });
 
 describe("간판이 길 쪽을 보는가", () => {
@@ -1062,17 +1065,19 @@ describe("도로와 옥상이 비지 않는가", () => {
      * 개수 검사가 헐렁했던 세 번째 자리다.
      */
     const perBlock = details.rooftops.length / blocks;
-    expect(perBlock, `구역당 ${perBlock.toFixed(1)}개 (전체 ${details.rooftops.length})`).toBeGreaterThan(
-      10,
-    );
+    expect(
+      perBlock,
+      `구역당 ${perBlock.toFixed(1)}개 (전체 ${details.rooftops.length})`,
+    ).toBeGreaterThan(10);
   });
 
   it("도로 표시가 도로마다 그려진다", () => {
     // 도로는 격자당 한 줄씩 가로·세로로 있다
     const perRoad = details.roadMarks.length / (CITY.gridSize * 2);
-    expect(perRoad, `도로당 ${perRoad.toFixed(1)}개 (전체 ${details.roadMarks.length})`).toBeGreaterThan(
-      20,
-    );
+    expect(
+      perRoad,
+      `도로당 ${perRoad.toFixed(1)}개 (전체 ${details.roadMarks.length})`,
+    ).toBeGreaterThan(20);
   });
 
   it("도로 표시가 둘레 도로를 넘지 않는다", () => {

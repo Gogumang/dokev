@@ -54,10 +54,14 @@ describe("buildCityLayout — 스폰", () => {
     );
 
     // Assert — 스폰하자마자 벽에 끼어 순간이동하는 회귀를 막는다
-    expect(resolved.x, `spawn=${JSON.stringify(spawn)}, resolved=${JSON.stringify(resolved)}`)
-      .toBeCloseTo(spawn.x, 12);
-    expect(resolved.z, `spawn=${JSON.stringify(spawn)}, resolved=${JSON.stringify(resolved)}`)
-      .toBeCloseTo(spawn.z, 12);
+    expect(
+      resolved.x,
+      `spawn=${JSON.stringify(spawn)}, resolved=${JSON.stringify(resolved)}`,
+    ).toBeCloseTo(spawn.x, 12);
+    expect(
+      resolved.z,
+      `spawn=${JSON.stringify(spawn)}, resolved=${JSON.stringify(resolved)}`,
+    ).toBeCloseTo(spawn.z, 12);
   });
 
   it("스폰 지점 주위에 사람이 지나갈 만큼의 여유가 있다", () => {
@@ -114,7 +118,10 @@ describe("buildCityLayout — 콜라이더", () => {
       const cx = (box.minX + box.maxX) / 2;
       const cz = (box.minZ + box.maxZ) / 2;
       const ground = terrainHeight(cx, cz);
-      expect(box.top - ground, `box=${JSON.stringify(box)} ground=${ground.toFixed(2)}`).toBeGreaterThan(0);
+      expect(
+        box.top - ground,
+        `box=${JSON.stringify(box)} ground=${ground.toFixed(2)}`,
+      ).toBeGreaterThan(0);
     }
   });
 
@@ -136,11 +143,15 @@ describe("buildCityLayout — 콜라이더", () => {
       expect(box.minX, `box=${JSON.stringify(box)}, halfExtent=${limit}`).toBeGreaterThanOrEqual(
         -limit,
       );
-      expect(box.maxX, `box=${JSON.stringify(box)}, halfExtent=${limit}`).toBeLessThanOrEqual(limit);
+      expect(box.maxX, `box=${JSON.stringify(box)}, halfExtent=${limit}`).toBeLessThanOrEqual(
+        limit,
+      );
       expect(box.minZ, `box=${JSON.stringify(box)}, halfExtent=${limit}`).toBeGreaterThanOrEqual(
         -limit,
       );
-      expect(box.maxZ, `box=${JSON.stringify(box)}, halfExtent=${limit}`).toBeLessThanOrEqual(limit);
+      expect(box.maxZ, `box=${JSON.stringify(box)}, halfExtent=${limit}`).toBeLessThanOrEqual(
+        limit,
+      );
     }
   });
 });
@@ -194,9 +205,10 @@ describe("buildCityLayout — 박스 데이터", () => {
 
     const downtown = meanFor("downtown");
     const forest = meanFor("forest");
-    expect(downtown, `downtown ${downtown.toFixed(1)}m vs forest ${forest.toFixed(1)}m`).toBeGreaterThan(
-      forest * 2,
-    );
+    expect(
+      downtown,
+      `downtown ${downtown.toFixed(1)}m vs forest ${forest.toFixed(1)}m`,
+    ).toBeGreaterThan(forest * 2);
   });
 
   it("건물 tone이 팔레트 범위 안의 정수다", () => {
@@ -278,9 +290,10 @@ describe("도시가 텅 비거나 넘치지 않는가", () => {
 
   it("구역마다 건물이 여러 채 선다 — 도시가 빈 땅이 되면 안 된다", () => {
     const perBlock = layout.buildings.length / blocks;
-    expect(perBlock, `구역당 ${perBlock.toFixed(1)}채 (전체 ${layout.buildings.length})`).toBeGreaterThan(
-      2,
-    );
+    expect(
+      perBlock,
+      `구역당 ${perBlock.toFixed(1)}채 (전체 ${layout.buildings.length})`,
+    ).toBeGreaterThan(2);
   });
 
   it("그렇다고 빈틈 없이 들어차지도 않는다 — 골목과 시야가 남아야 한다", () => {
@@ -292,8 +305,7 @@ describe("도시가 텅 비거나 넘치지 않는가", () => {
   it("광장에 화단이 있다 — 첫 화면에서 보는 것이다", () => {
     // 광장은 스폰 지점이고 건물 대신 화단이 선다
     const nearSpawn = layout.props.filter(
-      (prop) =>
-        Math.hypot(prop.x - layout.spawn.x, prop.z - layout.spawn.z) < CITY.blockSize * 0.5,
+      (prop) => Math.hypot(prop.x - layout.spawn.x, prop.z - layout.spawn.z) < CITY.blockSize * 0.5,
     );
     expect(nearSpawn.length, `광장 소품 ${nearSpawn.length}개`).toBeGreaterThan(3);
   });
@@ -323,10 +335,8 @@ describe("도시가 텅 비거나 넘치지 않는가", () => {
 
   it("줄무늬가 도시 밖으로 안 나간다", () => {
     const outside = layout.crosswalks.filter(
-      (stripe) =>
-        Math.abs(stripe.x) > layout.halfExtent || Math.abs(stripe.z) > layout.halfExtent,
+      (stripe) => Math.abs(stripe.x) > layout.halfExtent || Math.abs(stripe.z) > layout.halfExtent,
     );
     expect(outside.length, `도시 밖 줄무늬 ${outside.length}개`).toBe(0);
   });
 });
-

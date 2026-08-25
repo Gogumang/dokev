@@ -156,9 +156,9 @@ export function Sea({ halfExtent }: { halfExtent: number }) {
     <>
       <mesh geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, SEA_LEVEL, 0]}>
         {/*
-          * 그림자를 받지 않는다. 수면은 도시에서 멀리 떨어져 있어 그림자 맵
-          * 범위 밖이고, 켜 두면 범위 경계에서 물이 한 줄 어두워진다.
-          */}
+         * 그림자를 받지 않는다. 수면은 도시에서 멀리 떨어져 있어 그림자 맵
+         * 범위 밖이고, 켜 두면 범위 경계에서 물이 한 줄 어두워진다.
+         */}
         <meshToonMaterial
           ref={materialRef}
           map={texture}
@@ -167,9 +167,9 @@ export function Sea({ halfExtent }: { halfExtent: number }) {
         />
       </mesh>
       {/*
-        * 물가 거품. 깊이를 쓰되 **쓰지는 않는다**(depthWrite=false) — 반투명이라
-        * 깊이에 써 넣으면 뒤쪽 수면이 잘려 띠 안쪽에 구멍이 뚫린다.
-        */}
+       * 물가 거품. 깊이를 쓰되 **쓰지는 않는다**(depthWrite=false) — 반투명이라
+       * 깊이에 써 넣으면 뒤쪽 수면이 잘려 띠 안쪽에 구멍이 뚫린다.
+       */}
       <mesh geometry={foam}>
         <meshBasicMaterial
           ref={foamRef}
@@ -189,7 +189,11 @@ export function Sea({ halfExtent }: { halfExtent: number }) {
         />
       </mesh>
       <mesh geometry={cliffs} receiveShadow>
-        <meshToonMaterial color="#6e6a63" gradientMap={getToonGradientTexture()} side={THREE.DoubleSide} />
+        <meshToonMaterial
+          color="#6e6a63"
+          gradientMap={getToonGradientTexture()}
+          side={THREE.DoubleSide}
+        />
       </mesh>
     </>
   );
@@ -279,10 +283,22 @@ function buildFoamRibbon(halfExtent: number): THREE.BufferGeometry {
     }
   };
 
-  strip((t) => ({ x: t, z: -halfExtent }), (t) => ({ x: t, z: -inner }));
-  strip((t) => ({ x: t, z: halfExtent }), (t) => ({ x: t, z: inner }));
-  strip((t) => ({ x: -halfExtent, z: t }), (t) => ({ x: -inner, z: t }));
-  strip((t) => ({ x: halfExtent, z: t }), (t) => ({ x: inner, z: t }));
+  strip(
+    (t) => ({ x: t, z: -halfExtent }),
+    (t) => ({ x: t, z: -inner }),
+  );
+  strip(
+    (t) => ({ x: t, z: halfExtent }),
+    (t) => ({ x: t, z: inner }),
+  );
+  strip(
+    (t) => ({ x: -halfExtent, z: t }),
+    (t) => ({ x: -inner, z: t }),
+  );
+  strip(
+    (t) => ({ x: halfExtent, z: t }),
+    (t) => ({ x: inner, z: t }),
+  );
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));

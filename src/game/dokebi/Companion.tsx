@@ -23,15 +23,17 @@
  */
 
 import { MAX_DELTA_SECONDS } from "@/game/config/tuning";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { COMPANION_BODY } from "@/game/dokebi/companionBody";
+import { CompanionAbilityVfx } from "@/game/dokebi/CompanionAbilityVfx";
 import { BASE_LIGHT_RANGE, type DokebiSpirit } from "@/game/dokebi/roster";
 import { ToonMaterial } from "@/game/scene/ToonMaterial";
 import {
   bobOffset,
+  companionFormationScale,
   createCompanionState,
   isAbilityActive,
   projectCompanionEffects,
@@ -94,8 +96,10 @@ export function Companion({
   const eyeLeftRef = useRef<THREE.Mesh>(null);
   const eyeRightRef = useRef<THREE.Mesh>(null);
   const lightRef = useRef<THREE.PointLight>(null);
+  const viewportWidth = useThree((renderState) => renderState.size.width);
+  const formationScale = companionFormationScale(viewportWidth);
 
-  const state = useRef<CompanionState>(createCompanionState(target.position, slot));
+  const state = useRef<CompanionState>(createCompanionState(target.position, slot, formationScale));
   const ringSpin = useRef(0);
   const blinkTimer = useRef(0);
 
@@ -103,12 +107,7 @@ export function Companion({
   const geometry = useMemo(
     () => ({
       body: new THREE.SphereGeometry(COMPANION_BODY.bodyRadius, 16, 12),
-      ring: new THREE.TorusGeometry(
-        COMPANION_BODY.ringRadius,
-        COMPANION_BODY.ringThickness,
-        8,
-        24,
-      ),
+      ring: new THREE.TorusGeometry(COMPANION_BODY.ringRadius, COMPANION_BODY.ringThickness, 8, 24),
       eye: new THREE.SphereGeometry(COMPANION_BODY.eyeRadius, 8, 6),
       flame: new THREE.ConeGeometry(COMPANION_BODY.flameRadius, COMPANION_BODY.flameHeight, 8),
       cap: new THREE.CylinderGeometry(
@@ -135,10 +134,17 @@ export function Companion({
     };
   }, [geometry]);
 
-
   useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
-    const next = stepCompanion(state.current, target, dt, command, spirit.effect, slot);
+    const next = stepCompanion(
+      state.current,
+      target,
+      dt,
+      command,
+      spirit.effect,
+      slot,
+      formationScale,
+    );
     // 요청은 한 번만 처리한다 — 유지되면 매 프레임 재발동한다.
     state.current = next;
 
@@ -189,7 +195,8 @@ export function Companion({
     // 공중에 떴을 때 눈을 키워 놀란 표정을 만든다.
     const eyeScale = next.mood === "airborne" ? 1.35 : 1;
     if (eyeLeftRef.current) eyeLeftRef.current.scale.set(eyeScale, eyeScaleY * eyeScale, eyeScale);
-    if (eyeRightRef.current) eyeRightRef.current.scale.set(eyeScale, eyeScaleY * eyeScale, eyeScale);
+    if (eyeRightRef.current)
+      eyeRightRef.current.scale.set(eyeScale, eyeScaleY * eyeScale, eyeScale);
 
     /*
      * 능력 — 도깨비마다 효과가 다르다. 여기서는 빛만 직접 다루고, 전투에
@@ -261,6 +268,7 @@ export function Companion({
         distance={9}
         decay={2}
       />
+      <CompanionAbilityVfx source={state} spirit={spirit} reducedMotion={reducedMotion} />
     </group>
   );
 }

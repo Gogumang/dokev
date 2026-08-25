@@ -32,9 +32,10 @@ describe("물가 자리 찾기", () => {
   });
 
   it("수면 위다 — 물에 잠긴 자리에 대어 두지 않는다", () => {
-    expect(landing.height, `지형 ${landing.height.toFixed(2)}m, 수면 ${SEA_LEVEL}m`).toBeGreaterThan(
-      SEA_LEVEL,
-    );
+    expect(
+      landing.height,
+      `지형 ${landing.height.toFixed(2)}m, 수면 ${SEA_LEVEL}m`,
+    ).toBeGreaterThan(SEA_LEVEL);
   });
 
   it("벼랑이 아니다 — 절벽 위에 「물가에 대어 둔 제트스키」는 거짓말이다", () => {

@@ -50,8 +50,10 @@ describe("점자블록", () => {
   function sideOf(plate: { x: number; z: number; blockIndex: number }): string | null {
     const { x, z } = local(plate);
     const reach = Math.max(Math.abs(x), Math.abs(z));
-    if (Math.abs(Math.abs(x) - reach) < 1e-6 && Math.abs(x) > Math.abs(z)) return x > 0 ? "동" : "서";
-    if (Math.abs(Math.abs(z) - reach) < 1e-6 && Math.abs(z) > Math.abs(x)) return z > 0 ? "남" : "북";
+    if (Math.abs(Math.abs(x) - reach) < 1e-6 && Math.abs(x) > Math.abs(z))
+      return x > 0 ? "동" : "서";
+    if (Math.abs(Math.abs(z) - reach) < 1e-6 && Math.abs(z) > Math.abs(x))
+      return z > 0 ? "남" : "북";
     return null;
   }
 
@@ -63,7 +65,10 @@ describe("점자블록", () => {
      */
     for (const index of URBAN_BLOCKS) {
       const sides = new Set(
-        guideways.filter((plate) => plate.blockIndex === index).map(sideOf).filter(Boolean),
+        guideways
+          .filter((plate) => plate.blockIndex === index)
+          .map(sideOf)
+          .filter(Boolean),
       );
       expect(sides.size, `구역 ${index}의 변 ${[...sides].join(",")}`).toBe(4);
     }
@@ -126,9 +131,10 @@ describe("점자블록", () => {
     const reach = Math.max(...west.map((plate) => Math.abs(local(plate).z) + plate.depth / 2));
     // 가로 줄 띠의 안쪽 모서리
     const bandInner = Math.abs(local(north[0]).z) - north[0].depth / 2;
-    expect(reach, `세로 줄 끝 ${reach.toFixed(2)} / 가로 줄 안쪽 ${bandInner.toFixed(2)}`).toBeGreaterThanOrEqual(
-      bandInner - 1e-6,
-    );
+    expect(
+      reach,
+      `세로 줄 끝 ${reach.toFixed(2)} / 가로 줄 안쪽 ${bandInner.toFixed(2)}`,
+    ).toBeGreaterThanOrEqual(bandInner - 1e-6);
   });
 
   it("건물에 먹히지 않는다 — 벽 안쪽에 깔리면 아예 안 보인다", () => {

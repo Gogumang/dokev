@@ -35,7 +35,9 @@ describe("attackElapsed", () => {
 
   it("전체 길이가 세 단계의 합이다", () => {
     expect(BAT_SWING).toBeCloseTo(
-      WEAPONS.bat.timing.windupSeconds + WEAPONS.bat.timing.activeSeconds + WEAPONS.bat.timing.recoverySeconds,
+      WEAPONS.bat.timing.windupSeconds +
+        WEAPONS.bat.timing.activeSeconds +
+        WEAPONS.bat.timing.recoverySeconds,
       9,
     );
   });
@@ -49,9 +51,10 @@ describe("attackPose", () => {
     const ready = attackPose(0);
     const pulled = attackPose(windupEnd * 0.9);
     // 오른팔이 뒤로 가면 rightArmX가 커진다(양수 = 뒤)
-    expect(pulled.rightArmX, `ready=${ready.rightArmX}, pulled=${pulled.rightArmX}`).toBeGreaterThan(
-      ready.rightArmX,
-    );
+    expect(
+      pulled.rightArmX,
+      `ready=${ready.rightArmX}, pulled=${pulled.rightArmX}`,
+    ).toBeGreaterThan(ready.rightArmX);
   });
 
   it("판정이 끝나는 순간 팔이 가장 앞에 있다", () => {
