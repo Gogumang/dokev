@@ -119,7 +119,11 @@ function signals(state: ReturnType<typeof createLocomotionState>) {
 }
 
 /** NaN은 한 번 생기면 모든 계산에 번진다. 생긴 프레임에서 잡아야 원인을 안다 */
-function assertFinite(state: ReturnType<typeof createLocomotionState>, frame: number, seed: number) {
+function assertFinite(
+  state: ReturnType<typeof createLocomotionState>,
+  frame: number,
+  seed: number,
+) {
   for (const [name, value] of [
     ["x", state.position.x],
     ["y", state.position.y],

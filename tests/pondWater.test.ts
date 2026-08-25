@@ -78,7 +78,10 @@ describe("물결 배선", () => {
      * 연못보다 커서** 결이 아예 안 보이고 파란 판이 된다.
      */
     const pond = Number(/const POND_TILE_METERS = ([\d.]+);/.exec(sea)?.[1] ?? NaN);
-    const water = Number(/const WATER_TILE_METERS = ([\d.]+);/.exec(readCode("src/game/world/textures.ts"))?.[1] ?? NaN);
+    const water = Number(
+      /const WATER_TILE_METERS = ([\d.]+);/.exec(readCode("src/game/world/textures.ts"))?.[1] ??
+        NaN,
+    );
 
     expect(Number.isFinite(pond), `연못 타일 ${pond}`).toBe(true);
     expect(Number.isFinite(water), `바다 타일 ${water}`).toBe(true);

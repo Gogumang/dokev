@@ -126,9 +126,10 @@ describe("팔레트에 죽은 색이 없는가", () => {
   const used = new Set(details.streetFixtures.map((box) => box.tone));
 
   it("소품을 실제로 만들었다", () => {
-    expect(details.streetFixtures.length, `소품 ${details.streetFixtures.length}개`).toBeGreaterThan(
-      100,
-    );
+    expect(
+      details.streetFixtures.length,
+      `소품 ${details.streetFixtures.length}개`,
+    ).toBeGreaterThan(100);
   });
 
   it("정한 색이 모두 도시에 나온다", () => {
@@ -205,7 +206,8 @@ describe("간판 내용", () => {
      * 처음부터 맞는 것은 다르다.
      */
     const stray = SHOP_BRANDS.filter(
-      (brand) => !Number.isInteger(brand.scheme) || brand.scheme < 0 || brand.scheme >= SIGN_SCHEMES.length,
+      (brand) =>
+        !Number.isInteger(brand.scheme) || brand.scheme < 0 || brand.scheme >= SIGN_SCHEMES.length,
     ).map((brand) => `${brand.short}: ${brand.scheme}`);
     expect(stray, `배색 ${SIGN_SCHEMES.length}개인데 범위 밖: ${stray.join(", ")}`).toEqual([]);
   });

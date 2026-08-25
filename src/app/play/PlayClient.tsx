@@ -31,10 +31,20 @@ import {
 } from "@/game/systems/quality";
 
 import { createAnalytics } from "@/game/systems/analytics";
-import { companionParty, consumeDiscovery, type DiscoveryView, DOKEBI, type DokebiId, nextDokebi, resolveCompanion, unlockedDokebi } from "@/game/dokebi/roster";
+import {
+  companionParty,
+  consumeDiscovery,
+  type DiscoveryView,
+  DOKEBI,
+  type DokebiId,
+  nextDokebi,
+  resolveCompanion,
+  unlockedDokebi,
+} from "@/game/dokebi/roster";
 import { createEmoteState } from "@/game/player/emote";
 import { createCombatCues } from "@/game/systems/audio/combat";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
+import { createBossView } from "@/game/combat/bossSim";
 import { parseScenario } from "@/game/systems/devScenario";
 import { buildDemoRoute, demoSpawn } from "@/game/systems/demoRoute";
 import { DemoGuide } from "@/components/hud/DemoGuide";
@@ -155,7 +165,6 @@ export function PlayClient() {
   const [reducedMotion, setReducedMotion] = useState(environment.reducedMotion);
   const [showPerf, setShowPerf] = useState(false);
   const [photoMode, setPhotoMode] = useState(false);
-  /** 촬영·녹화 결과를 알리는 짧은 문구. null이면 표시하지 않는다 */
   const [captureNotice, setCaptureNotice] = useState<string | null>(null);
   /*
    * 녹화 여부는 ref가 아니라 상태로 둔다. ref를 렌더에서 읽으면 React가
@@ -189,6 +198,7 @@ export function PlayClient() {
     x: 0,
     z: 0,
     facing: 0,
+    viewYaw: 0,
   }));
 
   // 퀘스트 표시도 같은 방식으로 공유한다 — 씬이 쓰고 HUD가 읽는다.
@@ -314,8 +324,8 @@ export function PlayClient() {
     stepIndex: 0,
   }));
 
-  const [metDokebi, setMetDokebi] = useState<DokebiId[]>(
-    () => resolveMetDokebi(loadSettings().metDokebi, scenario),
+  const [metDokebi, setMetDokebi] = useState<DokebiId[]>(() =>
+    resolveMetDokebi(loadSettings().metDokebi, scenario),
   );
   /*
    * 잠긴 동료를 들고 시작하지 않는다.
@@ -382,16 +392,12 @@ export function PlayClient() {
    */
   const [script, setScript] = useState(createScriptState);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 줄마다 다시 걸어야 한다 — index를 빼면 넘겨도 안 걸린다
   useEffect(() => {
     if (script.id === null) return;
-    const timer = setTimeout(
-      () => setScript(advanceLine),
-      SCRIPT_LINE_SECONDS * 1000,
-    );
-    return () => clearTimeout(timer);
-    // 줄이 바뀔 때마다 새 타이머를 건다 — 그래야 눌러서 넘긴 뒤 남은 시간이 안 샌다
+    const t = setTimeout(() => setScript(advanceLine), SCRIPT_LINE_SECONDS * 1000);
+    return () => clearTimeout(t);
   }, [script.id, script.index]);
-
 
   const [talkView] = useState(() => ({
     line: null as string | null,
@@ -399,13 +405,7 @@ export function PlayClient() {
     remaining: 0,
     nearby: false,
   }));
-  const [bossView] = useState(() => ({
-    engaged: false,
-    healthRatio: 1,
-    telegraph: false,
-    distance: Number.POSITIVE_INFINITY,
-    phase: "idle",
-  }));
+  const [bossView] = useState(createBossView);
   const [contextView] = useState(createContextLossView);
   const [vendingView] = useState(() => ({
     machineInReach: false,

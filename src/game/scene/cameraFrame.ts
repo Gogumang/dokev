@@ -126,15 +126,42 @@ export function recordCameraFrame(
       RUN_CAMERA,
     );
   }
-  state.combatEase = damp(state.combatEase, combatPressure(input.enemyBlips, input.enemyBlipCount, input.position.x, input.position.z, input.bossEngaged, CAMERA.combatRadius), CAMERA.followLambda, input.dt);
-  const distance = followDistance(input.tuning, speed01, input.photoMode, look.photoDistance, state.combatEase, input.position.y, isVehicle(input.mode));
+  state.combatEase = damp(
+    state.combatEase,
+    combatPressure(
+      input.enemyBlips,
+      input.enemyBlipCount,
+      input.position.x,
+      input.position.z,
+      input.bossEngaged,
+      CAMERA.combatRadius,
+    ),
+    CAMERA.followLambda,
+    input.dt,
+  );
+  const distance = followDistance(
+    input.tuning,
+    speed01,
+    input.photoMode,
+    look.photoDistance,
+    state.combatEase,
+    input.position.y,
+    isVehicle(input.mode),
+  );
   const orbit = orbitDirection(look.yaw, look.pitch);
 
   state.scratch.direction.set(orbit.x, orbit.y, orbit.z).normalize();
 
   state.scratch.playerHead.set(
     input.position.x,
-    input.position.y + followHeight(input.tuning, speed01, state.combatEase, input.position.y, isVehicle(input.mode)),
+    input.position.y +
+      followHeight(
+        input.tuning,
+        speed01,
+        state.combatEase,
+        input.position.y,
+        isVehicle(input.mode),
+      ),
     input.position.z,
   );
 
@@ -145,7 +172,9 @@ export function recordCameraFrame(
     input.colliders,
   );
 
-  state.scratch.desired.copy(state.scratch.playerHead).addScaledVector(state.scratch.direction, allowedDistance);
+  state.scratch.desired
+    .copy(state.scratch.playerHead)
+    .addScaledVector(state.scratch.direction, allowedDistance);
 
   /*
    * 카메라가 언덕을 파고들지 않게 한다.
@@ -155,7 +184,8 @@ export function recordCameraFrame(
    * 지면 위 최소 높이만 지켜 준다 — 시선 방향은 그대로 두므로 구도가
    * 흔들리지 않는다.
    */
-  const cameraGround = surfaceHeight(state.scratch.desired.x, state.scratch.desired.z) + CAMERA_GROUND_CLEARANCE;
+  const cameraGround =
+    surfaceHeight(state.scratch.desired.x, state.scratch.desired.z) + CAMERA_GROUND_CLEARANCE;
   if (state.scratch.desired.y < cameraGround) state.scratch.desired.y = cameraGround;
 
   /*
@@ -169,7 +199,11 @@ export function recordCameraFrame(
    * 식을 새로 쓰면 두 판정이 갈라지고, 그러면 플레이어는 못 들어가는 자리에
    * 카메라만 들어가는 자리가 생긴다.
    */
-  const cleared = resolveHorizontalCollisions(state.scratch.desired, CAMERA_COLLIDER_RADIUS, input.colliders);
+  const cleared = resolveHorizontalCollisions(
+    state.scratch.desired,
+    CAMERA_COLLIDER_RADIUS,
+    input.colliders,
+  );
   state.scratch.desired.x = cleared.x;
   state.scratch.desired.z = cleared.z;
 
@@ -183,12 +217,7 @@ export function recordCameraFrame(
    * 벽에 박힐 여지가 거의 없다.
    */
   if (input.finish01 > 0) {
-    const shot = faceShot(
-      input.position.x,
-      input.position.y,
-      input.position.z,
-      input.facing,
-    );
+    const shot = faceShot(input.position.x, input.position.y, input.position.z, input.facing);
     state.scratch.desired.x = lerp(state.scratch.desired.x, shot.x, input.finish01);
     state.scratch.desired.y = lerp(state.scratch.desired.y, shot.y, input.finish01);
     state.scratch.desired.z = lerp(state.scratch.desired.z, shot.z, input.finish01);
@@ -274,7 +303,9 @@ export function recordCameraFrame(
     if (state.discoveryPulseSeconds >= FOV_PULSE_SECONDS) state.discoveryPulseSeconds = null;
   }
   const pulse =
-    input.photoMode || state.discoveryPulseSeconds === null ? 0 : fovPulse(state.discoveryPulseSeconds);
+    input.photoMode || state.discoveryPulseSeconds === null
+      ? 0
+      : fovPulse(state.discoveryPulseSeconds);
 
   /*
    * 클로즈업에서는 화각을 좁힌다. 원근이 눌려 인물이 배경에서 떨어져

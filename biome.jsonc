@@ -1,0 +1,82 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  // 서식과 린트의 정본. ESLint를 대체한다 — 설정이 두 곳이면 한쪽만 고쳐진다.
+  //
+  // `biome.json`이 아니라 `.jsonc`인 이유: 주석을 단 `biome.json`은 **조용히
+  // 기본값으로 되돌아간다.** 규칙을 꺼 두었는데 그대로 걸리길래 알았다.
+  "files": {
+    "includes": ["src/**", "tests/**", "*.ts", "*.mts", "*.mjs"]
+  },
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    // 이미 이 폭으로 쓰여 있다. 넓히면 오히려 더 많은 파일이 다시 접힌다(재 봤다:
+    // 100에서 181곳, 120에서 246곳, 140에서 272곳).
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "css": {
+    // `@theme`·`@apply`를 쓴다. 켜지 않으면 globals.css가 통째로 파싱 오류다.
+    "parser": { "tailwindDirectives": true }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        // 이 저장소의 훅은 공유 가변 객체를 **일부러** 의존성에서 뺀다
+        // (`useSampled`). 규칙은 켜 두되 막지는 않는다.
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "error",
+        "useConst": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        // 여기서 인덱스 키를 쓰는 곳은 전부 **길이가 고정된 기하 목록**이다 —
+        // 우산 8패널, 체력 칸, 부두 널판. 순서가 바뀌지 않으므로 인덱스가
+        // 곧 정체성이고, 다른 키를 지어내면 없는 뜻을 만드는 것이 된다.
+        "noArrayIndexKey": "off"
+      },
+      "complexity": {
+        // 저감 모션 블록은 `!important`가 있어야 한다. 다른 전환 규칙을 반드시
+        // 이겨야 하는 접근성 장치다 (DESIGN_GUIDE 「즐거움은 선택 가능해야 함」).
+        "noImportantStyles": "off"
+      }
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        // 가져오기 순서는 사람이 정한다. 자동 정렬은 이 저장소의 그룹
+        // (컴포넌트 → 게임 → 타입)을 흩는다.
+        "organizeImports": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["tests/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            // 검사는 자기 fixture를 안다. `DOKEBI[id]!`를 옵셔널로 바꾸면
+            // **없을 때 조용히 통과하는** 검사가 된다 — 그쪽이 더 나쁘다.
+            "noNonNullAssertion": "off"
+          }
+        }
+      }
+    }
+  ]
+}

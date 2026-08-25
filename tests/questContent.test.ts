@@ -7,13 +7,13 @@ import { describe, expect, it } from "vitest";
 import { BOSS } from "@/game/combat/bossSim";
 
 import { COMBAT_TUNING } from "@/game/combat/combatSim";
+import { DEFAULT_WEAPON, WEAPONS } from "@/game/combat/weapons";
 import { GRAPPLE, LOCOMOTION } from "@/game/config/tuning";
 import { createLocomotionState, stepLocomotion } from "@/game/player/locomotion";
 import { buildCityDetails } from "@/game/world/cityDetails";
 import { buildCityLayout, ROAD_CENTERS } from "@/game/world/cityLayout";
 import { BOSS_QUEST, FIRST_RUN_QUEST } from "@/game/quest/questContent";
 import { CONTROL_CODES, CONTROLS } from "@/game/systems/controls";
-
 
 describe("안내문이 실제 규칙과 맞는가", () => {
   /*
@@ -33,7 +33,7 @@ describe("안내문이 실제 규칙과 맞는가", () => {
     다섯: 5,
   };
 
-  it("「n번 때리면」이 적 체력과 맞는다", () => {
+  it("「n번/n발」이 시작 무기로 실제 필요한 수와 맞는다", () => {
     /*
      * 예전에는 「두 번 때리면」이라는 **그 문장이 있는지**만 봤다. 그러면
      * 누가 힌트를 「세 번 때리면」으로 고쳐 적는 순간 `includes`가 거짓이
@@ -41,15 +41,22 @@ describe("안내문이 실제 규칙과 맞는가", () => {
      * 안내에만 반응하지 않는 꼴이다.
      *
      * 문장에서 수를 읽어 비교한다. 어떤 낱말을 쓰든 숫자가 맞아야 한다.
+     *
+     * **체력이 아니라 「몇 번 필요한가」와 비교한다.** 예전에는 체력과 바로
+     * 견줬는데, 그건 한 대에 1씩 깎는 무기만 있을 때 우연히 맞던 식이다 —
+     * 시작 무기가 활(피해 2)로 바뀌자 「두 번」이 거짓이 됐다. 「발」도 받는다:
+     * 쏘는 무기에 「때리면」이라고 적으면 그게 더 이상한 안내다.
      */
-    const claim = /(한|두|세|네|다섯|\d+)\s*번 때리면/.exec(hints);
-    expect(claim, `때리는 횟수를 말하는 힌트가 없다:\n${hints}`).not.toBeNull();
+    const claim = /(한|두|세|네|다섯|\d+)\s*(?:번|발)/.exec(hints);
+    expect(claim, `횟수를 말하는 힌트가 없다:\n${hints}`).not.toBeNull();
     if (!claim) return;
 
+    const damage = WEAPONS[DEFAULT_WEAPON].damage;
+    const needed = Math.ceil(COMBAT_TUNING.maxHp / damage);
     const said = COUNT_WORDS[claim[1]] ?? Number(claim[1]);
     expect(said, `수를 못 읽었다: ${claim[0]}`).toBeGreaterThan(0);
-    expect(said, `안내문은 ${claim[0]}인데 체력은 ${COMBAT_TUNING.maxHp}`).toBe(
-      COMBAT_TUNING.maxHp,
+    expect(said, `안내문은 ${claim[0]}인데 체력 ${COMBAT_TUNING.maxHp} / 피해 ${damage}`).toBe(
+      needed,
     );
   });
 
@@ -73,7 +80,7 @@ describe("안내문이 실제 규칙과 맞는가", () => {
     expect(said, `힌트가 표식 모양을 말하지 않는다:\n${hints}`).toBeDefined();
     if (!said) return;
 
-    const map = readFileSync("src/components/hud/CityMap.tsx", "utf8");
+    const map = readFileSync("src/game/systems/cityMapPaint.ts", "utf8");
     const marks = map.slice(map.indexOf("const MARKS = {"), map.indexOf("} as const;"));
     const boss = /boss: \{ color: "(#[0-9a-fA-F]{6})", shape: "(\w+)"/.exec(marks);
     expect(boss, "지도의 대장 표식을 못 읽었다").toBeTruthy();
@@ -89,7 +96,7 @@ describe("안내문이 실제 규칙과 맞는가", () => {
      * 직접 가리킨다 — 앵커는 **그 코드에만 있는 모양**이어야 한다(예전에
      * 「BOSS_HOME.x의 첫 등장」으로 잘랐다가 엉뚱한 데를 검사했다).
      */
-    const bossDraw = map.slice(map.indexOf("toFullMapPixel(BOSS_HOME.x"));
+    const bossDraw = map.slice(map.indexOf("toFullMapPixel(boss.x"));
     const body = bossDraw.slice(0, 400);
     expect(body, "보스 표식이 삼각형이 아니다").toContain("lineTo");
     expect(body, "보스가 표식 상수를 쓰지 않는다").toContain("MARKS.boss.color");
@@ -172,12 +179,13 @@ describe("활강 목표에 실제로 닿을 수 있는가", () => {
     return gliding;
   }
 
-  const target =
-    FIRST_RUN_QUEST.steps.find((step) => step.objective.kind === "glide")?.objective.kind ===
-    "glide"
-      ? (FIRST_RUN_QUEST.steps.find((step) => step.objective.kind === "glide")
-          ?.objective as { kind: "glide"; seconds: number }).seconds
-      : 0;
+  /*
+   * 같은 단계를 두 번 찾아 놓고 한 번은 옵셔널로, 한 번은 단언으로 읽고 있었다 —
+   * 단계가 사라지면 앞은 undefined를 흘리고 뒤는 그것을 객체로 우겼다. 한 번만
+   * 찾고, 좁히는 일은 타입이 하게 둔다.
+   */
+  const glideStep = FIRST_RUN_QUEST.steps.find((step) => step.objective.kind === "glide");
+  const target = glideStep?.objective.kind === "glide" ? glideStep.objective.seconds : 0;
 
   it("활강 목표가 실제로 있다", () => {
     // 단계가 사라지면 아래 검사들이 0을 상대로 조용히 통과한다
@@ -397,7 +405,9 @@ describe("힌트가 말하는 키가 실제로 묶여 있는가", () => {
       if (!code) continue;
       checked += 1;
       const letter = /^Key([A-Z])$/.exec(code)?.[1] ?? code;
-      expect(row.keyboard, `${row.id}: 표는 "${row.keyboard}"인데 코드는 ${code}`).toContain(letter);
+      expect(row.keyboard, `${row.id}: 표는 "${row.keyboard}"인데 코드는 ${code}`).toContain(
+        letter,
+      );
     }
     expect(checked, `대조한 항목 ${checked}개`).toBeGreaterThan(8);
   });
@@ -411,11 +421,9 @@ describe("안내가 말하는 표식이 지도에 실제로 있는가", () => {
    *
    * 안내에 모양이 나오면 그 모양이 실제 표식에 있어야 한다.
    */
-  const map = readCode("src/components/hud/CityMap.tsx");
+  const map = readCode("src/game/systems/cityMapPaint.ts");
   const marks = map.slice(map.indexOf("const MARKS = {"), map.indexOf("} as const;"));
-  const shapes = new Set(
-    [...marks.matchAll(/shape: "(\w+)"/g)].map((match) => match[1]),
-  );
+  const shapes = new Set([...marks.matchAll(/shape: "(\w+)"/g)].map((match) => match[1]));
 
   /** 안내에 쓰는 말 → 표식의 모양 이름 */
   const SHAPE_WORDS: Record<string, string> = {
@@ -480,7 +488,7 @@ describe("여러 번 해야 하는 목표에 계수기가 있는가", () => {
 
   it("각 단계가 화면에 진행 수를 낸다", () => {
     const runner = readCode("src/game/quest/questRunner.ts");
-    const start = runner.indexOf("let counter = \"\";");
+    const start = runner.indexOf('let counter = "";');
     expect(start, "계수기를 만드는 곳을 못 찾았다").toBeGreaterThan(-1);
     const body = runner.slice(start, runner.indexOf("return {", start));
     expect(body.length, `잘라낸 길이 ${body.length}`).toBeGreaterThan(80);

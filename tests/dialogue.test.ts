@@ -201,7 +201,9 @@ describe("같은 말만 반복하지 않는가", () => {
 
   it("자주 나오는 상황일수록 여유가 있다", () => {
     // 동료 보내기는 C로 자주 누르는 자리다 — 한 판에 여러 번 나온다
-    expect(LINES.dismissed.length, `dismissed ${LINES.dismissed.length}줄`).toBeGreaterThanOrEqual(3);
+    expect(LINES.dismissed.length, `dismissed ${LINES.dismissed.length}줄`).toBeGreaterThanOrEqual(
+      3,
+    );
   });
 
   it("연달아 같은 줄이 나오지 않는다", () => {
@@ -230,8 +232,9 @@ describe("쓴 대사가 실제로 들리는가", () => {
 
   it("모든 상황이 어딘가에서 불린다", () => {
     // 정책 함수 본문만 본다. 주석은 `readCode`가 이미 걷어내므로 코드로 가른다
-  const policy = readCode("src/game/quest/dialogue.ts").split("export function recordRemark")[1] ?? "";
-  const silent: string[] = [];
+    const policy =
+      readCode("src/game/quest/dialogue.ts").split("export function recordRemark")[1] ?? "";
+    const silent: string[] = [];
     for (const cue of Object.keys(LINES)) {
       if (cue.startsWith("step:")) continue;
       // 여정 단계와 완주는 함수가 골라 준다
@@ -360,7 +363,10 @@ describe("recordRemark", () => {
   it("예고가 떠 있는 동안 계속 말하지 않는다 — 매 프레임 말하면 초당 60번이다", () => {
     const memory = createRemarkMemory();
     recordRemark(memory, { bossTelegraph: true, defeats: 0 });
-    expect(recordRemark(memory, { bossTelegraph: true, defeats: 0 }), "두 번째도 말했다").toBeNull();
+    expect(
+      recordRemark(memory, { bossTelegraph: true, defeats: 0 }),
+      "두 번째도 말했다",
+    ).toBeNull();
   });
 
   it("한 판에 한 번뿐이다 — 링이 꺼졌다 다시 떠도 조용하다", () => {

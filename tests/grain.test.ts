@@ -65,7 +65,9 @@ describe("결이 벽을 망치지 않는가", () => {
     for (const mark of marks) {
       expect(mark.x, `x=${mark.x}`).toBeGreaterThanOrEqual(0);
       expect(mark.y, `y=${mark.y}`).toBeGreaterThanOrEqual(0);
-      expect(mark.x + mark.width, `오른쪽 끝 ${mark.x + mark.width}`).toBeLessThanOrEqual(SIZE + 1e-6);
+      expect(mark.x + mark.width, `오른쪽 끝 ${mark.x + mark.width}`).toBeLessThanOrEqual(
+        SIZE + 1e-6,
+      );
       expect(mark.y + mark.height, `아래쪽 끝 ${mark.y + mark.height}`).toBeLessThanOrEqual(
         SIZE + 1e-6,
       );

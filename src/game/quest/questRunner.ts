@@ -305,6 +305,5 @@ export function projectQuestView(
   view.completed = next.completed;
   // 씬이 조용한 구간을 판단할 때 읽는다. 안 옮기면 영영 0번 단계로 남는다
   view.stepIndex = next.stepIndex;
-  view.firstQuestDone =
-    quest.id !== firstQuestId || next.completed || view.firstQuestDone;
+  view.firstQuestDone = quest.id !== firstQuestId || next.completed || view.firstQuestDone;
 }

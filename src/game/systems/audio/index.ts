@@ -18,7 +18,12 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-import { isVehicle, LOCOMOTION, VEHICLE_TOP_SPEED, type LocomotionMode } from "@/game/config/tuning";
+import {
+  isVehicle,
+  LOCOMOTION,
+  VEHICLE_TOP_SPEED,
+  type LocomotionMode,
+} from "@/game/config/tuning";
 import { createSeededRandom, inverseLerpClamped } from "@/game/core/mathx";
 import {
   getServerSettingsSnapshot,
@@ -28,7 +33,14 @@ import {
 
 import type { DistrictId } from "@/game/world/districts";
 
-import { createCombatVoice, consumeCues, createCombatCues, hasCues, type CombatCues, type CombatVoice } from "./combat";
+import {
+  createCombatVoice,
+  consumeCues,
+  createCombatCues,
+  hasCues,
+  type CombatCues,
+  type CombatVoice,
+} from "./combat";
 import { createMusicVoice, type MusicVoice } from "./music";
 import { createNoiseBuffer } from "./noise";
 import {
@@ -116,8 +128,6 @@ const WIND_FULL_SPEED = VEHICLE_TOP_SPEED;
 
 /** 구름 소리가 들리기 시작하는 속도. 멈춘 보드에서 소리가 나면 안 된다 */
 const ROLL_START_SPEED = 0.8;
-
-
 
 /* ------------------------------------------------------------------ */
 /* 엔진                                                                 */

@@ -67,12 +67,18 @@ describe("문서에 적힌 디렉터리", () => {
 });
 
 describe("에셋 없음 원칙", () => {
-  it("public에 에셋 디렉터리가 없다", () => {
+  it("public에 열지 않은 에셋 디렉터리가 없다", () => {
     /*
-     * 이 프로젝트의 중심 제약이다. 디렉터리가 생기는 순간 누군가 파일을
+     * 이 프로젝트의 중심 제약이었다: 디렉터리가 생기는 순간 누군가 파일을
      * 넣게 되고, 그러면 초기 다운로드 예산이 무너진다.
+     *
+     * `models/`만 연다. ASSET_PLAN 「반입 절차」가 정한 자리이고, 안에
+     * 들어올 수 있는 것은 `forbiddenApis.test.ts`의 목록에 **파일 단위로**
+     * 적힌 것뿐이다 — 디렉터리는 열렸지만 문은 여전히 하나씩 연다.
+     *
+     * 나머지 셋은 그대로 막는다. 텍스처·소리·그림은 아직 절차도 예산도 없다.
      */
-    for (const dir of ["public/models", "public/textures", "public/audio", "public/images"]) {
+    for (const dir of ["public/textures", "public/audio", "public/images"]) {
       expect(existsSync(dir), `${dir} exists — 에셋 없음 원칙이 깨졌다`).toBe(false);
     }
   });

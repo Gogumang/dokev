@@ -311,13 +311,26 @@ export function buildOldTown(
          * 담에 기대는 물건이라 담이 없으면 놓을 이유가 없다.
          */
         if (withIvy && sideWall) {
-          pushIvy(wallGreens, block.cx + side * reach, block.cz + along,
-            { dx: side, dz: 0 }, block.blockIndex, random);
+          pushIvy(
+            wallGreens,
+            block.cx + side * reach,
+            block.cz + along,
+            { dx: side, dz: 0 },
+            block.blockIndex,
+            random,
+          );
         }
         if (withPlanter && sideWall) {
           // 담 바깥쪽에 놓는다 — 안쪽은 집 마당이라 지나가며 볼 일이 없다
-          pushPlanter(planters, wallGreens, block.cx + side * (reach + WALL.thickness / 2),
-            block.cz + along, { dx: side, dz: 0 }, block.blockIndex, random);
+          pushPlanter(
+            planters,
+            wallGreens,
+            block.cx + side * (reach + WALL.thickness / 2),
+            block.cz + along,
+            { dx: side, dz: 0 },
+            block.blockIndex,
+            random,
+          );
         }
         // x 방향으로 뻗는 변 (구역의 위·아래)
         const endWall =
@@ -333,18 +346,31 @@ export function buildOldTown(
             random,
           );
         if (withIvy && endWall) {
-          pushIvy(wallGreens, block.cx + along, block.cz + side * reach,
-            { dx: 0, dz: side }, block.blockIndex, random);
+          pushIvy(
+            wallGreens,
+            block.cx + along,
+            block.cz + side * reach,
+            { dx: 0, dz: side },
+            block.blockIndex,
+            random,
+          );
         }
         if (withPlanter && endWall) {
-          pushPlanter(planters, wallGreens, block.cx + along,
-            block.cz + side * (reach + WALL.thickness / 2), { dx: 0, dz: side }, block.blockIndex, random);
+          pushPlanter(
+            planters,
+            wallGreens,
+            block.cx + along,
+            block.cz + side * (reach + WALL.thickness / 2),
+            { dx: 0, dz: side },
+            block.blockIndex,
+            random,
+          );
         }
       }
     }
 
     for (const side of block.openSides) {
-        pushGate(gates, colliders, block, side, reach);
+      pushGate(gates, colliders, block, side, reach);
     }
   }
 

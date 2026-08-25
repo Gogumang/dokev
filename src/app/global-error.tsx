@@ -40,7 +40,14 @@ export default function GlobalError({
           <p style={{ marginTop: "12px", color: "#b6acd0" }}>
             새로고침하거나 잠시 뒤 다시 시도해 주세요.
           </p>
-          <p style={{ marginTop: "8px", fontSize: "0.75rem", color: "#b6acd0", wordBreak: "break-word" }}>
+          <p
+            style={{
+              marginTop: "8px",
+              fontSize: "0.75rem",
+              color: "#b6acd0",
+              wordBreak: "break-word",
+            }}
+          >
             {error.message}
             {error.digest ? ` (${error.digest})` : ""}
           </p>

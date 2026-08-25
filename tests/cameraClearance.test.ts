@@ -99,9 +99,10 @@ describe("카메라가 벽 안에 남지 않는다", () => {
      * 카메라는 몸이 아니라 점이다. 플레이어와 같게 잡으면 좁은 골목에서
      * 필요 이상으로 튕겨 나가 구도가 흔들린다.
      */
-    expect(CAMERA_COLLIDER_RADIUS, `카메라 ${CAMERA_COLLIDER_RADIUS} / 플레이어 ${PLAYER_RADIUS}`).toBeLessThan(
-      PLAYER_RADIUS,
-    );
+    expect(
+      CAMERA_COLLIDER_RADIUS,
+      `카메라 ${CAMERA_COLLIDER_RADIUS} / 플레이어 ${PLAYER_RADIUS}`,
+    ).toBeLessThan(PLAYER_RADIUS);
     expect(CAMERA_COLLIDER_RADIUS, "0이면 아무것도 밀어내지 않는다").toBeGreaterThan(0);
   });
 

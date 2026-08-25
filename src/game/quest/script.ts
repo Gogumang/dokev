@@ -31,12 +31,7 @@ const CHORONG = DOKEBI.chorong.name;
 const PLAYER = "나";
 
 /** 대본이 붙는 자리 */
-export type ScriptId =
-  | "firstProblem"
-  | "firstFriend"
-  | "friend"
-  | "bossBefore"
-  | "bossAfter";
+export type ScriptId = "firstProblem" | "firstFriend" | "friend" | "bossBefore" | "bossAfter";
 
 export interface ScriptLine {
   /** 누가 말하는가. 빈 문자열이면 화자 없이 지문으로 뜬다 */

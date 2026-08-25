@@ -77,24 +77,33 @@ describe("금지한 API를 쓰지 않는가", () => {
      * **캐릭터 모델 하나만** 받는다 — 사람 몸은 상자로 흉내 내기 가장 어려워
      * 여기서 얻는 것이 가장 크다고 판단한 예외다.
      *
-     * 「하나도 안 받는다」에서 **「이 파일에서만 받는다」**로 규칙을 바꿨다.
-     * 로더가 다른 곳에 하나 더 생기면 여기서 걸린다 — CSP(`connect-src 'self'`)
-     * 안에서만 받는다는 약속도 그때 함께 흔들린다.
+     * 「하나도 안 받는다」에서 **「적어 둔 곳에서만 받는다」**로 규칙을 바꿨다.
+     * 로더가 목록 밖에 생기면 여기서 걸린다 — CSP(`connect-src 'self'`) 안에서만
+     * 받는다는 약속도 그때 함께 흔들린다.
+     *
+     * 둘째가 대장이다. 예고 동작이 **게임플레이 그 자체**라서 열었다 — 팔이
+     * 올라가는 1.1초가 피할 때를 아는 유일한 단서인데, 상자로는 그 팔이 안
+     * 올라간다. 캐릭터와 같은 종류의 **한 번의 판단**이지 문이 열린 것이 아니다.
      */
-    const LOADER_HOME = "src/game/player/CharacterModel.tsx";
+    const LOADER_HOMES = new Set([
+      "src/game/player/CharacterModel.tsx",
+      "src/game/combat/BossModel.tsx",
+    ]);
 
     const offenders = sources
-      .filter(({ path }) => path !== LOADER_HOME)
+      .filter(({ path }) => !LOADER_HOMES.has(path))
       .filter(({ text }) => /\b(fetch\s*\(|new XMLHttpRequest|TextureLoader|GLTFLoader)/.test(text))
       .map(({ path }) => path);
     expect(offenders, `외부에서 받아 오는 곳:\n${offenders.join("\n")}`).toEqual([]);
   });
 
-  it("그 하나는 실제로 로더를 쓴다", () => {
+  it("적어 둔 곳은 실제로 로더를 쓴다", () => {
     // 예외로 적어 두고 정작 안 쓰면, 이 검사가 아무것도 안 지키면서 문만 열어 둔다
-    const home = sources.find(({ path }) => path === "src/game/player/CharacterModel.tsx");
-    expect(home, "캐릭터 모델 파일이 없다").toBeDefined();
-    expect(home?.text, "예외로 열어 둔 곳이 로더를 안 쓴다").toMatch(/GLTFLoader/);
+    for (const path of ["src/game/player/CharacterModel.tsx", "src/game/combat/BossModel.tsx"]) {
+      const home = sources.find((file) => file.path === path);
+      expect(home, `${path}가 없다`).toBeDefined();
+      expect(home?.text, `${path}가 로더를 안 쓴다`).toMatch(/GLTFLoader/);
+    }
   });
 });
 
@@ -110,9 +119,12 @@ describe("금지한 API를 쓰지 않는가", () => {
  */
 function frameBodies(source: string): string[] {
   const bodies: string[] = [];
-  const opener = /useFrame\s*\(/g;
-  let match: RegExpExecArray | null;
-  while ((match = opener.exec(source)) !== null) {
+  /*
+   * `while ((m = re.exec(s)))`는 **읽는 줄이 값을 바꾼다.** 같은 일을
+   * `matchAll`로 하면 대입이 사라진다 — 정규식에 `g`가 붙어 있어야 도는 것도
+   * 여기서는 타입이 대신 말해 준다.
+   */
+  for (const match of source.matchAll(/useFrame\s*\(/g)) {
     const start = source.indexOf("{", match.index);
     if (start < 0) continue;
     let depth = 0;
@@ -252,7 +264,54 @@ describe("public에 에셋이 들어오지 않는가", () => {
    *
    * 이것도 캐릭터와 같은 **한 번의 판단**이지 문이 열린 것이 아니다.
    */
-  const ALLOWED = new Set(["public/character.glb", "public/title-street.webp"]);
+  const ALLOWED = new Set([
+    "public/character.glb",
+    "public/title-street.webp",
+    /*
+     * 배경 차량 셋. ASSET_PLAN 「반입 절차」가 정한 자리(`public/models/`)이고,
+     * 정본은 `assets/concepts/meshy/vehicles/README.md`다.
+     *
+     * 차량을 들인 이유는 캐릭터와 같다 — 둥근 차체와 두 단계 툰 음영은 상자
+     * 조합으로 흉내 내기 어렵다. 셋을 함께 들이는 이유는 **한 벌**이어서다:
+     * 팔레트와 머티리얼을 공유해야 인스턴싱이 산다.
+     *
+     * 셋 다 원본은 117~120MB짜리 Meshy 출력이었다(300만 삼각형). 여기 있는
+     * 것은 절차를 거친 결과다 — 알베도만 남기고, 512²로 줄이고, 단순화하고,
+     * draco로 압축했다.
+     */
+    "public/models/traffic-compact-car.glb",
+    "public/models/traffic-city-minibus.glb",
+    "public/models/traffic-delivery-van.glb",
+    /*
+     * 동료 흰곰. ASSET_PLAN 「동료의 정체 — 메인 그림으로 고정」이 정한 넷 중
+     * 첫 번째이고, 입력 정본은 `assets/concepts/meshy/companion-bear-v2.png`다.
+     *
+     * 원본은 동작 열한 개가 붙은 10.6MB였다. 게임에 상태가 있는 다섯만 남겼다
+     * (달리기·걷기·공격·능력·일어서기) — 나머지 여섯은 핸드스탠드 플립·펀치
+     * 콤보·구르기처럼 **대응하는 상태가 게임에 없는** 것들이고, 애니메이션이
+     * 파일의 절반이라 예산을 그것들이 먹고 있었다.
+     */
+    "public/models/companion-bear.glb",
+    /*
+     * 버섯과 검은 고양이. 파일 이름이 둘 다 `Merged_Animations (n)`이라 어느
+     * 쪽인지 이름으로는 알 수 없었다 — **알베도를 꺼내 컨셉 그림과 대조해서**
+     * 갈랐다. 버섯은 청록 갓·크림 몸·연두 싹·주황 카메라, 고양이는 검정 몸·
+     * 연두 조끼·크림 눈이다. 실루엣도 같은 말을 한다: 버섯은 위에서 두 번째
+     * 띠가 둥글고 넓은 갓(1.04×1.06), 고양이는 맨 위가 넓고 납작한 귀(0.75×0.23).
+     */
+    "public/models/companion-mushroom.glb",
+    "public/models/companion-cat.glb",
+    /*
+     * 미니 보스 「고물 대장」. 팔레트가 정본과 그대로 맞는다 — 연보라 회색 몸통,
+     * 크림 주둥이, 민트 포획 코어, 산호색 위험 표시
+     * (`assets/concepts/meshy/bosses/README.md`).
+     *
+     * 동작 여덟을 다 남겼다. 동료와 달리 **보스의 단계마다 대응하는 것이 있다**:
+     * 서 있기·쫓기·예고(투구 준비)·내려치기·쓰러짐이 그대로 있고, 지금 코드의
+     * `BossPhase`가 일곱이다. 버릴 것이 없어서 안 버렸다.
+     */
+    "public/models/boss-scrap-foreman.glb",
+  ]);
 
   it("정해 둔 것 말고는 에셋이 없다", () => {
     /*
@@ -266,6 +325,51 @@ describe("public에 에셋이 들어오지 않는가", () => {
     );
     const unexpected = assets.filter((path) => !ALLOWED.has(path));
     expect(unexpected, `허락하지 않은 에셋이 들어왔다:\n${unexpected.join("\n")}`).toEqual([]);
+  });
+
+  it("배경 차량이 예산을 넘지 않는다", () => {
+    /*
+     * 차종당 압축 후 350KB — `assets/concepts/meshy/vehicles/README.md` 6항.
+     * 지금은 59~73KB다.
+     *
+     * 셋을 따로 재는 이유: 합계만 보면 하나가 커진 것을 다른 둘이 가려 준다.
+     * 실제로 원본은 셋 다 117MB가 넘었고, 그때도 합계 자만 있었다면 「셋 다
+     * 크다」가 「합계가 크다」 한 줄로 뭉개졌다.
+     */
+    for (const path of [...ALLOWED].filter((name) => name.startsWith("public/models/traffic-"))) {
+      const kb = statSync(path).size / 1024;
+      expect(kb, `${path} ${kb.toFixed(0)}KB`).toBeLessThan(350);
+    }
+  });
+
+  it("동료와 보스가 예산을 넘지 않는다", () => {
+    /*
+     * GLB 하나 600KB — ASSET_PLAN 4절. 동료는 399~597KB, 대장은 758KB다.
+     *
+     * **Draco를 빼면서 커졌다.** 앱의 `GLTFLoader`에 디코더가 없어서 압축한
+     * 파일은 통째로 못 읽었고, 화면에는 절차적 몸이 대신 서 있었다 — 오류도
+     * 없이. 지금은 three가 기본으로 아는 것만 쓴다(`KHR_mesh_quantization`).
+     *
+     * 차량(350KB)보다 넉넉한 이유는 **뼈와 동작**을 들고 오기 때문이다.
+     * 단순화로는 더 못 줄인다 — 메시는 이미 바닥이고 draco는 애니메이션
+     * 트랙을 압축하지 않는다. 넘으면 줄일 곳은 동작 수뿐이다.
+     */
+    for (const path of [...ALLOWED].filter((name) => name.includes("companion-"))) {
+      const kb = statSync(path).size / 1024;
+      expect(kb, `${path} ${kb.toFixed(0)}KB`).toBeLessThan(650);
+    }
+
+    /*
+     * 대장은 따로 잰다 — **일곱 단계에 일곱 동작**이라 애니메이션이 파일의
+     * 절반을 넘는다. 그중 버릴 것이 없다: 단계와 동작의 짝은
+     * `tests/bossClips.test.ts`가 **양방향으로** 묶어 두었고, 하나를 빼면
+     * 그 단계에서 대장이 굳는다.
+     *
+     * 캐릭터에 2MB를 준 것과 같은 종류의 판단이다. 뼈와 동작을 들고 오는
+     * 액터는 상자와 다른 자를 쓴다.
+     */
+    const bossKb = statSync("public/models/boss-scrap-foreman.glb").size / 1024;
+    expect(bossKb, `대장 ${bossKb.toFixed(0)}KB`).toBeLessThan(800);
   });
 
   it("들이기로 한 것은 실제로 있다", () => {
@@ -300,11 +404,11 @@ describe("public에 에셋이 들어오지 않는가", () => {
 
   it("파일이 조용히 늘지 않는다", () => {
     /*
-     * 확장자만 막으면 `.json` 데이터나 새 SVG가 슬금슬금 는다. 지금 일곱이고
-     * (시작 화면 그림이 늘었다), **줄이는 것은 언제든 환영**이라 상한만 둔다.
+     * 확장자만 막으면 `.json` 데이터나 새 SVG가 슬금슬금 는다. 지금 열넷이고
+     * (배경 차량 셋·동료 셋·보스가 늘었다), **줄이는 것은 언제든 환영**이라 상한만 둔다.
      */
     expect(files.length, `public 파일 ${files.length}개:\n${files.join("\n")}`).toBeLessThanOrEqual(
-      7,
+      14,
     );
   });
 });

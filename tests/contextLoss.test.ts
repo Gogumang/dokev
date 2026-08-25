@@ -18,7 +18,10 @@ function fakeCanvas() {
       handlers.set(type, [...(handlers.get(type) ?? []), handler]);
     },
     removeEventListener(type: string, handler: EventListener) {
-      handlers.set(type, (handlers.get(type) ?? []).filter((item) => item !== handler));
+      handlers.set(
+        type,
+        (handlers.get(type) ?? []).filter((item) => item !== handler),
+      );
     },
     fire(type: string, event: Partial<Event> = {}) {
       for (const handler of handlers.get(type) ?? []) {
@@ -129,13 +132,13 @@ describe("끊겼을 때 빠져나갈 길이 있는가", () => {
    * 주지 않았다.** 모바일에서는 주소창을 다시 꺼내는 것부터 어렵고, 화면은
    * 검은 채로 남아 게임이 죽은 것으로 보인다.
    */
-  const hud = readCode("src/components/hud/WorldHud.tsx");
-  const notice = hud.slice(hud.indexOf("function ContextNotice"));
-  const body = notice.slice(0, notice.indexOf("\n/**"));
+  const views = readCode("src/components/hud/views/ContextNotice.tsx");
+  const body = views.slice(views.indexOf("export function ContextNotice"));
+  const wiring = readCode("src/components/hud/ContextNotice.tsx");
 
   it("끊긴 동안에는 새로고침 버튼이 있다", () => {
-    expect(body, "누를 것이 없다").toContain("location.reload()");
-    expect(body, "끊긴 상태와 무관하게 뜬다").toContain('context.state === "lost"');
+    expect(wiring, "누를 것이 없다").toContain("location.reload()");
+    expect(wiring, "끊긴 상태와 무관하게 뜬다").toContain('context.state === "lost"');
   });
 
   it("돌아온 뒤에는 권하지 않는다", () => {

@@ -9,7 +9,13 @@
 
 import type { QualityLevel } from "@/game/systems/quality";
 
-export function DowngradeNotice({ level, onDismiss }: { level: QualityLevel; onDismiss: () => void }) {
+export function DowngradeNotice({
+  level,
+  onDismiss,
+}: {
+  level: QualityLevel;
+  onDismiss: () => void;
+}) {
   const labels: Record<QualityLevel, string> = {
     low: "가벼움",
     medium: "보통",

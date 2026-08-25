@@ -15,7 +15,14 @@ import {
 const FRAME = 1 / 60;
 
 function makeInput(overrides: Partial<PoseInput> = {}): PoseInput {
-  return { speed: 0, grounded: true, onBoard: false, gliding: false, landingImpact: 0, ...overrides };
+  return {
+    speed: 0,
+    grounded: true,
+    onBoard: false,
+    gliding: false,
+    landingImpact: 0,
+    ...overrides,
+  };
 }
 
 function run(state: PoseState, input: PoseInput, frames: number): PoseState {

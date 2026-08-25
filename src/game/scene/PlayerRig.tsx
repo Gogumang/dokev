@@ -20,9 +20,24 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import * as THREE from "three";
+import type * as THREE from "three";
 
-import { isVehicle, STATS_SAMPLE_SECONDS, CAMERA, DOWNGRADE_FPS_THRESHOLD, DOWNGRADE_SAMPLE_SECONDS, CAMERA_REDUCED, CARRIED_VEHICLE, RUN_CAMERA, GRAPPLE, LANDING_SHAKE, MAX_DELTA_SECONDS, PHOTO_CAMERA, PLAYER_HEIGHT, PLAYER_RADIUS } from "@/game/config/tuning";
+import {
+  isVehicle,
+  STATS_SAMPLE_SECONDS,
+  CAMERA,
+  DOWNGRADE_FPS_THRESHOLD,
+  DOWNGRADE_SAMPLE_SECONDS,
+  CAMERA_REDUCED,
+  CARRIED_VEHICLE,
+  RUN_CAMERA,
+  GRAPPLE,
+  LANDING_SHAKE,
+  MAX_DELTA_SECONDS,
+  PHOTO_CAMERA,
+  PLAYER_HEIGHT,
+  PLAYER_RADIUS,
+} from "@/game/config/tuning";
 import {
   createLocomotionState,
   findGrappleTarget,
@@ -30,8 +45,8 @@ import {
   resolveMode,
   type LocomotionState,
   type MoveInput,
-  projectMotionView,
 } from "@/game/player/locomotion";
+import { projectMotionView } from "@/game/player/motionView";
 import { stepPlayerOnGround } from "@/game/player/groundStep";
 import {
   consumeGrapple,
@@ -39,11 +54,8 @@ import {
   projectCommands,
   consumeLookDelta,
   consumeZoom,
-  } from "@/game/systems/input";
-import {
-  projectCompanionTarget,
-  resetCompanionEffects,
-} from "@/game/dokebi/companionMotion";
+} from "@/game/systems/input";
+import { projectCompanionTarget, resetCompanionEffects } from "@/game/dokebi/companionMotion";
 import {
   projectCharacterCues,
   projectCombatView,
@@ -72,7 +84,7 @@ import {
   finisherTimeScale,
   stepFinisher,
 } from "@/game/scene/finisher";
-import type { RigProps, } from "@/game/scene/sceneTypes";
+import type { RigProps } from "@/game/scene/sceneTypes";
 
 /*
  * 타입은 sceneTypes가 갖고 있다. HUD 여러 곳이 예전부터 이 파일에서
@@ -94,8 +106,6 @@ import {
   type DialogueState,
 } from "@/game/quest/dialogue";
 import { FIRST_RUN_QUEST, nextQuest, questById, QUEST_CHAIN } from "@/game/quest/questContent";
-import {
-  } from "@/game/systems/photoFilter";
 import { districtAt } from "@/game/world/districts";
 import { clampStepIndex } from "@/game/systems/saveGame";
 import {
@@ -104,10 +114,11 @@ import {
   projectQuestView,
   type QuestProgress,
   type QuestSignals,
-  } from "@/game/quest/questRunner";
+} from "@/game/quest/questRunner";
 import { Character } from "@/game/player/Character";
 import { CharacterModel } from "@/game/player/CharacterModel";
 import { RiddenVehicle } from "@/game/player/RiddenVehicle";
+import { UmbrellaGlider } from "@/game/player/UmbrellaGlider";
 import { nearestStatic } from "@/game/world/interaction";
 import { standInReach } from "@/game/world/vehicleStands";
 import { consumeInteract, stepInteraction } from "@/game/scene/interactionStep";
@@ -328,7 +339,8 @@ export function PlayerRig({
        * 어느 자리든 같은 식으로 발밑을 잰다 — 이동 전과 이동 후를 두 번 잰다.
        * 두 곳에 손으로 적으면 한쪽만 고쳐질 자리가 하나 더 생긴다.
        */
-      sampleGround: (x, z) => rideSurfaceHeight(surfaceHeight(x, z), x, z, layout.halfExtent, riding),
+      sampleGround: (x, z) =>
+        rideSurfaceHeight(surfaceHeight(x, z), x, z, layout.halfExtent, riding),
       colliders,
       grappleAnchors,
       radius: PLAYER_RADIUS,
@@ -409,7 +421,7 @@ export function PlayerRig({
     });
     if (downgrade) onRequestDowngrade(downgrade);
 
-    projectMotionView(stats, corrected, speed, mode);
+    projectMotionView(stats, corrected, speed, mode, Math.PI - look.yaw); // 카메라 yaw는 지도와 반대로 돈다
     /*
      * 동료가 말할 거리가 생겼는지 묻는다. 「언제 말하나」는 순수 규칙이라
      * `quest/dialogue.ts`가 들고 있고, 여기서는 결과만 흘려보낸다.
@@ -461,7 +473,11 @@ export function PlayerRig({
     if (!emotingBefore && emote.current.elapsed !== null) {
       // 동료가 같이 신난다. 혼자 하면 감정 표현이 아니라 애니메이션 재생이다.
       dialogueCounter.current += 1;
-      dialogue.current = speak(dialogue.current, emoteCue(emote.current.index), dialogueCounter.current);
+      dialogue.current = speak(
+        dialogue.current,
+        emoteCue(emote.current.index),
+        dialogueCounter.current,
+      );
     }
 
     /* ---------------- 탈것 ---------------- */
@@ -524,7 +540,6 @@ export function PlayerRig({
     }
     wasDowned.current = playerLink.playerDowned;
 
-
     /*
      * 도깨비와의 만남 — 이미 신호가 대기 중이면 건너뛴다. PlayClient가
      * 가져가기 전에 덮어쓰면 만남이 하나 사라진다.
@@ -556,7 +571,13 @@ export function PlayerRig({
     stats.district = district.id;
     projectDistrictView(districtView, district);
 
-    projectCompanionTarget(playerLink, corrected.position, speed, corrected.facing, corrected.grounded);
+    projectCompanionTarget(
+      playerLink,
+      corrected.position,
+      speed,
+      corrected.facing,
+      corrected.grounded,
+    );
     // 입력을 전투·동료 쪽으로 넘긴다. 소비는 각자가 한다.
     projectCommands(playerLink, input, cameraFrame.combatEase, dt);
     // 전투 결과를 HUD 쪽 객체로 옮긴다. 객체를 교체하지 않고 필드만 쓴다.
@@ -564,7 +585,6 @@ export function PlayerRig({
     projectSummaryView(summaryView, playerLink, speed, dt, questView.completed);
 
     projectCombatView(combatView, playerLink);
-
 
     /* ---------------- 퀘스트 ---------------- */
     const signals: QuestSignals = {
@@ -648,6 +668,7 @@ export function PlayerRig({
       */}
       {/* 타고 있는 것. 캐릭터가 GLB든 대체물이든 발밑에 보여야 한다 */}
       <RiddenVehicle motion={stats} />
+      <UmbrellaGlider motion={stats} reducedMotion={reducedMotion} />
       <CharacterModel
         motion={stats}
         fade={characterFade}

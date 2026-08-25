@@ -71,9 +71,10 @@ describe("점프로 탄을 피할 수 있는가", () => {
      * 측정값: 0.34초 / 체공 0.66초 = 51%. 판정 높이를 1.0에서 0.8로 낮춰
      * 얻은 값이다(그 전에는 0.23초로 반응 시간보다 짧았다).
      */
-    expect(window, `safe window ${window.toFixed(2)}s of ${airtime.toFixed(2)}s airtime`).toBeGreaterThan(
-      0.3,
-    );
+    expect(
+      window,
+      `safe window ${window.toFixed(2)}s of ${airtime.toFixed(2)}s airtime`,
+    ).toBeGreaterThan(0.3);
   });
 });
 
@@ -89,15 +90,18 @@ describe("보스 예고를 보고 피할 수 있는가", () => {
     const needed = BOSS.slamRadius - BOSS.slamRange;
     const walked = LOCOMOTION.walk.maxSpeed * BOSS.windupSeconds;
 
-    expect(walked, `walk ${walked.toFixed(2)}m in windup, need ${needed.toFixed(2)}m`).toBeGreaterThan(
-      needed,
-    );
+    expect(
+      walked,
+      `walk ${walked.toFixed(2)}m in windup, need ${needed.toFixed(2)}m`,
+    ).toBeGreaterThan(needed);
   });
 
   it("빈틈이 한 번 때릴 시간보다 길다", () => {
     // 빈틈에 때릴 수 없으면 그건 빈틈이 아니다
     const swing =
-      WEAPONS.bat.timing.windupSeconds + WEAPONS.bat.timing.activeSeconds + WEAPONS.bat.timing.recoverySeconds;
+      WEAPONS.bat.timing.windupSeconds +
+      WEAPONS.bat.timing.activeSeconds +
+      WEAPONS.bat.timing.recoverySeconds;
     expect(BOSS.recoverSeconds, `recover=${BOSS.recoverSeconds}, swing=${swing}`).toBeGreaterThan(
       swing,
     );
@@ -105,7 +109,9 @@ describe("보스 예고를 보고 피할 수 있는가", () => {
 
   it("비틀거림 동안 여러 번 때릴 수 있다", () => {
     const swing =
-      WEAPONS.bat.timing.windupSeconds + WEAPONS.bat.timing.activeSeconds + WEAPONS.bat.timing.recoverySeconds;
+      WEAPONS.bat.timing.windupSeconds +
+      WEAPONS.bat.timing.activeSeconds +
+      WEAPONS.bat.timing.recoverySeconds;
     expect(BOSS.staggerSeconds / swing, "비틀거림이 짧아 보상이 안 된다").toBeGreaterThan(3);
   });
 });
@@ -200,9 +206,10 @@ describe("가장 낮은 등급도 볼 만한가", () => {
       const preset = QUALITY_PRESETS[level];
       if (!preset.shadows) continue;
       checked += 1;
-      expect(preset.shadowMapSize, `${level} 그림자 ${preset.shadowMapSize}`).toBeGreaterThanOrEqual(
-        512,
-      );
+      expect(
+        preset.shadowMapSize,
+        `${level} 그림자 ${preset.shadowMapSize}`,
+      ).toBeGreaterThanOrEqual(512);
     }
     expect(checked, `그림자를 켠 등급 ${checked}개`).toBeGreaterThan(0);
   });
@@ -311,10 +318,9 @@ describe("표가 약속한 것이 실제로 일어나는가", () => {
      * 첫 점프의 절반은 되어야 「한 번 더 떴다」로 읽힌다. 그보다 작으면
      * 떨어지던 속도를 조금 늦춘 것에 가깝다.
      */
-    expect(
-      AIR_JUMP_VELOCITY,
-      `공중 ${AIR_JUMP_VELOCITY} vs 지상 ${JUMP_VELOCITY}`,
-    ).toBeGreaterThan(JUMP_VELOCITY / 2);
+    expect(AIR_JUMP_VELOCITY, `공중 ${AIR_JUMP_VELOCITY} vs 지상 ${JUMP_VELOCITY}`).toBeGreaterThan(
+      JUMP_VELOCITY / 2,
+    );
   });
 
   it("공중 점프가 첫 점프보다 세지 않다", () => {
@@ -392,9 +398,10 @@ describe("전투가 성립하는가", () => {
      * 짧으면 인지하자마자 사거리 밖인 구간이 생긴다.
      */
     const reach = PROJECTILE.speed * PROJECTILE.lifeSeconds;
-    expect(reach, `reach=${reach.toFixed(1)}m, aggro=${COMBAT_TUNING.aggroRadius}m`).toBeGreaterThan(
-      COMBAT_TUNING.aggroRadius,
-    );
+    expect(
+      reach,
+      `reach=${reach.toFixed(1)}m, aggro=${COMBAT_TUNING.aggroRadius}m`,
+    ).toBeGreaterThan(COMBAT_TUNING.aggroRadius);
   });
 
   it("탄이 달리기보다 빠르다", () => {
@@ -409,9 +416,10 @@ describe("전투가 성립하는가", () => {
 
   it("사수가 자기 사거리 안에 선다", () => {
     const reach = PROJECTILE.speed * PROJECTILE.lifeSeconds;
-    expect(GUNNER.maxDistance, `keep=${GUNNER.maxDistance}, reach=${reach.toFixed(1)}`).toBeLessThan(
-      reach,
-    );
+    expect(
+      GUNNER.maxDistance,
+      `keep=${GUNNER.maxDistance}, reach=${reach.toFixed(1)}`,
+    ).toBeLessThan(reach);
   });
 
   it("무적 시간이 적의 공격 주기보다 짧다", () => {
@@ -420,7 +428,9 @@ describe("전투가 성립하는가", () => {
      * 짧으면 한 번에 체력이 다 깎인다 — 그 균형이 이 두 값의 관계다.
      */
     const cycle =
-      WEAPONS.bat.timing.windupSeconds + WEAPONS.bat.timing.activeSeconds + WEAPONS.bat.timing.recoverySeconds;
+      WEAPONS.bat.timing.windupSeconds +
+      WEAPONS.bat.timing.activeSeconds +
+      WEAPONS.bat.timing.recoverySeconds;
     expect(PLAYER_COMBAT.invulnerableSeconds).toBeGreaterThan(cycle);
     expect(PLAYER_COMBAT.invulnerableSeconds).toBeLessThan(cycle * 4);
   });
@@ -508,9 +518,10 @@ describe("안개와 스트리밍", () => {
   it("안개가 도시 한 변보다 짧다", () => {
     // 도시 전체가 안개 없이 보이면 경계 밖 빈 공간이 그대로 드러난다
     const across = CITY.gridSize * (CITY.blockSize + CITY.roadWidth);
-    expect(QUALITY_PRESETS.high.fogFar, `fog=${QUALITY_PRESETS.high.fogFar}, city=${across}`).toBeLessThan(
-      across,
-    );
+    expect(
+      QUALITY_PRESETS.high.fogFar,
+      `fog=${QUALITY_PRESETS.high.fogFar}, city=${across}`,
+    ).toBeLessThan(across);
   });
 });
 
@@ -583,7 +594,9 @@ describe("안개 시작 거리가 등급마다 같은 인상을 주는가", () =
     for (const level of Object.keys(QUALITY_PRESETS) as QualityLevel[]) {
       const preset = QUALITY_PRESETS[level];
       const band = preset.fogFar - preset.fogNear;
-      expect(band, `${level}: ${preset.fogNear}~${preset.fogFar}m`).toBeGreaterThan(preset.fogFar * 0.5);
+      expect(band, `${level}: ${preset.fogNear}~${preset.fogFar}m`).toBeGreaterThan(
+        preset.fogFar * 0.5,
+      );
     }
   });
 });

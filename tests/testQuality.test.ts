@@ -77,7 +77,8 @@ describe("검사가 실제로 확인하는가", () => {
      * 이 세션에서 여러 번 겪은 실패 방식이라 개수를 함께 확인한다.
      */
     const found = testFiles().reduce(
-      (total, path) => total + (stripComments(readFileSync(path, "utf8")).match(/\bit\("/g)?.length ?? 0),
+      (total, path) =>
+        total + (stripComments(readFileSync(path, "utf8")).match(/\bit\("/g)?.length ?? 0),
       0,
     );
     expect(found, `찾은 it ${found}개`).toBeGreaterThan(500);
@@ -104,9 +105,7 @@ describe("소스를 훑는 검사가 주석에 걸리지 않는가", () => {
 
   it("공용 도우미가 실제로 쓰이고 있다", () => {
     // 만들어만 두고 아무도 안 쓰면 다음 사람은 다시 손으로 붙인다
-    const users = testFiles().filter((path) =>
-      readFileSync(path, "utf8").includes("readCode("),
-    );
+    const users = testFiles().filter((path) => readFileSync(path, "utf8").includes("readCode("));
     expect(users.length, `${users.length}개 파일이 쓴다`).toBeGreaterThan(2);
   });
 });

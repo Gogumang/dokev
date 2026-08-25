@@ -180,7 +180,8 @@ function pushSkirt(
     positions.push(next.x, nextTop, next.z);
     positions.push(here.x, hereTop - SKIRT_DEPTH, here.z);
     positions.push(next.x, nextTop - SKIRT_DEPTH, next.z);
-    for (const point of [here, next, here, next]) uvs.push(point.x / tileMeters, point.z / tileMeters);
+    for (const point of [here, next, here, next])
+      uvs.push(point.x / tileMeters, point.z / tileMeters);
 
     indices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
   }

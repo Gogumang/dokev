@@ -49,7 +49,9 @@ function blossomShare(id?: ZoneId): number {
 describe("벚꽃이 피는가", () => {
   it("실제로 핀다", () => {
     const blossoms = crowns.filter(isBlossom);
-    expect(blossoms.length, `꽃 수관 ${blossoms.length} / 전체 ${crowns.length}`).toBeGreaterThan(20);
+    expect(blossoms.length, `꽃 수관 ${blossoms.length} / 전체 ${crowns.length}`).toBeGreaterThan(
+      20,
+    );
   });
 
   it("초록을 밀어내지는 않는다", () => {
@@ -98,7 +100,9 @@ describe("어디에 피는가", () => {
 
   it("숲은 초록이 정체성이다", () => {
     // 숲까지 분홍으로 물들이면 「방향마다 다른 것이 나온다」가 다시 무너진다
-    expect(shareIn("forest"), `숲 꽃 비율 ${(shareIn("forest") * 100).toFixed(0)}%`).toBeLessThan(0.25);
+    expect(shareIn("forest"), `숲 꽃 비율 ${(shareIn("forest") * 100).toFixed(0)}%`).toBeLessThan(
+      0.25,
+    );
   });
 
   it("구역마다 비율이 다르다 — 한 값으로 전부 칠하지 않는다", () => {
@@ -132,7 +136,10 @@ describe("색과 배선", () => {
     // 어긋나면 벚나무가 초록이 되는데 배치 값은 멀쩡해서 코드로는 안 보인다
     const source = readFileSync("src/game/world/trees.ts", "utf8");
     const block = /const CROWN_TONE = \{([\s\S]*?)\} as const;/.exec(source);
-    expect(block, "trees.ts의 CROWN_TONE을 못 읽었다 — 검사가 아무것도 안 보고 있다").not.toBeNull();
+    expect(
+      block,
+      "trees.ts의 CROWN_TONE을 못 읽었다 — 검사가 아무것도 안 보고 있다",
+    ).not.toBeNull();
     if (!block) return;
 
     const families = (block[1].match(/\w+:\s*\d/g) ?? []).length;

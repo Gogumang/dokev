@@ -27,9 +27,10 @@ describe("파사드 타일", () => {
      */
     // 필지 분할 최소치: 구역을 3x3으로 나눈 한 칸에서 여백을 뺀 정도
     const smallest = CITY.blockSize / 3 - 4;
-    expect(smallest, `smallest building ${smallest}m vs cell ${FACADE_CELL_WIDTH}m`).toBeGreaterThan(
-      FACADE_CELL_WIDTH,
-    );
+    expect(
+      smallest,
+      `smallest building ${smallest}m vs cell ${FACADE_CELL_WIDTH}m`,
+    ).toBeGreaterThan(FACADE_CELL_WIDTH);
   });
 
   it("가장 낮은 건물도 층 한 칸보다 높다", () => {

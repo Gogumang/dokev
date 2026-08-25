@@ -79,7 +79,10 @@ export function atlasCellUv(atlas: TextureAtlas, cell: number): AtlasCellUv {
   };
 }
 
-function createCanvas(width: number, height: number): {
+function createCanvas(
+  width: number,
+  height: number,
+): {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D | null;
 } {
@@ -386,10 +389,7 @@ function drawNoticeBoardCell(ctx: CanvasRenderingContext2D, x: number, y: number
 type AtlasKind = "shopHorizontal" | "shopVertical" | "banner" | "prop";
 
 function paintShopHorizontal(): TextureAtlas {
-  const { canvas, ctx } = createCanvas(
-    SIGN_H_CELL_W * SIGN_H_COLUMNS,
-    SIGN_H_CELL_H * SIGN_H_ROWS,
-  );
+  const { canvas, ctx } = createCanvas(SIGN_H_CELL_W * SIGN_H_COLUMNS, SIGN_H_CELL_H * SIGN_H_ROWS);
   const atlas = {
     columns: SIGN_H_COLUMNS,
     rows: SIGN_H_ROWS,
@@ -407,10 +407,7 @@ function paintShopHorizontal(): TextureAtlas {
 }
 
 function paintShopVertical(): TextureAtlas {
-  const { canvas, ctx } = createCanvas(
-    SIGN_V_CELL_W * SIGN_V_COLUMNS,
-    SIGN_V_CELL_H * SIGN_V_ROWS,
-  );
+  const { canvas, ctx } = createCanvas(SIGN_V_CELL_W * SIGN_V_COLUMNS, SIGN_V_CELL_H * SIGN_V_ROWS);
   const atlas = {
     columns: SIGN_V_COLUMNS,
     rows: SIGN_V_ROWS,
@@ -428,10 +425,7 @@ function paintShopVertical(): TextureAtlas {
 }
 
 function paintBanner(): TextureAtlas {
-  const { canvas, ctx } = createCanvas(
-    BANNER_CELL_W * BANNER_COLUMNS,
-    BANNER_CELL_H * BANNER_ROWS,
-  );
+  const { canvas, ctx } = createCanvas(BANNER_CELL_W * BANNER_COLUMNS, BANNER_CELL_H * BANNER_ROWS);
   const atlas = {
     columns: BANNER_COLUMNS,
     rows: BANNER_ROWS,

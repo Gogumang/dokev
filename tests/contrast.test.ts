@@ -109,7 +109,11 @@ describe("월드 위에 뜨는 패널", () => {
 
   /** 밝은 배경 위에 반투명 패널을 얹은 결과 */
   function panelOver(behind: string): string {
-    const parts = overlay.replace(/rgba?\(|\)|\//g, " ").trim().split(/[\s,]+/).map(Number);
+    const parts = overlay
+      .replace(/rgba?\(|\)|\//g, " ")
+      .trim()
+      .split(/[\s,]+/)
+      .map(Number);
     const alpha = parts[3] ?? 1;
     const channel = (from: number, to: number) =>
       Math.round(from * (1 - alpha) + to * alpha)

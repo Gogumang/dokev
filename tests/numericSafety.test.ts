@@ -33,9 +33,10 @@ describe("겹쳐 서도 숫자가 깨지지 않는다", () => {
     const enemies = createEnemies(6, 100);
     for (const enemy of enemies) {
       const stepped = stepEnemy({ ...enemy, x: 0, z: 0 }, 0, 0, 1 / 60);
-      expect(finite(stepped.x) && finite(stepped.z), `${enemy.kind}: ${stepped.x}, ${stepped.z}`).toBe(
-        true,
-      );
+      expect(
+        finite(stepped.x) && finite(stepped.z),
+        `${enemy.kind}: ${stepped.x}, ${stepped.z}`,
+      ).toBe(true);
       expect(finite(stepped.facing), `facing ${stepped.facing}`).toBe(true);
     }
   });

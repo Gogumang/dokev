@@ -1,8 +1,6 @@
-
 import { describe, expect, it } from "vitest";
 
 import { readCode, collectSources } from "./support/source";
-
 
 import { resolveAnimation } from "@/game/player/characterPose";
 import { createQuestProgress, currentStep } from "@/game/quest/questRunner";
@@ -63,7 +61,10 @@ describe("저장값 복구", () => {
     for (const saved of [-5, 0, 1, count - 1, count, count + 99, 1.7]) {
       const index = clampStepIndex(saved, count);
       const progress = { ...createQuestProgress(SIGNALS), stepIndex: index };
-      expect(currentStep(FIRST_RUN_QUEST, progress), `saved ${saved} → index ${index}`).not.toBeNull();
+      expect(
+        currentStep(FIRST_RUN_QUEST, progress),
+        `saved ${saved} → index ${index}`,
+      ).not.toBeNull();
     }
   });
 
@@ -290,16 +291,16 @@ describe("매 프레임 쓰는 값이 상수로 굳지 않았는가", () => {
     for (const [path, code] of sources) {
       const lines = code.split("\n");
       for (const [index, line] of lines.entries()) {
-        const hit = new RegExp(`\\b(?:${OWNERS})\\.(\\w+)\\s*=\\s*(?:${CONSTANTS})\\s*;`).exec(line);
+        const hit = new RegExp(`\\b(?:${OWNERS})\\.(\\w+)\\s*=\\s*(?:${CONSTANTS})\\s*;`).exec(
+          line,
+        );
         if (!hit) continue;
         const field = hit[1];
         const anyWrite = new RegExp(`\\b(?:${OWNERS})\\.${field}\\s*=\\s*(.+)$`, "gm");
         const rights = [...all.matchAll(anyWrite)].map((m) => m[1].trim());
 
         // 어디선가 계산된 값을 받는가 (상수가 아닌 오른쪽이 한 번이라도 있는가)
-        const computed = rights.some(
-          (right) => !new RegExp(`^(?:${CONSTANTS})\\s*;`).test(right),
-        );
+        const computed = rights.some((right) => !new RegExp(`^(?:${CONSTANTS})\\s*;`).test(right));
         /*
          * 상수만 받더라도 **서로 다른 상수**를 받으면 굳은 것이 아니다.
          *
@@ -397,6 +398,12 @@ describe("공유 화면 객체의 모든 칸이 채워지는가", () => {
   const VIEWS: Array<[string, string]> = [
     ["src/game/scene/sceneTypes.ts", "RuntimeStats"],
     ["src/game/scene/sceneTypes.ts", "SceneProps"],
+    /*
+     * 대장 상태는 `SceneProps` 안에 모양을 손으로 적어 두었다가 정본을 가리키게
+     * 바뀌었다 — 손으로 적은 쪽은 칸이 늘어도 따라오지 않았다. 중첩으로는 더
+     * 이상 안 보이므로 여기서 따로 본다.
+     */
+    ["src/game/combat/bossSim.ts", "BossView"],
     ["src/game/scene/sceneTypes.ts", "PlayerLink"],
     ["src/game/quest/questRunner.ts", "QuestView"],
     ["src/game/player/GrappleVisuals.tsx", "GrappleView"],
@@ -410,7 +417,7 @@ describe("공유 화면 객체의 모든 칸이 채워지는가", () => {
 
   it("중첩 객체 안의 칸까지 본다", () => {
     // 자를 처음 썼을 때 여기가 통째로 빠져 있었다
-    expect(viewFields("src/game/scene/sceneTypes.ts", "SceneProps")).toContain("telegraph");
+    expect(viewFields("src/game/scene/sceneTypes.ts", "SceneProps")).toContain("playerDowned");
   });
 
   it("모든 칸에 채우는 곳이 있다", () => {
@@ -427,7 +434,9 @@ describe("공유 화면 객체의 모든 칸이 채워지는가", () => {
         if (!direct && !nested) unwritten.push(`${name}.${field}`);
       }
     }
-    expect(unwritten, `화면이 기다리는데 아무도 안 채우는 칸:\n${unwritten.join(", ")}`).toEqual([]);
+    expect(unwritten, `화면이 기다리는데 아무도 안 채우는 칸:\n${unwritten.join(", ")}`).toEqual(
+      [],
+    );
   });
 });
 
@@ -448,7 +457,7 @@ describe("프레임마다 하는 일이 실제로 불리는가", () => {
    * 「화면(.tsx)에서」로 좁혔다가 넓혔다 — `consumeCues`는 화면이 아니라 오디오
    * 루프에서 돈다. 부르는 자리는 **프레임 루프가 있는 파일**이 맞다.
    */
-  const VERBS = /^export function ((?:project|record|reset|consume)\w+)/gm;
+  const VERBS = /^export function ((?:project|record|reset|consume|paint)\w+)/gm;
 
   const duties = collectSources("src").flatMap((path) =>
     [...readCode(path).matchAll(VERBS)].map((found) => ({ path, name: found[1] })),
@@ -456,22 +465,24 @@ describe("프레임마다 하는 일이 실제로 불리는가", () => {
 
   /** 매 프레임 도는 파일들 — **정의한 파일은 뺀다** */
   function loopsOtherThan(definedIn: string): string {
-    return collectSources("src")
-      .filter((path) => path !== definedIn)
-      .map((path) => readCode(path))
-      /*
-       * 「도는 곳」에는 `setInterval`도 넣는다. `consumeDiscovery`를 부르는
-       * `PlayClient`는 프레임이 아니라 **일정 간격**으로 신호를 가져간다 —
-       * useFrame 안에서 setState를 부르면 매 프레임 리렌더가 걸리기 때문이다.
-       * 그걸 빼 두면 멀쩡한 코드를 「안 불린다」고 잡는다.
-       */
-      .filter(
-        (code) =>
-          code.includes("useFrame(") ||
-          code.includes("requestAnimationFrame(") ||
-          code.includes("setInterval("),
-      )
-      .join("\n");
+    return (
+      collectSources("src")
+        .filter((path) => path !== definedIn)
+        .map((path) => readCode(path))
+        /*
+         * 「도는 곳」에는 `setInterval`도 넣는다. `consumeDiscovery`를 부르는
+         * `PlayClient`는 프레임이 아니라 **일정 간격**으로 신호를 가져간다 —
+         * useFrame 안에서 setState를 부르면 매 프레임 리렌더가 걸리기 때문이다.
+         * 그걸 빼 두면 멀쩡한 코드를 「안 불린다」고 잡는다.
+         */
+        .filter(
+          (code) =>
+            code.includes("useFrame(") ||
+            code.includes("requestAnimationFrame(") ||
+            code.includes("setInterval("),
+        )
+        .join("\n")
+    );
   }
 
   it("프레임마다 하는 일을 실제로 찾았다", () => {
@@ -487,7 +498,7 @@ describe("프레임마다 하는 일이 실제로 불리는가", () => {
      */
     const self = duties.find((duty) => duty.path.endsWith("GrappleVisuals.tsx"));
     expect(self, "정의가 .tsx에 있는 사례가 사라졌다 — 이 검사가 헛돈다").toBeDefined();
-    if (self) expect(loopsOtherThan(self.path)).not.toContain("export function " + self.name);
+    if (self) expect(loopsOtherThan(self.path)).not.toContain(`export function ${self.name}`);
   });
 
   it("모두 프레임 루프에서 불린다", () => {
@@ -507,9 +518,14 @@ describe("넘겨받은 객체를 고치는 함수의 이름", () => {
    * 조용히 비켜 간다 — 실제로 `takeDiscovery`라고 지었더니 검사가 아예 못 봤고,
    * 배선을 끊어도 통과했다. **이름이 곧 계약**인 구조라 이름을 검사해야 한다.
    *
-   * 넘겨받은 객체를 고치는 함수는 넷 중 하나여야 한다:
+   * 넘겨받은 객체를 고치는 함수는 다섯 중 하나여야 한다:
    *   `project`(화면 칸을 채운다)·`record`(일어난 일을 적는다)
    *   `reset`(매 프레임 되돌린다)·`consume`(한 번짜리 신호를 꺼낸다)
+   *   `paint`(칠한다 — 캔버스에 긋거나 재질을 갈아입힌다)
+   *
+   * `paint`가 늦게 들어왔다. 지도를 컴포넌트에서 떼어 내면서 생겼는데, 넷 중
+   * 어느 것도 아니다 — 화면 칸을 채우는 것이 아니라 **픽셀을 칠한다.** 이름을
+   * 넷 중 하나로 우겨 넣으면 그 넷의 뜻이 흐려진다.
    *
    * React **훅과 컴포넌트**는 뺀다 — 이름 앞자리가 React 규칙으로 정해져 있어
    * 바꿀 수 없다(`use…`, PascalCase). 하는 일도 다르다: 훅은 이벤트를 받아
@@ -517,7 +533,7 @@ describe("넘겨받은 객체를 고치는 함수의 이름", () => {
    * 컴포넌트 안의 그 대입들이 바로 **밖으로 빼는 중인 대상**이고, 다 빼고 나면
    * 여기 걸릴 컴포넌트도 없어진다.
    */
-  const VERBS = ["project", "record", "reset", "consume"];
+  const VERBS = ["project", "record", "reset", "consume", "paint"];
 
   /** 첫 인자의 칸을 고치는 export 함수들 */
   const mutators = collectSources("src").flatMap((path) => {

@@ -168,10 +168,9 @@ describe("번들 검사가 실제로 도는가", () => {
     const verify = scripts.scripts.verify ?? "";
     expect(verify, "verify 스크립트가 없다").toContain("build");
     expect(verify, "verify에 test가 없다").toContain("test");
-    expect(
-      verify.indexOf("build") < verify.indexOf("test"),
-      `순서가 뒤집혔다: ${verify}`,
-    ).toBe(true);
+    expect(verify.indexOf("build") < verify.indexOf("test"), `순서가 뒤집혔다: ${verify}`).toBe(
+      true,
+    );
   });
 
   it("빌드 없이 돌면 그 사실을 남긴다", () => {

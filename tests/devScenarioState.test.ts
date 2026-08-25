@@ -203,10 +203,9 @@ describe("확인 지점이 이미 찾은 흔적에 비지 않는가", () => {
   it("흔적 지점은 실제로 남은 흔적이 있다", () => {
     // 이 지점의 목적이 그것이다 — 목적과 상태가 어긋나면 확인 지점이 아니다
     const resumed = resolveResume(foundAll, SCENARIOS.clues);
-    expect(
-      pendingClues(resumed?.foundClues ?? []).length,
-      "남은 흔적이 없어 볼 것이 없다",
-    ).toBe(CLUES.length);
+    expect(pendingClues(resumed?.foundClues ?? []).length, "남은 흔적이 없어 볼 것이 없다").toBe(
+      CLUES.length,
+    );
   });
 
   it("확인 지점이 없으면 찾은 흔적을 그대로 이어받는다", () => {

@@ -66,7 +66,7 @@ export function createWindVoice(
 
   return {
     update(speed01, now) {
-      const shaped = Math.pow(clamp(speed01, 0, 1), WIND_GAIN_CURVE);
+      const shaped = clamp(speed01, 0, 1) ** WIND_GAIN_CURVE;
       gain.gain.setTargetAtTime(shaped * WIND_GAIN_MAX, now, GLIDE_SECONDS);
       lowpass.frequency.setTargetAtTime(
         lerp(WIND_LOWPASS_MIN_HZ, WIND_LOWPASS_MAX_HZ, shaped),

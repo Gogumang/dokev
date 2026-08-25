@@ -110,9 +110,10 @@ describe("모든 적에게 가슴의 점이 있는가", () => {
   });
 
   it("대장의 점이 더 크다 — 몸 크기에 맞아야 같은 조형으로 읽힌다", () => {
-    expect(BOSS_BODY.coreRadius, `대장 ${BOSS_BODY.coreRadius} vs 로봇 ${ENEMY_BODY.coreRadius}`).toBeGreaterThan(
-      ENEMY_BODY.coreRadius,
-    );
+    expect(
+      BOSS_BODY.coreRadius,
+      `대장 ${BOSS_BODY.coreRadius} vs 로봇 ${ENEMY_BODY.coreRadius}`,
+    ).toBeGreaterThan(ENEMY_BODY.coreRadius);
   });
 
   it("점이 몸을 덮지 않는다 — 크면 로봇이 아니라 등불로 보인다", () => {
@@ -134,8 +135,9 @@ describe("모든 적에게 가슴의 점이 있는가", () => {
 
   it("쓰러질 때 빛을 놓아 주는 쪽이 있다", () => {
     // 규칙만 있고 부르는 곳이 없으면 화면에서는 아무 일도 일어나지 않는다
-    expect(readFileSync("src/game/combat/Enemies.tsx", "utf8"), "아무도 releaseEmber를 안 부른다").toMatch(
-      /releaseEmber\(/,
-    );
+    expect(
+      readFileSync("src/game/combat/Enemies.tsx", "utf8"),
+      "아무도 releaseEmber를 안 부른다",
+    ).toMatch(/releaseEmber\(/);
   });
 });

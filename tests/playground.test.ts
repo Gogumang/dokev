@@ -31,7 +31,10 @@ describe("놀이터 자리", () => {
       const near = layout.playground.filter(
         (part) => Math.hypot(part.x - spot.x, part.z - spot.z) < 8,
       );
-      expect(near.length, `(${spot.x.toFixed(0)}, ${spot.z.toFixed(0)})에 놀이기구가 없다`).toBeGreaterThan(0);
+      expect(
+        near.length,
+        `(${spot.x.toFixed(0)}, ${spot.z.toFixed(0)})에 놀이기구가 없다`,
+      ).toBeGreaterThan(0);
     }
   });
 });
@@ -80,7 +83,10 @@ describe("노는 사람들", () => {
 
   it("걷기보다 빠르게 뛴다 — 느리면 뛰는 것으로 안 보인다", () => {
     expect(PLAYGROUND.hopRate).toBeGreaterThan(CROWD.maxSpeed);
-    expect(PLAYGROUND.hopScale, "폴짝임이 걷기 흔들림과 같으면 그냥 서 있는 것이다").toBeGreaterThan(1.5);
+    expect(
+      PLAYGROUND.hopScale,
+      "폴짝임이 걷기 흔들림과 같으면 그냥 서 있는 것이다",
+    ).toBeGreaterThan(1.5);
   });
 
   it("예산을 넘기지 않는다 — 저사양에서 놀이터가 도시를 잡아먹지 않게", () => {

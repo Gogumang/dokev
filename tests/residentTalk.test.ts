@@ -131,10 +131,11 @@ describe("화면과 조작에 닿아 있는가", () => {
      * 「T 말 걸기」를 문자열로 적으면 키를 옮길 때 안내만 남아 거짓이 된다.
      * 코드에서 만든다.
      */
-    const notices = readCode("src/components/hud/Notices.tsx");
+    const notices = readCode("src/components/hud/views/Speech.tsx");
     expect(notices, "안내가 키를 박아 두었다").not.toMatch(/"T 살펴보기"/);
-    expect(readCode("src/components/hud/WorldHud.tsx"), "키 표기를 코드에서 만들지 않는다").toContain(
-      "keyLabel(CONTROL_CODES.talk)",
-    );
+    expect(
+      readCode("src/components/hud/WorldHud.tsx"),
+      "키 표기를 코드에서 만들지 않는다",
+    ).toContain("keyLabel(CONTROL_CODES.talk)");
   });
 });

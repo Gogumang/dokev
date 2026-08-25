@@ -106,9 +106,10 @@ describe("자리가 맞는가", () => {
      * 않으면 공에 가까운 것이 잔디 위에 **얹혀** 보이고, 비탈에서는 아예 뜬다.
      */
     for (const piece of layout.undergrowth) {
-      expect(piece.sink ?? 0, `(${piece.x.toFixed(1)}, ${piece.z.toFixed(1)}) 파묻기`).toBeGreaterThan(
-        0,
-      );
+      expect(
+        piece.sink ?? 0,
+        `(${piece.x.toFixed(1)}, ${piece.z.toFixed(1)}) 파묻기`,
+      ).toBeGreaterThan(0);
     }
   });
 
@@ -136,7 +137,9 @@ describe("자리가 맞는가", () => {
 
     const bush = meanHeight([0, 1]);
     const flower = meanHeight([3, 4]);
-    expect(bush, `덤불 ${bush.toFixed(2)}m vs 꽃 ${flower.toFixed(2)}m`).toBeGreaterThan(flower * 1.5);
+    expect(bush, `덤불 ${bush.toFixed(2)}m vs 꽃 ${flower.toFixed(2)}m`).toBeGreaterThan(
+      flower * 1.5,
+    );
   });
 });
 
@@ -207,7 +210,10 @@ describe("철쭉", () => {
     // 어긋나면 철쭉이 바위색이 되는데 배치 값은 멀쩡해서 코드로는 안 보인다
     const source = readFileSync("src/game/world/undergrowth.ts", "utf8");
     const block = /const TONE = \{([\s\S]*?)\} as const;/.exec(source);
-    expect(block, "undergrowth.ts의 TONE을 못 읽었다 — 검사가 아무것도 안 보고 있다").not.toBeNull();
+    expect(
+      block,
+      "undergrowth.ts의 TONE을 못 읽었다 — 검사가 아무것도 안 보고 있다",
+    ).not.toBeNull();
     if (!block) return;
 
     const tones = (block[1].match(/\w+:\s*\d/g) ?? []).length;

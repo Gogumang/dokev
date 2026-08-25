@@ -7,7 +7,7 @@
  * 하나뿐이라 로봇 한 기를 상대하는 방법이 한 가지였다.
  *
  * 무기별로 코드 분기를 두지 않는다. 도깨비 능력을 배율 몇 개로 기술해 둔
- * 것과 같은 방식이다 — **전투 규칙은 이 표를 읽기만 하고**, 셋째 무기를
+ * 것과 같은 방식이다 — **전투 규칙은 이 표를 읽기만 하고**, 다음 무기를
  * 더할 때 전투 코드를 고치지 않는다.
  *
  * three.js도 React도 모른다.
@@ -28,14 +28,15 @@ export type WeaponKind = "melee" | "ranged";
 
 /** 탄이 어떻게 나는가. 근접 무기는 null이다 */
 export interface BoltSpec {
-  /** 날아가는 속도(m/s) */
+  /** 날아가는 속도(m/s). 사거리는 speed × lifeSeconds다 */
   speed: number;
-  /** 수명(초). 사거리는 speed × lifeSeconds다 */
   lifeSeconds: number;
   /** 나가는 높이(m) — 아이 가슴 높이 */
   spawnHeight: number;
   /** 명중 판정 반경(m) */
   hitRadius: number;
+  /** 무지개 자국을 남기는지. **활만** — 35m를 나는 탄이라 어디로 갔는지가 안 읽혔다 */
+  rainbow?: boolean;
 }
 
 export interface Weapon {
@@ -65,7 +66,7 @@ export interface Weapon {
 }
 
 /**
- * 세 자루 — 근접 둘, 원거리 하나.
+ * 여섯 자루 — 드는 것은 둘이다(`WEAPON_ORDER`).
  *
  * 늘릴 때마다 **정말 다른가**를 먼저 본다. 이름만 다른 무기가 다섯 있는
  * 것보다 손맛이 갈리는 셋이 낫다 — `tests/weapons.test.ts`가 「다른 축이
@@ -217,24 +218,28 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
     damage: 2,
     knockbackScale: 0.35,
     /** 사거리 35.2m — 도시 한 블록 건너까지 닿는다 */
-    bolt: { speed: 22, lifeSeconds: 1.6, spawnHeight: 1.15, hitRadius: 0.7 },
+    bolt: { speed: 22, lifeSeconds: 1.6, spawnHeight: 1.15, hitRadius: 0.7, rainbow: true },
   },
 };
 
 /**
- * 바꾸는 순서. **첫째가 시작 무기다.**
+ * **주인공이 드는 것.** 첫째가 시작 무기다.
  *
- * 표(`WEAPONS`)의 키 순서에 기대지 않는다 — 객체 키 순서에 조작 순서를
- * 맡기면 정의를 위아래로 옮기는 것만으로 손에 잡히는 무기가 바뀐다.
+ * 여섯을 만들어 놓고 **둘로 좁혔다.** 활이 「멀리서 한 발」을, 광선총이
+ * 그 반대편을 맡는다. 표(`WEAPONS`)의 키 순서에 기대지 않는다 — 키 순서에 조작 순서를 맡기면
+ * 정의를 위아래로 옮기는 것만으로 손에 잡히는 무기가 바뀐다.
  */
-export const WEAPON_ORDER: readonly WeaponId[] = [
-  "bat",
-  "sword",
-  "hammer",
-  "popgun",
-  "beam",
-  "bow",
-];
+export const WEAPON_ORDER: readonly WeaponId[] = ["bow", "beam"];
+
+/**
+ * 정의는 남기되 **들지 않는** 것들.
+ *
+ * 「정의만 있고 손에 잡히지 않는 무기는 없다」가 이 파일의 규칙이었다. 조용히
+ * 두면 빠뜨린 것으로 읽으므로 적는다 — 검사가 이 목록과 `WEAPON_ORDER`를
+ * 합쳐 정의 전체와 대조한다. 지우지 않는 이유: 부채꼴 판정과 휘두르는 자세가 아직 살아 있는데, 드는
+ * 둘이 모두 원거리라 **근접을 잴 자가 없어진다.**
+ */
+export const RETIRED_WEAPONS: readonly WeaponId[] = ["bat", "sword", "hammer", "popgun"];
 
 /** 시작 무기 */
 export const DEFAULT_WEAPON: WeaponId = WEAPON_ORDER[0];
@@ -277,4 +282,18 @@ export function weaponRange(weapon: Weapon): number {
 /** 한 번의 휘두르기 전체 길이(초) */
 export function swingSeconds(weapon: Weapon): number {
   return weapon.timing.windupSeconds + weapon.timing.activeSeconds + weapon.timing.recoverySeconds;
+}
+
+/**
+ * 화면에 쓰는 이름 — 무기 이름에 **사거리**를 붙인다.
+ *
+ * 이름만으로는 딱총이 얼마나 멀리 닿는지 알 수 없다. 근접은 부채꼴 사거리,
+ * 원거리는 탄이 나는 거리 — `weaponRange`가 그 둘을 한 값으로 답한다.
+ *
+ * HUD 알림과 성능 패널이 함께 쓴다. 둘이 각자 만들면 같은 무기가 화면 두 곳에
+ * 다른 이름으로 뜬다.
+ */
+export function weaponLabel(id: WeaponId): string {
+  const weapon = WEAPONS[id];
+  return `${weapon.name} · ${weaponRange(weapon).toFixed(0)}m`;
 }

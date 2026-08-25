@@ -111,13 +111,7 @@ export interface CharacterProps {
   appearance: Appearance;
 }
 
-export function Character({
-  motion,
-  input,
-  reducedMotion,
-  photoPose,
-  appearance,
-}: CharacterProps) {
+export function Character({ motion, input, reducedMotion, photoPose, appearance }: CharacterProps) {
   const { skin: SKIN, hair: HAIR, hoodie: HOODIE, hoodieDark: HOODIE_DARK } = appearance;
   const { pants: PANTS, shoe: SHOE, bag: BAG } = appearance;
   const torsoRef = useRef<THREE.Group>(null);
@@ -140,7 +134,11 @@ export function Character({
       torso: new THREE.CapsuleGeometry(PLAYER_BODY.torsoRadius, PLAYER_BODY.torsoLength, 4, 12),
       arm: new THREE.CapsuleGeometry(PLAYER_BODY.armRadius, PLAYER_BODY.armLength, 3, 8),
       leg: new THREE.CapsuleGeometry(PLAYER_BODY.legRadius, PLAYER_BODY.legLength, 3, 8),
-      shoe: new THREE.BoxGeometry(PLAYER_BODY.shoeWidth, PLAYER_BODY.shoeHeight, PLAYER_BODY.shoeDepth),
+      shoe: new THREE.BoxGeometry(
+        PLAYER_BODY.shoeWidth,
+        PLAYER_BODY.shoeHeight,
+        PLAYER_BODY.shoeDepth,
+      ),
       bag: new THREE.BoxGeometry(PLAYER_BODY.bagWidth, PLAYER_BODY.bagHeight, PLAYER_BODY.bagDepth),
     }),
     [],
@@ -192,7 +190,6 @@ export function Character({
       for (const ring of trailRings) ring.dispose();
     };
   }, [trailRings]);
-
 
   useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
@@ -255,7 +252,8 @@ export function Character({
       rightArm.current.rotation.x = appliedPose ? appliedPose.rightArmX : limbs.rightArm;
       rightArm.current.rotation.z = appliedPose ? appliedPose.rightArmZ : 0;
     }
-    if (leftLeg.current) leftLeg.current.rotation.x = appliedPose ? appliedPose.leftLegX : limbs.leftLeg;
+    if (leftLeg.current)
+      leftLeg.current.rotation.x = appliedPose ? appliedPose.leftLegX : limbs.leftLeg;
     if (rightLeg.current) {
       rightLeg.current.rotation.x = appliedPose ? appliedPose.rightLegX : limbs.rightLeg;
     }
@@ -277,7 +275,6 @@ export function Character({
       // 상체가 기울어도 머리는 앞을 본다. 사람은 달릴 때 시선을 유지한다.
       headRef.current.rotation.x = appliedPose ? appliedPose.headTilt : -next.lean * 0.75;
     }
-
   });
 
   return (
@@ -298,7 +295,13 @@ export function Character({
           position={[0, -PLAYER_HEIGHT * 0.32, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
-          <meshBasicMaterial color={TRAIL_COLOR} transparent opacity={0} depthWrite={false} toneMapped={false} />
+          <meshBasicMaterial
+            color={TRAIL_COLOR}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            toneMapped={false}
+          />
         </mesh>
       ))}
       {/* 스쿼시는 캐릭터 전체에 걸린다. 발이 지면을 뚫지 않도록 원점을 발밑에 둔다 */}
@@ -390,7 +393,6 @@ export function Character({
               <ToonMaterial color={SHOE} />
             </mesh>
           </group>
-
         </group>
       </group>
     </group>

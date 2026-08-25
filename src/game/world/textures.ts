@@ -118,7 +118,10 @@ function lighten(hex: string, amount: number): string {
  * `skyTexture`도 쓴다 — 그쪽이 이 파일을 부르는 방향이라 순환이 아니다.
  * 컨텍스트가 null일 수 있는 처리를 두 곳에서 따로 쓰면 한쪽만 빠뜨린다.
  */
-export function createCanvas(width: number, height: number): {
+export function createCanvas(
+  width: number,
+  height: number,
+): {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D | null;
 } {
@@ -484,7 +487,7 @@ function drawWater(): HTMLCanvasElement {
     const y = random() * ASPHALT_SIZE;
     const thickness = 2 + random() * 9;
     const shade = Math.floor(150 + random() * 80);
-    ctx.fillStyle = `rgba(${shade}, ${shade + 6}, ${shade + 14}, ${0.10 + random() * 0.16})`;
+    ctx.fillStyle = `rgba(${shade}, ${shade + 6}, ${shade + 14}, ${0.1 + random() * 0.16})`;
     ctx.fillRect(0, y, ASPHALT_SIZE, thickness);
   }
 
@@ -498,7 +501,7 @@ function drawWater(): HTMLCanvasElement {
     const x = random() * ASPHALT_SIZE;
     const y = random() * ASPHALT_SIZE;
     const length = 2 + random() * 7;
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.10 + random() * 0.30})`;
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.1 + random() * 0.3})`;
     ctx.fillRect(x, y, length, 1);
   }
 

@@ -272,7 +272,6 @@ const EDGE_LINE_OFFSET = CITY.roadWidth / 2 - 0.9;
 /** 갓길선 굵기(m). 차선 점선보다 굵어야 「가장자리」로 읽힌다 */
 const EDGE_LINE_WIDTH = 0.22;
 
-
 /** 도로 중심선에서 버스전용차로 경계선까지(m). 중앙 황색 복선 바로 바깥이다 */
 
 /**

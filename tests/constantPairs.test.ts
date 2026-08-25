@@ -56,13 +56,15 @@ describe("인도 높이", () => {
       const above = y - terrainHeight(x, z);
       // 치마(아래로 늘린 옆면) 정점은 빼고 윗면만 본다
       if (above < 0) continue;
-      expect(above, `(${x.toFixed(1)}, ${z.toFixed(1)})에서 인도가 지면 위 ${above.toFixed(2)}m`).toBeCloseTo(
-        CITY.sidewalkHeight,
-        6,
-      );
+      expect(
+        above,
+        `(${x.toFixed(1)}, ${z.toFixed(1)})에서 인도가 지면 위 ${above.toFixed(2)}m`,
+      ).toBeCloseTo(CITY.sidewalkHeight, 6);
       checked += 1;
     }
-    expect(checked, "윗면 정점을 하나도 못 찾았다 — 검사가 아무것도 안 보고 있다").toBeGreaterThan(100);
+    expect(checked, "윗면 정점을 하나도 못 찾았다 — 검사가 아무것도 안 보고 있다").toBeGreaterThan(
+      100,
+    );
   });
 });
 
@@ -183,9 +185,8 @@ describe("아틀라스 격자가 내용을 담는가", () => {
 
   it("현수막이 격자에 들어간다", () => {
     const cells = grid("BANNER");
-    expect(
-      BANNER_TEXTS.length,
-      `문구 ${BANNER_TEXTS.length}개, 칸 ${cells}개`,
-    ).toBeLessThanOrEqual(cells);
+    expect(BANNER_TEXTS.length, `문구 ${BANNER_TEXTS.length}개, 칸 ${cells}개`).toBeLessThanOrEqual(
+      cells,
+    );
   });
 });

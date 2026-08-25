@@ -142,8 +142,6 @@ interface GroundPatch {
  */
 const ROAD_ID = "road" as const;
 
-
-
 /**
  * 삼각형을 구역별로 갈라 메시 데이터를 만든다.
  *
@@ -296,7 +294,7 @@ export function Sidewalks({ receiveShadow }: { receiveShadow: boolean }) {
     // 기울기에 따라 음영이 지려면 노멀을 다시 구해야 한다
     geo.computeVertexNormals();
     return geo;
-  }, [size]);
+  }, []);
 
   useLayoutEffect(() => () => geometry.dispose(), [geometry]);
 
@@ -306,4 +304,3 @@ export function Sidewalks({ receiveShadow }: { receiveShadow: boolean }) {
     </mesh>
   );
 }
-

@@ -121,13 +121,7 @@ export function loadProgress(): SavedProgress | null {
        * 중복이 있으면 「3 / 3」을 채웠는데 실제로는 두 자리만 본 것이 된다.
        */
       foundClues: Array.isArray(candidate.foundClues)
-        ? [
-            ...new Set(
-              candidate.foundClues.filter((id) =>
-                CLUES.some((clue) => clue.id === id),
-              ),
-            ),
-          ]
+        ? [...new Set(candidate.foundClues.filter((id) => CLUES.some((clue) => clue.id === id)))]
         : [],
     };
   } catch {

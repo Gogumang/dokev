@@ -114,7 +114,10 @@ describe("색보정을 얹어도 실루엣이 남는가", () => {
    * 비네트를 얹으면 **23**까지 떨어졌다. 가운데는 43으로 버틴다.
    */
   function channels(rgba: string): { r: number; g: number; b: number; a: number } {
-    const parts = rgba.replace(/rgba?\(|\)/g, "").split(",").map(Number);
+    const parts = rgba
+      .replace(/rgba?\(|\)/g, "")
+      .split(",")
+      .map(Number);
     return { r: parts[0], g: parts[1], b: parts[2], a: parts[3] ?? 1 };
   }
 
@@ -131,7 +134,11 @@ describe("색보정을 얹어도 실루엣이 남는가", () => {
       b: Number.parseInt(base.slice(5, 7), 16),
     };
     const l = channels(layer);
-    return toHex(b.r * (1 - l.a) + l.r * l.a, b.g * (1 - l.a) + l.g * l.a, b.b * (1 - l.a) + l.b * l.a);
+    return toHex(
+      b.r * (1 - l.a) + l.r * l.a,
+      b.g * (1 - l.a) + l.g * l.a,
+      b.b * (1 - l.a) + l.b * l.a,
+    );
   }
 
   it("합성 계산이 맞는다", () => {

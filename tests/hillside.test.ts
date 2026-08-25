@@ -122,7 +122,10 @@ describe("계단이 계단으로 보이는가", () => {
      */
     for (const step of steps) {
       const rise = riseOf(step);
-      expect(rise, `(${step.x.toFixed(1)}, ${step.z.toFixed(1)})의 디딤판이 판보다 ${rise.toFixed(2)}m 위`).toBeGreaterThan(0);
+      expect(
+        rise,
+        `(${step.x.toFixed(1)}, ${step.z.toFixed(1)})의 디딤판이 판보다 ${rise.toFixed(2)}m 위`,
+      ).toBeGreaterThan(0);
 
       // 아랫면 = 윗면 - (보이는 높이 + 파묻은 깊이)
       const bottom = rise - step.height - (step.sink ?? 0);
@@ -167,8 +170,7 @@ describe("골목이 막히지 않는가", () => {
      */
     for (const step of steps) {
       const blocking = layout.colliders.find(
-        (box) =>
-          step.x > box.minX && step.x < box.maxX && step.z > box.minZ && step.z < box.maxZ,
+        (box) => step.x > box.minX && step.x < box.maxX && step.z > box.minZ && step.z < box.maxZ,
       );
       expect(
         blocking,
@@ -267,5 +269,7 @@ function smallestGap(values: readonly number[]): number {
 
 function luminance(hex: string): number {
   const value = Number.parseInt(hex.slice(1), 16);
-  return (((value >> 16) & 255) * 0.299 + ((value >> 8) & 255) * 0.587 + (value & 255) * 0.114) / 255;
+  return (
+    (((value >> 16) & 255) * 0.299 + ((value >> 8) & 255) * 0.587 + (value & 255) * 0.114) / 255
+  );
 }

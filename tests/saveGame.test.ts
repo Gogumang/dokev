@@ -323,10 +323,7 @@ describe("손상된 저장이 그대로 흘러들지 않는가", () => {
     for (const bad of [42, true, { id: "x" }, ["x"], null]) {
       const loaded = load(bad);
       expect(loaded, `${JSON.stringify(bad)}에서 저장을 통째로 잃었다`).not.toBeNull();
-      expect(
-        loaded?.questId,
-        `${JSON.stringify(bad)}이(가) 여정 id로 들어왔다`,
-      ).toBeUndefined();
+      expect(loaded?.questId, `${JSON.stringify(bad)}이(가) 여정 id로 들어왔다`).toBeUndefined();
     }
   });
 

@@ -133,10 +133,22 @@ describe("술어가 실제로 갈리는가", () => {
      * `bothWays`가 늘 참을 돌려주면 **위 검사들이 통째로 눈이 먼다.** 도구를
      * 만들었으면 도구를 지키는 검사도 있어야 한다 — `staleCopy`에서 배운 것이다.
      */
-    expect(bothWays([1, 2, 3], (n) => n > 2), "갈리는데 안 갈린다고 한다").toBe(true);
-    expect(bothWays([3, 4, 5], (n) => n > 2), "늘 참인데 갈린다고 한다").toBe(false);
-    expect(bothWays([1, 2], (n) => n > 2), "늘 거짓인데 갈린다고 한다").toBe(false);
-    expect(bothWays([], () => true), "빈 묶음이 갈린다고 한다").toBe(false);
+    expect(
+      bothWays([1, 2, 3], (n) => n > 2),
+      "갈리는데 안 갈린다고 한다",
+    ).toBe(true);
+    expect(
+      bothWays([3, 4, 5], (n) => n > 2),
+      "늘 참인데 갈린다고 한다",
+    ).toBe(false);
+    expect(
+      bothWays([1, 2], (n) => n > 2),
+      "늘 거짓인데 갈린다고 한다",
+    ).toBe(false);
+    expect(
+      bothWays([], () => true),
+      "빈 묶음이 갈린다고 한다",
+    ).toBe(false);
 
     expect(splits([true, false]), "갈리는데 안 갈린다고 한다").toBe(true);
     expect(splits([true, true]), "한 갈래인데 갈린다고 한다").toBe(false);
@@ -150,17 +162,15 @@ describe("술어가 실제로 갈리는가", () => {
       { vehicle: null, grounded: false, speed: 3 },
       { vehicle: null, grounded: true, speed: 0 },
     ];
-    const test = (c: (typeof cases)[number]) => walksOnFoot(c.vehicle !== null, c.grounded, c.speed);
+    const test = (c: (typeof cases)[number]) =>
+      walksOnFoot(c.vehicle !== null, c.grounded, c.speed);
 
     expect(bothWays(cases, test), describeSplit(cases, test)).toBe(true);
   });
 
   it("착지 소리 판정이 체공에 따라 갈린다", () => {
     const airtimes = [0.02, 0.05, 0.2, 0.6, 1.2];
-    expect(
-      bothWays(airtimes, landingSounds),
-      describeSplit(airtimes, landingSounds),
-    ).toBe(true);
+    expect(bothWays(airtimes, landingSounds), describeSplit(airtimes, landingSounds)).toBe(true);
   });
 
   it("걸음 신호가 프레임마다 갈린다 — 매 프레임 울리면 소리가 뭉갠다", () => {

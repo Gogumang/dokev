@@ -205,8 +205,24 @@ function addStalls(
   for (const side of [-1, 1]) {
     for (let along = -half + STALL.step; along < half - STALL.step; along += STALL.step) {
       // 네 변 — 남북 변은 x를 따라, 동서 변은 z를 따라 늘어선다
-      pushStall(stalls, colliders, block, block.cx + along, block.cz + side * STALL.inset, false, random);
-      pushStall(stalls, colliders, block, block.cx + side * STALL.inset, block.cz + along, true, random);
+      pushStall(
+        stalls,
+        colliders,
+        block,
+        block.cx + along,
+        block.cz + side * STALL.inset,
+        false,
+        random,
+      );
+      pushStall(
+        stalls,
+        colliders,
+        block,
+        block.cx + side * STALL.inset,
+        block.cz + along,
+        true,
+        random,
+      );
     }
   }
 }

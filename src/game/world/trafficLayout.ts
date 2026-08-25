@@ -175,9 +175,7 @@ export function sampleSignal(time: number): SignalState {
   else if (local < SIGNAL.greenSeconds + SIGNAL.yellowSeconds) active = "yellow";
   else active = "red";
 
-  return inFirstHalf
-    ? { alongZ: active, alongX: "red" }
-    : { alongZ: "red", alongX: active };
+  return inFirstHalf ? { alongZ: active, alongX: "red" } : { alongZ: "red", alongX: active };
 }
 
 /**
@@ -237,8 +235,7 @@ export function buildTraffic(halfExtent: number, budget: number): TrafficPlan {
             direction,
             startU: (laneStart + k * spacing) % loopLength,
             cruiseSpeed:
-              TRAFFIC.minCruiseSpeed +
-              random() * (TRAFFIC.maxCruiseSpeed - TRAFFIC.minCruiseSpeed),
+              TRAFFIC.minCruiseSpeed + random() * (TRAFFIC.maxCruiseSpeed - TRAFFIC.minCruiseSpeed),
             // 갓길 주차와 같은 팔레트를 쓴다 — 주행 차량만 색이 튀면 붙여 넣은 것처럼 보인다.
             tone: Math.floor(random() * MOVING_CAR_PALETTE.length),
             stopLineUs,

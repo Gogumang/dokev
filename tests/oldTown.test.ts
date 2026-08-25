@@ -142,9 +142,10 @@ describe("돌담", () => {
      * 화면으로만 알 수 있는 종류라 오래 남아 있었다. 이제 숫자로 잡는다.
      */
     const half = CITY.blockSize / 2;
-    expect(wallReach, `담이 중심에서 ${wallReach.toFixed(1)}m (구역 반 폭 ${half})`).toBeGreaterThan(
-      half * 0.8,
-    );
+    expect(
+      wallReach,
+      `담이 중심에서 ${wallReach.toFixed(1)}m (구역 반 폭 ${half})`,
+    ).toBeGreaterThan(half * 0.8);
     // 인도로 삐져나가면 보행자와 차가 담을 통과한다
     expect(wallReach, `담이 중심에서 ${wallReach.toFixed(1)}m`).toBeLessThan(half);
   });
@@ -230,9 +231,10 @@ describe("돌담", () => {
       const cap = sorted[sorted.length - 1];
       // 얇은 쪽(담의 두께)으로 잰다 — 긴 쪽은 도막 길이라 켜마다 같다
       const thin = (wall: (typeof stack)[number]) => Math.min(wall.width, wall.depth);
-      expect(thin(cap), `갓 ${thin(cap).toFixed(2)} / 몸통 ${thin(body).toFixed(2)}`).toBeGreaterThan(
-        thin(body),
-      );
+      expect(
+        thin(cap),
+        `갓 ${thin(cap).toFixed(2)} / 몸통 ${thin(body).toFixed(2)}`,
+      ).toBeGreaterThan(thin(body));
       checked += 1;
     }
     expect(checked, "세 켜로 쌓인 담을 하나도 못 찾았다").toBeGreaterThan(10);
@@ -289,9 +291,10 @@ describe("홍살문", () => {
       const open = openSidesOf(block.index);
       expect(open.length, `구역 ${block.index}에 바깥 변이 없다`).toBeGreaterThan(0);
       // 문 하나가 기둥 둘 + 보 둘 = 넷
-      expect(parts.length, `구역 ${block.index}: 문 조각 ${parts.length}, 바깥 변 ${open.length}`).toBe(
-        open.length * 4,
-      );
+      expect(
+        parts.length,
+        `구역 ${block.index}: 문 조각 ${parts.length}, 바깥 변 ${open.length}`,
+      ).toBe(open.length * 4);
     }
   });
 
@@ -342,7 +345,9 @@ describe("홍살문", () => {
      */
     const tallestWall = Math.max(...layout.stoneWalls.map((wall) => wall.height));
     const gateHeight = Math.max(...layout.gates.map((part) => part.height));
-    expect(gateHeight, `문 ${gateHeight}m vs 담 ${tallestWall}m`).toBeGreaterThan(tallestWall * 2.5);
+    expect(gateHeight, `문 ${gateHeight}m vs 담 ${tallestWall}m`).toBeGreaterThan(
+      tallestWall * 2.5,
+    );
   });
 
   it("문 사이로 지나갈 수 있다", () => {
@@ -505,9 +510,10 @@ describe("담 아래 화분", () => {
     const boxTop = Math.max(...boxes.map((box) => box.y + box.height / 2));
     for (const flower of flowers) {
       const bottom = flower.y - flower.height / 2;
-      expect(bottom, `꽃 아랫면 ${bottom.toFixed(2)} / 상자 윗면 ${boxTop.toFixed(2)}`).toBeLessThan(
-        boxTop,
-      );
+      expect(
+        bottom,
+        `꽃 아랫면 ${bottom.toFixed(2)} / 상자 윗면 ${boxTop.toFixed(2)}`,
+      ).toBeLessThan(boxTop);
       expect(flower.y, `꽃 높이 ${flower.y.toFixed(2)}m`).toBeGreaterThan(boxTop);
     }
   });
@@ -519,9 +525,10 @@ describe("담 아래 화분", () => {
      */
     const widest = Math.max(...flowers.map((flower) => Math.max(flower.width, flower.depth)));
     const narrowestBox = Math.min(...boxes.map((box) => Math.min(box.width, box.depth)));
-    expect(widest, `꽃 ${widest.toFixed(2)} / 상자 짧은 변 ${narrowestBox.toFixed(2)}`).toBeGreaterThan(
-      narrowestBox,
-    );
+    expect(
+      widest,
+      `꽃 ${widest.toFixed(2)} / 상자 짧은 변 ${narrowestBox.toFixed(2)}`,
+    ).toBeGreaterThan(narrowestBox);
   });
 
   it("City가 실제로 건다", () => {
@@ -567,7 +574,10 @@ describe("담 아래 화분", () => {
       ["GREEN_TONE", WALL_GREEN_PALETTE],
     ] as const) {
       const block = new RegExp(`const ${name} = \\{([\\s\\S]*?)\\} as const;`).exec(source);
-      expect(block, `oldTown.ts의 ${name}을 못 읽었다 — 검사가 아무것도 안 보고 있다`).not.toBeNull();
+      expect(
+        block,
+        `oldTown.ts의 ${name}을 못 읽었다 — 검사가 아무것도 안 보고 있다`,
+      ).not.toBeNull();
       if (!block) continue;
 
       const tones = (block[1].match(/\w+:\s*\d/g) ?? []).length;
@@ -596,9 +606,10 @@ describe("담쟁이", () => {
      * 것」으로 보인다.
      */
     for (const leaf of ivy) {
-      expect(leaf.y, `담쟁이 높이 ${leaf.y.toFixed(2)}m / 담 ${WALL_TOTAL_HEIGHT.toFixed(2)}m`).toBeGreaterThan(
-        WALL_TOTAL_HEIGHT * 0.6,
-      );
+      expect(
+        leaf.y,
+        `담쟁이 높이 ${leaf.y.toFixed(2)}m / 담 ${WALL_TOTAL_HEIGHT.toFixed(2)}m`,
+      ).toBeGreaterThan(WALL_TOTAL_HEIGHT * 0.6);
     }
   });
 
@@ -615,8 +626,7 @@ describe("담쟁이", () => {
        */
       const nearby = layout.stoneWalls.filter(
         (item) =>
-          item.blockIndex === leaf.blockIndex &&
-          Math.hypot(item.x - leaf.x, item.z - leaf.z) < 1.6,
+          item.blockIndex === leaf.blockIndex && Math.hypot(item.x - leaf.x, item.z - leaf.z) < 1.6,
       );
       if (nearby.length === 0) continue;
       const wall = nearby.reduce((widest, item) =>
@@ -637,7 +647,9 @@ describe("담쟁이", () => {
         (wall) =>
           wall.blockIndex === leaf.blockIndex && Math.hypot(wall.x - leaf.x, wall.z - leaf.z) < 1.8,
       );
-      expect(beside, `담쟁이 (${leaf.x.toFixed(1)}, ${leaf.z.toFixed(1)}) 밑에 담이 없다`).toBe(true);
+      expect(beside, `담쟁이 (${leaf.x.toFixed(1)}, ${leaf.z.toFixed(1)}) 밑에 담이 없다`).toBe(
+        true,
+      );
     }
   });
 

@@ -299,10 +299,7 @@ export function revealedDokebi(progress: DokebiProgress): DokebiId[] {
  * 자리가 없는 도깨비(초롱)는 조건만 채우면 되고, 자리가 있는 도깨비는
  * 실제로 찾아가 만나야 한다.
  */
-export function unlockedDokebi(
-  progress: DokebiProgress,
-  met: readonly DokebiId[],
-): DokebiId[] {
+export function unlockedDokebi(progress: DokebiProgress, met: readonly DokebiId[]): DokebiId[] {
   const metSet = new Set(met);
   return revealedDokebi(progress).filter((id) => DOKEBI[id].home === null || metSet.has(id));
 }

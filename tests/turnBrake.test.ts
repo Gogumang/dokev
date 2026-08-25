@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { LOCOMOTION, TURN_BRAKE, type VehicleKind } from "@/game/config/tuning";
-import { horizontalSpeed, stepLocomotion, turnBrakeScale, type LocomotionState, type MoveInput } from "@/game/player/locomotion";
+import {
+  horizontalSpeed,
+  stepLocomotion,
+  turnBrakeScale,
+  type LocomotionState,
+  type MoveInput,
+} from "@/game/player/locomotion";
 import { shortestAngleDelta } from "@/game/core/mathx";
 
 /*
@@ -86,9 +92,10 @@ describe("꺾을 때의 감속 배율", () => {
      * 속도가 거의 그대로였고, 브레이크가 있으나 마나였다.
      */
     const slowest = Math.min(...Object.values(LOCOMOTION).map((mode) => mode.decel));
-    expect(TURN_BRAKE.decel, `제동 ${TURN_BRAKE.decel} vs 가장 낮은 감속 ${slowest}`).toBeGreaterThan(
-      slowest * 4,
-    );
+    expect(
+      TURN_BRAKE.decel,
+      `제동 ${TURN_BRAKE.decel} vs 가장 낮은 감속 ${slowest}`,
+    ).toBeGreaterThan(slowest * 4);
   });
 
   it("부호와 무관하다", () => {
@@ -138,7 +145,9 @@ describe("실제 이동에서", () => {
      * 돌아선다 — 둘을 맞바꾼 것이고, 화면에서 중요한 것은 「얼마나 느려졌나」가
      * 아니라 「얼마나 빨리 돌아섰나」다(아래 검사).
      */
-    expect(lowest, `${before.toFixed(1)} → 최저 ${lowest.toFixed(1)} m/s`).toBeLessThan(before * 0.8);
+    expect(lowest, `${before.toFixed(1)} → 최저 ${lowest.toFixed(1)} m/s`).toBeLessThan(
+      before * 0.8,
+    );
   });
 
   it("반전이 오래 끌지 않는다", () => {

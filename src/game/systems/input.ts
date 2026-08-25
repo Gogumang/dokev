@@ -205,7 +205,10 @@ export function useKeyboardBindings(
     const onKeyDown = (event: KeyboardEvent) => {
       // 폼 입력 중에는 월드 조작을 가로채지 않는다.
       const target = event.target as HTMLElement | null;
-      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+      if (
+        target &&
+        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      ) {
         return;
       }
 

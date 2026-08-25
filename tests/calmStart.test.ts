@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { readCode } from "./support/source";
 
-import { BOSS_QUEST, FIRST_RUN_QUEST, firstCombatStep, isCalmStep } from "@/game/quest/questContent";
+import {
+  BOSS_QUEST,
+  FIRST_RUN_QUEST,
+  firstCombatStep,
+  isCalmStep,
+} from "@/game/quest/questContent";
 
 /*
  * 시작은 조용하다.
@@ -29,7 +34,10 @@ describe("여정이 전투를 언제 요구하는가", () => {
   });
 
   it("보스 여정은 처음부터 전투다 — 그쪽은 조용할 이유가 없다", () => {
-    expect(firstCombatStep(BOSS_QUEST), "대장을 찾아가는 여정인데 전투가 없다").toBeGreaterThanOrEqual(0);
+    expect(
+      firstCombatStep(BOSS_QUEST),
+      "대장을 찾아가는 여정인데 전투가 없다",
+    ).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -40,9 +48,10 @@ describe("조용한 구간", () => {
 
   it("전투 단계에 닿으면 끝난다", () => {
     const combat = firstCombatStep(FIRST_RUN_QUEST);
-    expect(isCalmStep({ stepIndex: combat, firstQuestDone: false }), "전투를 시키면서 조용하다").toBe(
-      false,
-    );
+    expect(
+      isCalmStep({ stepIndex: combat, firstQuestDone: false }),
+      "전투를 시키면서 조용하다",
+    ).toBe(false);
   });
 
   it("첫 여정을 마친 뒤에는 조용하지 않다", () => {

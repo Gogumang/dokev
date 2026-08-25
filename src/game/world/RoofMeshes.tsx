@@ -38,14 +38,26 @@ function createGableGeometry(): THREE.BufferGeometry {
 
   const positions = [
     // 뒤쪽 물매 (z-)
-    ...a, ...b, ...ridgeRight,
-    ...a, ...ridgeRight, ...ridgeLeft,
+    ...a,
+    ...b,
+    ...ridgeRight,
+    ...a,
+    ...ridgeRight,
+    ...ridgeLeft,
     // 앞쪽 물매 (z+)
-    ...c, ...d, ...ridgeLeft,
-    ...c, ...ridgeLeft, ...ridgeRight,
+    ...c,
+    ...d,
+    ...ridgeLeft,
+    ...c,
+    ...ridgeLeft,
+    ...ridgeRight,
     // 좌우 박공 삼각형
-    ...d, ...a, ...ridgeLeft,
-    ...b, ...c, ...ridgeRight,
+    ...d,
+    ...a,
+    ...ridgeLeft,
+    ...b,
+    ...c,
+    ...ridgeRight,
   ];
 
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -74,14 +86,26 @@ function createHipGeometry(): THREE.BufferGeometry {
 
   const positions = [
     // 뒤쪽 물매 (z-)
-    ...a, ...b, ...ridgeRight,
-    ...a, ...ridgeRight, ...ridgeLeft,
+    ...a,
+    ...b,
+    ...ridgeRight,
+    ...a,
+    ...ridgeRight,
+    ...ridgeLeft,
     // 앞쪽 물매 (z+)
-    ...c, ...d, ...ridgeLeft,
-    ...c, ...ridgeLeft, ...ridgeRight,
+    ...c,
+    ...d,
+    ...ridgeLeft,
+    ...c,
+    ...ridgeLeft,
+    ...ridgeRight,
     // 좌우 추녀 — 박공면 대신 이쪽도 눕는다
-    ...d, ...a, ...ridgeLeft,
-    ...b, ...c, ...ridgeRight,
+    ...d,
+    ...a,
+    ...ridgeLeft,
+    ...b,
+    ...c,
+    ...ridgeRight,
   ];
 
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -99,7 +123,13 @@ function createHipGeometry(): THREE.BufferGeometry {
 const HANOK_ROOF_PALETTE = ["#3d4450", "#474e5a", "#343a45"];
 
 /** 옛 마을의 기와지붕. */
-export function HanokRoofs({ items, quality }: { items: readonly BoxInstance[]; quality: QualityPreset }) {
+export function HanokRoofs({
+  items,
+  quality,
+}: {
+  items: readonly BoxInstance[];
+  quality: QualityPreset;
+}) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => createHipGeometry(), []);
   const toonGradient = useMemo(() => getToonGradientTexture(), []);
@@ -133,7 +163,13 @@ export function HanokRoofs({ items, quality }: { items: readonly BoxInstance[]; 
 const ROOF_PALETTE = ["#3f7f86", "#a8503f", "#6a6f78", "#4a6b4f", "#8a6a45", "#5a6a8a"];
 
 /** 저층 건물에 얹는 박공지붕. */
-export function Roofs({ items, quality }: { items: readonly BoxInstance[]; quality: QualityPreset }) {
+export function Roofs({
+  items,
+  quality,
+}: {
+  items: readonly BoxInstance[];
+  quality: QualityPreset;
+}) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const geometry = useMemo(() => createGableGeometry(), []);
   const toonGradient = useMemo(() => getToonGradientTexture(), []);

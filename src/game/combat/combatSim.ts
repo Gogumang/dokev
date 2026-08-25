@@ -119,7 +119,7 @@ function slideTo(
   toZ: number,
   isBlocked?: (x: number, z: number) => boolean,
 ): { x: number; z: number } {
-  if (!isBlocked || !isBlocked(toX, toZ)) return { x: toX, z: toZ };
+  if (!isBlocked?.(toX, toZ)) return { x: toX, z: toZ };
   if (!isBlocked(toX, fromZ)) return { x: toX, z: fromZ };
   if (!isBlocked(fromX, toZ)) return { x: fromX, z: toZ };
   return { x: fromX, z: fromZ };
@@ -381,7 +381,11 @@ export function stepEnemy(
       return { ...enemy, facing, mood: "chase", timer: 0, fireCooldown };
     }
     const direction =
-      distance < GUNNER.minDistance ? -GUNNER.retreatSpeedScale : distance > GUNNER.maxDistance ? 1 : 0;
+      distance < GUNNER.minDistance
+        ? -GUNNER.retreatSpeedScale
+        : distance > GUNNER.maxDistance
+          ? 1
+          : 0;
     const gunnerStep = COMBAT_TUNING.enemySpeed * dt * direction;
     const moved = slideTo(
       enemy.x,

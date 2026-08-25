@@ -47,4 +47,3 @@ export function advanceAttackPhase(
   if (phase === "active") return { phase: "recovery", timer: timing.recoverySeconds - overflow };
   return { phase: "ready", timer: 0 };
 }
-

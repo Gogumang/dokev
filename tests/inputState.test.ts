@@ -295,7 +295,13 @@ describe("입력이 전투·동료로 건너가는가", () => {
    *   - `weapon` — 안 돌리면 **Q를 눌러도 계속 방망이다.**
    */
   function link(): CommandLink {
-    return { attackQueued: false, summoned: false, summonLinger: 0, abilityRequests: 0, weapon: "bat" };
+    return {
+      attackQueued: false,
+      summoned: false,
+      summonLinger: 0,
+      abilityRequests: 0,
+      weapon: "bat",
+    };
   }
 
   it("공격이 건너간다", () => {

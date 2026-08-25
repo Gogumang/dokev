@@ -4,12 +4,7 @@ import { readCode } from "./support/source";
 
 import { buildCityLayout } from "@/game/world/cityLayout";
 import { SEA_LEVEL, terrainHeight } from "@/game/world/terrain";
-import {
-  isWaterVehicle,
-  LOCOMOTION,
-  VEHICLE_KINDS,
-  WATER_VEHICLES,
-} from "@/game/config/tuning";
+import { isWaterVehicle, LOCOMOTION, VEHICLE_KINDS, WATER_VEHICLES } from "@/game/config/tuning";
 import {
   isOverWater,
   rideLimit,
@@ -50,7 +45,13 @@ describe("딛는 높이", () => {
   const seaSpot = { x: HALF + 20, z: 0 };
 
   it("타고 물 위에 있으면 수면에 얹힌다", () => {
-    const y = rideSurfaceHeight(terrainHeight(seaSpot.x, seaSpot.z), seaSpot.x, seaSpot.z, HALF, "jetski");
+    const y = rideSurfaceHeight(
+      terrainHeight(seaSpot.x, seaSpot.z),
+      seaSpot.x,
+      seaSpot.z,
+      HALF,
+      "jetski",
+    );
     expect(y, `${y} vs 수면 ${SEA_LEVEL}`).toBe(waterSurfaceY());
   });
 
@@ -61,9 +62,10 @@ describe("딛는 높이", () => {
 
   it("뭍에서는 땅 높이 그대로다 — 타고 있어도", () => {
     const land = terrainHeight(landSpot.x, landSpot.z);
-    expect(rideSurfaceHeight(land, landSpot.x, landSpot.z, HALF, "jetski"), "육지가 수면이 됐다").toBe(
-      land,
-    );
+    expect(
+      rideSurfaceHeight(land, landSpot.x, landSpot.z, HALF, "jetski"),
+      "육지가 수면이 됐다",
+    ).toBe(land);
   });
 
   it("두 발로는 물 위에 얹히지 않는다 — 걸어 들어가면 수영이고, 그건 다른 게임이다", () => {
@@ -118,10 +120,9 @@ describe("무엇을 타야 물에 나가는가", () => {
      */
     for (const kind of ["kickboard", "bike", "skateboard", "toycar", "pony"] as const) {
       expect(rideLimit(HALF, kind), `${kind}가 바다로 나간다`).toBe(HALF);
-      expect(
-        rideSurfaceHeight(-999, HALF + 20, 0, HALF, kind),
-        `${kind}가 수면 위를 달린다`,
-      ).toBe(-999);
+      expect(rideSurfaceHeight(-999, HALF + 20, 0, HALF, kind), `${kind}가 수면 위를 달린다`).toBe(
+        -999,
+      );
     }
   });
 

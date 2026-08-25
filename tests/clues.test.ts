@@ -155,7 +155,7 @@ describe("여정과 화면에 닿아 있는가", () => {
      * 알려 주지 않으면 282m 도시에서 셋을 찾을 방법이 없다 — 「어딘가에
      * 있다」는 목표가 아니라 벽이다.
      */
-    const map = readCode("src/components/hud/CityMap.tsx");
+    const map = readCode("src/game/systems/cityMapPaint.ts");
     expect(map, "흔적 표식이 없다").toContain("MARKS.clue.color");
     const hud = readCode("src/components/hud/WorldHud.tsx");
     expect(hud, "남은 흔적을 넘기지 않는다").toContain("pendingClues");
@@ -286,8 +286,16 @@ describe("이어하기 판정", () => {
     const cases: Array<[string, Record<string, unknown> | null, boolean]> = [
       ["저장이 없으면 아니다", null, false],
       ["첫 여정을 진행 중이면 아니다", { ...base, questId: FIRST_RUN_QUEST.id }, false],
-      ["첫 여정을 끝냈으면 맞다", { ...base, questId: FIRST_RUN_QUEST.id, questCompleted: true }, true],
-      ["다음 여정으로 넘어갔으면 맞다 — 끝냈다는 표시가 없어도", { ...base, questId: BOSS_QUEST.id }, true],
+      [
+        "첫 여정을 끝냈으면 맞다",
+        { ...base, questId: FIRST_RUN_QUEST.id, questCompleted: true },
+        true,
+      ],
+      [
+        "다음 여정으로 넘어갔으면 맞다 — 끝냈다는 표시가 없어도",
+        { ...base, questId: BOSS_QUEST.id },
+        true,
+      ],
       ["예전 저장(여정 id 없음)은 완료 여부를 따른다", { ...base, questCompleted: true }, true],
     ];
 
@@ -300,7 +308,11 @@ describe("이어하기 판정", () => {
   it("대장을 눕혔는지 — 세 갈래", () => {
     const cases: Array<[string, Record<string, unknown>, boolean]> = [
       ["표시가 있으면 맞다", { ...base, bossDefeated: true }, true],
-      ["보스 여정을 끝냈으면 맞다 — 표시가 없어도(예전 저장)", { ...base, questId: BOSS_QUEST.id, questCompleted: true }, true],
+      [
+        "보스 여정을 끝냈으면 맞다 — 표시가 없어도(예전 저장)",
+        { ...base, questId: BOSS_QUEST.id, questCompleted: true },
+        true,
+      ],
       ["보스 여정 진행 중이면 아니다", { ...base, questId: BOSS_QUEST.id }, false],
     ];
 

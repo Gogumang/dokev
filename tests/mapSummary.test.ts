@@ -167,13 +167,19 @@ describe("문장이 화면에 닿아 있는가", () => {
    * 「만들어 두고 연결하지 않으면 없는 것과 같다」를 이번 세션에 여러 번
    * 만났다. 순수 함수는 테스트가 다 통과해도 아무도 안 부르면 그만이다.
    */
+  /*
+   * 문장은 컴포넌트가 만들고(공유 객체를 표본으로 뜬다), 표식은 그림 쪽이
+   * 찍는다. 「그림에 있는 것은 글에도 있어야 한다」를 보려면 둘 다 읽어야 한다.
+   */
   const map = readCode("src/components/hud/CityMap.tsx");
+  const paint = readCode("src/game/systems/cityMapPaint.ts");
 
   it("전체 지도가 문장을 부른다", () => {
     expect(map, "describeMap을 부르는 곳이 없다").toContain("describeMap(");
   });
 
   it("지도에 찍는 표식은 모두 말로도 나온다", () => {
+    const map = paint;
     /*
      * 표식을 더할 때 말을 빠뜨리는 일이 두 번 있었다(도깨비 자리, 흔적).
      * 개별 항목을 세는 대신 **표식 목록 자체**와 대조한다 — 다음에 표식이
@@ -196,8 +202,8 @@ describe("문장이 화면에 닿아 있는가", () => {
 
   it("그리는 것과 말하는 것이 같은 목록이다", () => {
     // 지도에 찍는 목록과 다른 것을 말하면 화면과 소리가 어긋난다
-    const start = map.indexOf("const update = ()");
-    const end = map.indexOf("setInterval(update, SUMMARY_MS)", start);
+    const start = map.indexOf("describeMap({");
+    const end = map.indexOf("SUMMARY_MS,", start);
     /*
      * 앵커를 못 찾으면 indexOf가 -1을 내고, slice가 파일 대부분을 돌려주며
      * **아무것도 확인하지 않고 통과한다.** 잘라낸 범위부터 본다.
@@ -220,14 +226,20 @@ describe("문장이 화면에 닿아 있는가", () => {
      * `stats`는 매 프레임 제자리에서 바뀌는 공유 객체라 리렌더가 없다.
      * 주기적으로 다시 만들지 않으면 지도를 여는 동안 캔버스만 움직이고
      * 글은 그대로다 — 눈으로는 알아채기 어렵다.
+     *
+     * 손으로 건 타이머를 찾고 있었다. 표본 뜨는 일이 `useSampled` 한 곳으로
+     * 모이면서 그 모양이 사라졌다 — 지키려는 것은 **주기적으로 다시 만드는가**이지
+     * `setInterval`이라는 글자가 아니다.
      */
-    expect(map, "문장을 다시 만드는 주기가 없다").toMatch(/setInterval\(update, SUMMARY_MS\)/);
+    expect(map, "문장을 다시 만드는 주기가 없다").toMatch(/useSampled\([\s\S]*?SUMMARY_MS/);
   });
 
   it("문장 주기가 그림 주기보다 느리다", () => {
     // 낭독기는 초당 여덟 번 바뀌는 글을 따라올 수 없다
+    // 칠하는 주기는 캔버스 쪽으로 옮겨갔다 — 둘이 다른 파일이어도 관계는 그대로다
+    const canvas = readCode("src/components/hud/CityMapCanvas.tsx");
     const summaryMs = Number(/const SUMMARY_MS = (\d+)/.exec(map)?.[1]);
-    const redrawMs = Number(/const REDRAW_MS = (\d+)/.exec(map)?.[1]);
+    const redrawMs = Number(/const REDRAW_MS = (\d+)/.exec(canvas)?.[1]);
     expect(summaryMs, `SUMMARY_MS=${summaryMs}`).toBeGreaterThan(redrawMs);
   });
 });

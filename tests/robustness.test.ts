@@ -37,9 +37,10 @@ describe("좌표 상수", () => {
      * 지금 쓰는 가장 큰 인덱스는 5다(보스 자리). 격자를 줄이면 여기서 먼저
      * 걸린다 — 화면이 아니라 테스트에서.
      */
-    expect(ROAD_CENTERS.length, `length=${ROAD_CENTERS.length}, grid=${CITY.gridSize}`).toBeGreaterThan(
-      5,
-    );
+    expect(
+      ROAD_CENTERS.length,
+      `length=${ROAD_CENTERS.length}, grid=${CITY.gridSize}`,
+    ).toBeGreaterThan(5);
     for (const value of ROAD_CENTERS) {
       expect(Number.isFinite(value), `road center ${value}`).toBe(true);
     }
@@ -144,12 +145,12 @@ describe("상태 갱신 함수는 순수한가", () => {
 
   for (const path of SOURCES) {
     it(`${path}의 갱신 함수가 설정을 건드리지 않는다`, () => {
-    /*
-     * 정규식이 낡으면 빈 목록이 되어 **아무것도 안 보며** 통과한다. 이 셋은
-     * 모두 `setX((current) => ...)`를 쓰는 파일로 골라 둔 것이므로, 한 개도
-     * 못 찾았다면 훑기가 망가진 것이다.
-     */
-    let seen = 0;
+      /*
+       * 정규식이 낡으면 빈 목록이 되어 **아무것도 안 보며** 통과한다. 이 셋은
+       * 모두 `setX((current) => ...)`를 쓰는 파일로 골라 둔 것이므로, 한 개도
+       * 못 찾았다면 훑기가 망가진 것이다.
+       */
+      let seen = 0;
       /*
        * 주석을 먼저 걷어낸다. 이 버그를 설명하는 주석이 그대로 걸려서
        * 좋은 기록을 지우게 만들었다 — 검사가 기록을 방해하면 검사가 틀린 것이다.
@@ -174,7 +175,7 @@ describe("상태 갱신 함수는 순수한가", () => {
         }
         const body = source.slice(start, end);
         expect(seen, `${path}에서 훑은 갱신 함수 ${seen}개`).toBeGreaterThan(0);
-    expect(body, `갱신 함수 안에서 설정을 바꾼다:\n${body.trim().slice(0, 160)}`).not.toContain(
+        expect(body, `갱신 함수 안에서 설정을 바꾼다:\n${body.trim().slice(0, 160)}`).not.toContain(
           "updateSettings(",
         );
       }
@@ -234,9 +235,10 @@ describe("오류 화면이 사람을 도와주는가", () => {
       const source = readCode(path);
       const buttons = (source.match(/<button/g) ?? []).length;
       const named = (source.match(/aria-label=|>\s*[가-힣]/g) ?? []).length;
-      expect(named, `${name}: 버튼 ${buttons}개인데 이름 있는 것이 ${named}개`).toBeGreaterThanOrEqual(
-        buttons,
-      );
+      expect(
+        named,
+        `${name}: 버튼 ${buttons}개인데 이름 있는 것이 ${named}개`,
+      ).toBeGreaterThanOrEqual(buttons);
     }
   });
 

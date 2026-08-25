@@ -71,7 +71,9 @@ describe("README의 내용", () => {
   });
 
   it("문서 링크가 실제 파일을 가리킨다", () => {
-    const links = [...readme.matchAll(/\]\(\.\/((?:docs\/)?[A-Z_]+\.md)\)/g)].map((match) => match[1]);
+    const links = [...readme.matchAll(/\]\(\.\/((?:docs\/)?[A-Z_]+\.md)\)/g)].map(
+      (match) => match[1],
+    );
     expect(links.length).toBeGreaterThan(2);
     for (const file of links) {
       expect(() => readFileSync(file, "utf8"), `${file}가 없다`).not.toThrow();
@@ -110,12 +112,13 @@ describe("README의 명령이 실제로 있는가", () => {
    * 반대로 스크립트를 지웠는데 문서가 남아도 같은 일이 벌어진다.
    */
   const readme = readFileSync("README.md", "utf8");
-  const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<string, string>;
+  const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<
+    string,
+    string
+  >;
 
   it("README가 안내하는 pnpm 명령이 전부 존재한다", () => {
-    const mentioned = new Set(
-      [...readme.matchAll(/`pnpm ([\w:]+)`/g)].map((m) => m[1]),
-    );
+    const mentioned = new Set([...readme.matchAll(/`pnpm ([\w:]+)`/g)].map((m) => m[1]));
     for (const name of mentioned) {
       expect(scripts[name], `README가 없는 명령 pnpm ${name}을 안내한다`).toBeDefined();
     }
@@ -223,15 +226,26 @@ describe("사람에게 부탁하는 시간이 정직한가", () => {
   it("적어 둔 전체 개수가 실제와 맞는다", () => {
     // 「열일곱 개」라고 적어 두고 스물이 되면 그 문장이 또 거짓이 된다
     const NUMBERS: Record<string, number> = {
-      열: 10, 열하나: 11, 열둘: 12, 열셋: 13, 열넷: 14, 열다섯: 15,
-      열여섯: 16, 열일곱: 17, 열여덟: 18, 열아홉: 19,
+      열: 10,
+      열하나: 11,
+      열둘: 12,
+      열셋: 13,
+      열넷: 14,
+      열다섯: 15,
+      열여섯: 16,
+      열일곱: 17,
+      열여덟: 18,
+      열아홉: 19,
       /*
        * 스물은 단위 앞에서 **스무**가 된다(「스무 개」). 목록에 `스물`만
        * 두었더니 스무 번째 항목을 더한 순간 「개수를 못 읽었다」로 실패했다 —
        * 문서가 맞는 말을 썼는데 검사가 못 읽은 것이다.
        */
-      스물: 20, 스무: 20,
-      스물하나: 21, 스물둘: 22, 스물셋: 23,
+      스물: 20,
+      스무: 20,
+      스물하나: 21,
+      스물둘: 22,
+      스물셋: 23,
     };
     const claimed = /항목이 (\S+?) 개가/.exec(body)?.[1] ?? "";
     expect(NUMBERS[claimed], `적어 둔 개수 「${claimed}」를 못 읽었다`).toBeGreaterThan(0);

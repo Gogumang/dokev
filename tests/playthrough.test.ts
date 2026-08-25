@@ -234,7 +234,8 @@ describe("첫 여정이 진행되는가", () => {
           onBoard: kind === "board",
           defeatedTotal: kind === "defeat" ? 99 : 0,
           gliding: kind === "glide",
-          position: kind === "reach" && target ? { x: target.x, y: 0, z: target.z } : locomotion.position,
+          position:
+            kind === "reach" && target ? { x: target.x, y: 0, z: target.z } : locomotion.position,
         }),
         FRAME,
       );
@@ -308,21 +309,21 @@ describe("목적지까지 실제로 갈 수 있는가", () => {
 
 describe("활강을 배울 수 있는가", () => {
   /*
-   * 안내는 「점프한 뒤 떨어질 때 Space를 계속 누르세요」라고 한다. 그런데
-   * 여정 단계 이름은 「높은 곳에서 뛰어내려 활강하기」다 — 높은 곳을 찾아야만
-   * 되는 것이라면, 못 찾은 사람은 안내대로 눌러도 아무 일이 없어 자기가
-   * 잘못한 줄 안다.
+   * 안내는 「공중에서 한 번 더 뛰면 내려올 때 자동으로 활강한다」고 한다.
+   * 여정 단계 이름은 「높은 곳에서 뛰어내려 활강하기」지만, 높은 곳을 못 찾은
+   * 사람도 평지 이단 점프로 우산을 보고 규칙을 배울 수 있어야 한다.
    *
-   * 재 보니 평지 이단 점프(최고 2.51m)만으로도 걸린다. 안내가 참이다.
+   * 반대로 첫 점프만으로 자동 활강하면 모든 점프가 느려진다. 자동 전개를 여는
+   * 경계가 이단 점프인지 두 시나리오로 함께 고정한다.
    */
-  it("평지 이단 점프만으로도 활강이 걸린다", () => {
+  it("평지 이단 점프 뒤 키를 놓아도 자동 활강이 걸린다", () => {
     let state = createLocomotionState(layout.spawn);
     let glided = false;
     let peak = 0;
 
     for (let i = 0; i < 60 * 6 && !glided; i += 1) {
-      // 5프레임에 뛰고, 20프레임에 한 번 더, 그동안 계속 누르고 있는다
-      const move = input({ jump: i === 5 || i === 20, jumpHeld: i >= 5, moveZ: 1 });
+      // 5프레임에 뛰고 20프레임에 한 번 더 누른 뒤 바로 놓는다
+      const move = input({ jump: i === 5 || i === 20, moveZ: 1 });
       state = stepLocomotion(state, move, FRAME, 0);
       if (state.position.y > peak) peak = state.position.y;
       if (state.gliding) glided = true;
@@ -331,16 +332,15 @@ describe("활강을 배울 수 있는가", () => {
     expect(glided, `최고 높이 ${peak.toFixed(2)}m에서 활강이 안 걸렸다`).toBe(true);
   });
 
-  it("누르지 않으면 걸리지 않는다", () => {
-    // 유지가 조건이다 — 점프만으로 걸리면 뛸 때마다 떠 버린다
+  it("이단 점프를 쓰기 전에는 키를 놓으면 자동 활강하지 않는다", () => {
     let state = createLocomotionState(layout.spawn);
     let glided = false;
 
     for (let i = 0; i < 60 * 6; i += 1) {
-      state = stepLocomotion(state, input({ jump: i === 5 || i === 20, moveZ: 1 }), FRAME, 0);
+      state = stepLocomotion(state, input({ jump: i === 5, moveZ: 1 }), FRAME, 0);
       if (state.gliding) glided = true;
     }
 
-    expect(glided, "누르지 않았는데 활강했다").toBe(false);
+    expect(glided, "이단 점프 전에 자동 활강했다").toBe(false);
   });
 });

@@ -50,7 +50,13 @@ export function FilterOverlay({ filter }: { filter: PhotoFilter }) {
   return (
     <mesh ref={meshRef} renderOrder={999} frustumCulled={false}>
       <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial map={texture} transparent depthTest={false} depthWrite={false} toneMapped={false} />
+      <meshBasicMaterial
+        map={texture}
+        transparent
+        depthTest={false}
+        depthWrite={false}
+        toneMapped={false}
+      />
     </mesh>
   );
 }

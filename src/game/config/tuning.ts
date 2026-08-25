@@ -364,7 +364,6 @@ export const CAMERA_COLLIDER_RADIUS = 0.3;
  */
 export const CHARACTER_FADE = { start: 2.1, end: 1.15 } as const;
 
-
 /**
  * 달릴 때 카메라가 진행 방향 뒤로 돌아오는 정도.
  *

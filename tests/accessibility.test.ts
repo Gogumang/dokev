@@ -3,12 +3,21 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  DISTRICT_BANNER_SECONDS,
-  UNLOCK_NOTICE_SECONDS,
-} from "@/components/hud/Notices";
+import { HUD_FOCUS } from "@/game/systems/hudFocus";
 
 import { collectSources, readCode } from "./support/source";
+
+/**
+ * 함수 하나의 본문만 잘라 낸다.
+ *
+ * 「앞에서부터 N자」로 자르면 주석을 늘렸다는 이유로 검사가 깨진다 — 규칙이
+ * 아니라 글자 수를 재게 된다.
+ */
+function section(text: string, header: string): string {
+  const start = text.indexOf(header);
+  const next = text.indexOf("\nexport function", start + header.length);
+  return next === -1 ? text.slice(start) : text.slice(start, next);
+}
 
 /** 화면을 그리는 소스 전부 */
 function sourceFiles(): string[] {
@@ -158,24 +167,20 @@ describe("캔버스", () => {
      * 어느 쪽인지도 없었다. 위 검사는 「대체 텍스트가 있는가」만 보므로
      * 고정 문자열로도 통과한다.
      *
-     * 지도 캔버스는 **손으로 적지 않고** 찾는다: 대장 자리를 찍으려면
-     * `BOSS_HOME`을 가져와야 한다. 지도가 하나 더 생겨도 같은 규칙을 받는다.
+     * 지도 화면은 **손으로 적지 않고** 찾는다: 내용을 글로 내려면
+     * `describeMap`을 불러야 한다. 지도가 하나 더 생겨도 같은 규칙을 받는다.
+     *
+     * 전에는 「캔버스가 있고 지도 변환을 가져오는 파일」로 찾았다. 칠하는 일을
+     * 떼어 내자 캔버스와 문장이 다른 파일로 갈라졌고, 검사는 지도 하나를
+     * 놓쳤다 — 표시로 삼은 것이 지도의 성질이 아니라 그때의 구현이었다.
      */
-    const maps = sources.filter(
-      (file) => file.text.includes("<canvas") && file.text.includes("BOSS_HOME"),
-    );
-    expect(maps.length, `찾은 지도 캔버스 ${maps.length}개`).toBeGreaterThan(1);
-
-    const silent = maps
-      .filter((file) => !file.text.includes("describeMap("))
-      .map((file) => file.path);
-    expect(silent, `이름만 대는 지도: ${silent.join(", ")}`).toEqual([]);
+    const maps = sources.filter((file) => file.text.includes("describeMap("));
+    expect(maps.length, `찾은 지도 화면 ${maps.length}개`).toBeGreaterThan(1);
 
     /*
      * 만들기만 하고 화면에 안 내보내면 없는 것과 같다. 내는 방법은 둘 다
      * 옳다 — 큰 지도는 **눈에 보이는 글**로(그쪽이 더 낫다), 미니맵은
-     * 계산된 `aria-label`로 낸다. 처음엔 `aria-label`만 요구했다가 큰
-     * 지도를 결함으로 잡았다.
+     * 계산된 `aria-label`로 낸다.
      */
     const unused = maps
       .filter((file) => !/aria-label=\{|\{summary\}/.test(file.text))
@@ -198,7 +203,10 @@ describe("상태 알림", () => {
      * `role="status"`를 쓰는 곳을 **전부** 찾아 짝을 맞춘다 — 화면 조각이
      * 어떻게 나뉘든 규칙은 같다.
      */
-    const speaking = [...sources, ...collectSources("src/app").map((path) => ({ path, text: readCode(path) }))]
+    const speaking = [
+      ...sources,
+      ...collectSources("src/app").map((path) => ({ path, text: readCode(path) })),
+    ]
       .map((file) => ({
         path: file.path,
         status: (file.text.match(/role="status"/g) ?? []).length,
@@ -224,7 +232,8 @@ describe("장식 요소", () => {
     for (const { path, text } of sources) {
       const decorative = (text.match(/aria-hidden="true"/g) ?? []).length;
       // 지도·도감처럼 색으로 정보를 주는 화면에는 반드시 하나 이상 있다
-      if (path.endsWith("Codex.tsx") || path.endsWith("CityMap.tsx")) {
+      // 도감의 색 점은 항목 카드로 내려갔다 — 「색으로 정보를 주는 화면」은 그쪽이다
+      if (path.endsWith("CodexEntry.tsx") || path.endsWith("CityMapLegend.tsx")) {
         expect(decorative, `${path} has no aria-hidden decoration`).toBeGreaterThan(0);
       }
     }
@@ -293,11 +302,11 @@ describe("열린 패널에서 빠져나올 수 있는가", () => {
    * 브라우저에서 확인했다: 페이지 안에서 Escape를 보내면 도감이 닫힌다.
    * (자동화 도구의 특수 키는 페이지에 닿지 않아 그 경로로는 검증이 안 됐다.)
    */
-  const hud = readFileSync("src/components/hud/WorldHud.tsx", "utf8");
+  const hud = readFileSync("src/components/hud/useHudPanels.ts", "utf8");
 
   it("Escape로 패널을 닫는다", () => {
-    expect(hud, "Escape 처리가 없다").toContain('event.code !== "Escape"');
-    expect(hud).toContain("setCodexOpen(false)");
+    expect(hud, "Escape 처리가 없다").toContain('event.code === "Escape"');
+    expect(hud, "닫는 길이 없다").toContain("setCodexOpen(false)");
     expect(hud).toContain("setMapOpen(false)");
   });
 
@@ -310,7 +319,7 @@ describe("열린 패널에서 빠져나올 수 있는가", () => {
   });
 
   it("리스너를 뗀다", () => {
-    const at = hud.indexOf('event.code !== "Escape"');
+    const at = hud.indexOf('event.code === "Escape"');
     const around = hud.slice(at, at + 500);
     expect(around, "keydown 리스너가 남는다").toContain("removeEventListener");
   });
@@ -441,10 +450,10 @@ describe("낭독기가 쉼 없이 떠들지 않는가", () => {
      *
      * 세는 동안에는 `off`, 뽑을 수 있게 된 순간에만 `polite`가 맞다.
      */
-    const hud = readCode("src/components/hud/WorldHud.tsx");
-    const prompt = hud.slice(hud.indexOf("function VendingPrompt"));
-    expect(prompt.slice(0, 1600), "세는 동안에도 계속 읽는다").toContain(
-      'aria-live={view.remaining > 0 ? "off" : "polite"}',
+    const prompts = readCode("src/components/hud/views/Prompts.tsx");
+    const prompt = section(prompts, "export function VendingPrompt");
+    expect(prompt, "세는 동안에도 계속 읽는다").toContain(
+      'aria-live={view.remaining !== null ? "off" : "polite"}',
     );
   });
 
@@ -453,9 +462,14 @@ describe("낭독기가 쉼 없이 떠들지 않는가", () => {
      * 체력·성능처럼 매 순간 변하는 값은 `aria-live="off"`여야 한다.
      * 켜 두면 게임 내내 숫자가 읽힌다.
      */
-    const panels = readFileSync("src/components/hud/StatusPanels.tsx", "utf8");
-    const health = panels.slice(panels.indexOf("export function HealthPanel"));
-    expect(health.slice(0, 1200), "체력 표시가 계속 읽힌다").toContain('aria-live="off"');
+    /*
+     * 함수 하나만 잘라 본다. 앞에서부터 1,200자를 보고 있었는데, 주석과 표시
+     * 조건이 늘자 `aria-live`가 그 창 밖으로 밀려 **고친 적 없는 규칙이
+     * 깨졌다고** 나왔다 — 글자 수는 규칙이 아니다.
+     */
+    const panels = readFileSync("src/components/hud/views/HealthPanel.tsx", "utf8");
+    const health = section(panels, "export function HealthPanel");
+    expect(health, "체력 표시가 계속 읽힌다").toContain('aria-live="off"');
   });
 });
 
@@ -514,7 +528,7 @@ describe("패널을 여는 버튼이 상태를 알리는가", () => {
    * 역할도 달랐다. `aria-pressed`는 "눌린 상태"이고, 패널을 여는 버튼은
    * `aria-expanded` + `aria-haspopup="dialog"`가 맞다.
    */
-  const hud = readFileSync("src/components/hud/WorldHud.tsx", "utf8");
+  const hud = readFileSync("src/components/hud/useHudPanels.ts", "utf8");
   const button = readFileSync("src/components/hud/HudButton.tsx", "utf8");
 
   it("이름이 지금 상태를 말한다", () => {
@@ -540,7 +554,7 @@ describe("패널을 여는 버튼이 상태를 알리는가", () => {
 
   it("펼침 상태를 알린다", () => {
     expect(button).toContain("aria-expanded={expanded}");
-    expect(button, "대화상자를 연다는 것을 알리지 않는다").toContain('aria-haspopup');
+    expect(button, "대화상자를 연다는 것을 알리지 않는다").toContain("aria-haspopup");
   });
 
   it("눌림과 펼침을 함께 쓰지 않는다", () => {
@@ -587,7 +601,10 @@ describe("화면에 제목이 있는가", () => {
      * 도감·지도는 h2다. 화면에 h1이 없으면 계층이 h2에서 시작한다 —
      * 훑어 내려가는 사람에게는 한 단계가 통째로 빠진 것으로 보인다.
      */
-    for (const path of ["src/components/hud/Codex.tsx", "src/components/hud/CityMap.tsx"]) {
+    for (const path of [
+      "src/components/hud/CodexEntry.tsx",
+      "src/components/hud/CityMapLegend.tsx",
+    ]) {
       const source = readFileSync(path, "utf8");
       if (!source.includes("<h2")) continue;
       const client = readFileSync("src/app/play/PlayClient.tsx", "utf8");
@@ -775,23 +792,25 @@ describe("스스로 사라지는 안내가 읽을 시간을 주는가", () => {
   it("두 안내 모두 읽을 만큼 머문다", () => {
     // 한글 한 줄을 읽는 데 최소 이 정도는 걸린다. 아래로 내려가면 못 읽는다
     const MIN_READABLE_SECONDS = 1.5;
-    expect(DISTRICT_BANNER_SECONDS, `구역 배너 ${DISTRICT_BANNER_SECONDS}초`).toBeGreaterThan(
-      MIN_READABLE_SECONDS,
-    );
-    expect(UNLOCK_NOTICE_SECONDS, `해금 알림 ${UNLOCK_NOTICE_SECONDS}초`).toBeGreaterThan(
-      MIN_READABLE_SECONDS,
-    );
+    expect(
+      HUD_FOCUS.districtBannerSeconds,
+      `구역 배너 ${HUD_FOCUS.districtBannerSeconds}초`,
+    ).toBeGreaterThan(MIN_READABLE_SECONDS);
+    expect(
+      HUD_FOCUS.unlockNoticeSeconds,
+      `해금 알림 ${HUD_FOCUS.unlockNoticeSeconds}초`,
+    ).toBeGreaterThan(MIN_READABLE_SECONDS);
   });
 
   it("계속 떠 있지는 않는다 — 화면을 가리면 도시가 안 보인다", () => {
-    expect(DISTRICT_BANNER_SECONDS).toBeLessThan(10);
-    expect(UNLOCK_NOTICE_SECONDS).toBeLessThan(10);
+    expect(HUD_FOCUS.districtBannerSeconds).toBeLessThan(10);
+    expect(HUD_FOCUS.unlockNoticeSeconds).toBeLessThan(10);
   });
 
   it("해금 알림이 구역 배너보다 오래 머문다 — 처음 보는 이름이다", () => {
     expect(
-      UNLOCK_NOTICE_SECONDS,
-      `해금 ${UNLOCK_NOTICE_SECONDS}초 vs 구역 ${DISTRICT_BANNER_SECONDS}초`,
-    ).toBeGreaterThan(DISTRICT_BANNER_SECONDS);
+      HUD_FOCUS.unlockNoticeSeconds,
+      `해금 ${HUD_FOCUS.unlockNoticeSeconds}초 vs 구역 ${HUD_FOCUS.districtBannerSeconds}초`,
+    ).toBeGreaterThan(HUD_FOCUS.districtBannerSeconds);
   });
 });

@@ -156,6 +156,14 @@ describe("레이어 방향", () => {
        * 지킨다: 여기 예외가 두 개가 되는 날이 카메라 계산이 새는 날이다.
        */
       "src/game/scene/cameraFrame.ts",
+      /*
+       * GLB를 이 도시의 룩으로 갈아입힌다 — 툰 재질을 만들고, 셰이더에 손을
+       * 넣고, 외곽선 껍데기를 복제한다. 전부 렌더러가 있어야 뜻이 있는 일이다.
+       *
+       * 캐릭터 안에만 있던 것을 뺐다. 대장도 GLB가 되면서 두 벌이 될 참이었고,
+       * 그러면 한쪽만 고쳐져 대장만 매끈해지는 날이 온다.
+       */
+      "src/game/scene/toonModel.ts",
     ];
 
     const pureDirs = collectSources("src/game")
@@ -171,7 +179,9 @@ describe("레이어 방향", () => {
 
     for (const file of pureDirs) {
       expect(existsSync(file), `${file} not found — 목록이 낡았다`).toBe(true);
-      const three = importsOf(file).filter((spec) => spec === "three" || spec.startsWith("@react-three"));
+      const three = importsOf(file).filter(
+        (spec) => spec === "three" || spec.startsWith("@react-three"),
+      );
       expect(three, `${file} imports ${three.join(", ")}`).toEqual([]);
     }
   });

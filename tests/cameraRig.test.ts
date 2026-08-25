@@ -55,7 +55,9 @@ describe("followDistance", () => {
   it("저감 모션에서도 거리가 있다", () => {
     // 0이면 카메라가 머리 안에 들어간다
     // 제품이 쓰는 모양 그대로 겹쳐서 잰다 — 저감 값은 CAMERA 위에 얹힌다
-    expect(followDistance({ ...CAMERA, ...CAMERA_REDUCED }, 0, false, 0, 0, 0, false)).toBeGreaterThan(1);
+    expect(
+      followDistance({ ...CAMERA, ...CAMERA_REDUCED }, 0, false, 0, 0, 0, false),
+    ).toBeGreaterThan(1);
   });
 });
 
@@ -346,7 +348,19 @@ describe("combatPressure", () => {
      * 미니맵 버퍼는 고정 길이라 **죽은 적의 좌표가 뒤에 남는다.** 개수를 무시하면
      * 아무도 없는 자리에서 카메라가 계속 물러난다.
      */
-    expect(combatPressure(blipsOf([[1, 1], [2, 2]]), 0, 0, 0, false, 14)).toBe(0);
+    expect(
+      combatPressure(
+        blipsOf([
+          [1, 1],
+          [2, 2],
+        ]),
+        0,
+        0,
+        0,
+        false,
+        14,
+      ),
+    ).toBe(0);
   });
 
   it("대장과 맞붙으면 최대다 — 대장은 미니맵 점에 없다", () => {
@@ -425,7 +439,9 @@ describe("높은 데 서면", () => {
     const crestGround = 6.4;
     const eye = crestGround + followHeight(CAMERA, 0, 0, crestGround, false);
     const flatEye = followHeight(CAMERA, 0, 0, 0, false);
-    expect(eye, `마루 눈높이 ${eye.toFixed(2)} vs 수면 ${SEA_LEVEL}`).toBeGreaterThan(SEA_LEVEL + 10);
+    expect(eye, `마루 눈높이 ${eye.toFixed(2)} vs 수면 ${SEA_LEVEL}`).toBeGreaterThan(
+      SEA_LEVEL + 10,
+    );
     expect(eye - flatEye, `평지 대비 ${(eye - flatEye).toFixed(2)}m`).toBeGreaterThan(crestGround);
   });
 });

@@ -64,9 +64,10 @@ describe("연못", () => {
       }
 
       const drop = highest - lowest;
-      expect(pond.sink ?? 0, `연못 자리 높이차 ${drop.toFixed(2)}m, 파묻기 ${pond.sink}m`).toBeGreaterThan(
-        drop,
-      );
+      expect(
+        pond.sink ?? 0,
+        `연못 자리 높이차 ${drop.toFixed(2)}m, 파묻기 ${pond.sink}m`,
+      ).toBeGreaterThan(drop);
     }
   });
 });
@@ -98,14 +99,22 @@ describe("놀이터", () => {
             Math.abs((box.minX + box.maxX) / 2 - post.x) < 0.01 &&
             Math.abs((box.minZ + box.maxZ) / 2 - post.z) < 0.01,
         );
-        expect(collider, `기둥 (${post.x.toFixed(1)}, ${post.z.toFixed(1)})에 충돌체가 없다`).toBeDefined();
+        expect(
+          collider,
+          `기둥 (${post.x.toFixed(1)}, ${post.z.toFixed(1)})에 충돌체가 없다`,
+        ).toBeDefined();
       }
     }
   });
 
   it("놀이기구가 구역 안에 머문다", () => {
     const half = CITY.blockSize / 2;
-    for (const piece of [...layout.playground, ...layout.pondWater, ...layout.pondRim, ...layout.parkPaths]) {
+    for (const piece of [
+      ...layout.playground,
+      ...layout.pondWater,
+      ...layout.pondRim,
+      ...layout.parkPaths,
+    ]) {
       const { cx, cz } = blockCenter(piece.blockIndex);
       expect(Math.abs(piece.x - cx), `x ${piece.x}`).toBeLessThan(half);
       expect(Math.abs(piece.z - cz), `z ${piece.z}`).toBeLessThan(half);

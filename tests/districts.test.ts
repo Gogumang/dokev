@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { buildCityLayout, BUILDING_TONE_COUNT, CITY, blockCenter } from "@/game/world/cityLayout";
-import { districtAt, districtForBlock, DISTRICTS, zoneAt, type DistrictId } from "@/game/world/districts";
+import {
+  districtAt,
+  districtForBlock,
+  DISTRICTS,
+  zoneAt,
+  type DistrictId,
+} from "@/game/world/districts";
 import { BLOCK_COUNT } from "@/game/world/streaming";
 import { ZONE_GRID_SIZE, ZONE_MAP, ZONES, zoneForBlock, type ZoneId } from "@/game/world/zones";
 
@@ -112,9 +118,10 @@ describe("방향마다 다른 것이 나온다", () => {
 
     // 네 방향이 서로 다른 곳에 닿아야 "방향마다 다르다"가 성립한다
     const ids = [...reached.values()];
-    expect(new Set(ids).size, `닿은 곳: ${[...reached].map(([k, v]) => `${k}=${v}`).join(", ")}`).toBe(
-      ids.length,
-    );
+    expect(
+      new Set(ids).size,
+      `닿은 곳: ${[...reached].map(([k, v]) => `${k}=${v}`).join(", ")}`,
+    ).toBe(ids.length);
   });
 });
 
@@ -159,7 +166,9 @@ describe("zoneAt / districtAt", () => {
     const { cz } = blockCenter(CITY.plazaBlockIndex);
     const outsideWest = -pitch * CITY.gridSize;
 
-    expect(zoneAt(outsideWest, cz).id).toBe(ZONE_MAP[Math.floor(CITY.plazaBlockIndex / CITY.gridSize) * CITY.gridSize]);
+    expect(zoneAt(outsideWest, cz).id).toBe(
+      ZONE_MAP[Math.floor(CITY.plazaBlockIndex / CITY.gridSize) * CITY.gridSize],
+    );
   });
 
   it("이름표가 지도와 같은 성격을 돌려준다", () => {

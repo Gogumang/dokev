@@ -58,7 +58,7 @@ export const FIRST_RUN_QUEST: Quest = {
     {
       id: "fight",
       title: "말썽 부리는 장난감 로봇 멈추기",
-      hint: "가까이 가서 J로 두 번 때리면 넘어집니다",
+      hint: "J로 활을 쏘세요. 한 발이면 넘어집니다",
       objective: { kind: "defeat", count: 3 },
     },
     {

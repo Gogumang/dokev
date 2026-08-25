@@ -72,8 +72,6 @@ const SHORE_COUNT = 2;
 /** 부두 옆으로 벌려 대는 간격(m) */
 const SHORE_PITCH = 2.6;
 
-
-
 /** 줄지어 선 간격(m) */
 const ROW_PITCH = 0.75;
 
@@ -199,7 +197,10 @@ export function buildVehicleStands(halfExtent: number): VehicleStand[] {
 type PartTone = "metal" | "frame" | "coat";
 
 /** 세워 둔 탈것 한 대가 차지하는 상자들. 종류마다 다르다 */
-const PARKED: Record<number, readonly { dx: number; dy: number; dz: number; w: number; h: number; d: number; tone: PartTone }[]> = {
+const PARKED: Record<
+  number,
+  readonly { dx: number; dy: number; dz: number; w: number; h: number; d: number; tone: PartTone }[]
+> = {
   // 킥보드 — 낮은 발판에 기둥 하나, 그 위 손잡이
   0: [
     { dx: 0, dy: 0.09, dz: -0.05, w: 0.2, h: 0.05, d: 0.8, tone: "frame" },
@@ -287,9 +288,8 @@ export function buildStandBoxes(
          * 인도 높이를 그대로 쓰면 언덕에 선 조랑말이 땅에 묻히거나 뜬다.
          */
         y:
-          (isUrbanBlock(stand.blockIndex)
-            ? CITY.sidewalkHeight
-            : terrainHeight(stand.x, stand.z)) + part.dy,
+          (isUrbanBlock(stand.blockIndex) ? CITY.sidewalkHeight : terrainHeight(stand.x, stand.z)) +
+          part.dy,
         z: stand.z - part.dx * sin + part.dz * cos,
         // 돌린 각도가 90도의 배수라 폭·깊이도 함께 바꿔 준다
         width: Math.abs(cos) > 0.5 ? part.w : part.d,

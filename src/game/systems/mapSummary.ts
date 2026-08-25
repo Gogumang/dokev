@@ -36,6 +36,14 @@ export interface MapSummaryInput {
   targetZ?: number;
   bossX: number;
   bossZ: number;
+  /**
+   * 대장이 누워 있는지.
+   *
+   * 지도는 이때 표식을 지운다. 글에만 남으면 **그림에 없는 것을 말하는** 셈이라,
+   * 눈으로 못 보는 사람만 없는 대장을 찾아 나선다 — 도깨비 자리·흔적에서 겪은
+   * 누락의 반대쪽이다.
+   */
+  bossDown?: boolean;
   /** 지도에 찍힌 고물 로봇 수 */
   enemyCount: number;
   /**
@@ -118,7 +126,9 @@ export function describeMap(input: MapSummaryInput): string {
     );
   }
 
-  parts.push(`고물 대장은 ${bearing(input.x, input.z, input.bossX, input.bossZ)}.`);
+  if (!input.bossDown) {
+    parts.push(`고물 대장은 ${bearing(input.x, input.z, input.bossX, input.bossZ)}.`);
+  }
 
   parts.push(
     input.enemyCount > 0 ? `주변에 고물 로봇 ${input.enemyCount}기.` : "주변에 고물 로봇이 없다.",

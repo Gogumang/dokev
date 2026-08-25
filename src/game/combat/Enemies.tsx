@@ -22,9 +22,34 @@ import { useFrame } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { COMBAT_TUNING, createAttackState, createEnemies, markFired, readyToFire, resolveHits, stepAttack, stepEnemy, stepEnemyStrike, strikeEnemy, strikeWindupProgress, type AttackState, type EnemyState } from "@/game/combat/combatSim";
-import { createPlayerCombat, stepPlayerCombat, type PlayerCombatState } from "@/game/combat/playerCombat";
-import { consumeAttack, consumeSlam, consumeSummonHeal, projectAttackTiming, projectPlayerVitals, recordEnemyHits } from "@/game/combat/combatLink";
+import {
+  COMBAT_TUNING,
+  createAttackState,
+  createEnemies,
+  markFired,
+  readyToFire,
+  resolveHits,
+  stepAttack,
+  stepEnemy,
+  stepEnemyStrike,
+  strikeEnemy,
+  strikeWindupProgress,
+  type AttackState,
+  type EnemyState,
+} from "@/game/combat/combatSim";
+import {
+  createPlayerCombat,
+  stepPlayerCombat,
+  type PlayerCombatState,
+} from "@/game/combat/playerCombat";
+import {
+  consumeAttack,
+  consumeSlam,
+  consumeSummonHeal,
+  projectAttackTiming,
+  projectPlayerVitals,
+  recordEnemyHits,
+} from "@/game/combat/combatLink";
 import {
   fireProjectile,
   fireWeaponBolt,
@@ -37,6 +62,8 @@ import {
   type Projectile,
 } from "@/game/combat/projectiles";
 import { ENEMY_BODY } from "@/game/combat/enemyBody";
+import { trailInstanceCount } from "@/game/combat/arrowTrail";
+import { paintArrowTrails, paintPlayerBolts } from "@/game/combat/arrowTrailPaint";
 import {
   createEmbers,
   EMBER,
@@ -252,6 +279,7 @@ export function Enemies({
   const boltRef = useRef<THREE.InstancedMesh>(null);
   /** 내가 쏜 탄. 적 탄과 색을 갈라야 어느 것을 피해야 하는지 한눈에 보인다 */
   const playerBoltRef = useRef<THREE.InstancedMesh>(null);
+  const trailRef = useRef<THREE.InstancedMesh>(null);
   /** 로봇 가슴의 점과, 쓰러질 때 빠져나간 빛 */
   const coreRef = useRef<THREE.InstancedMesh>(null);
   const emberRef = useRef<THREE.InstancedMesh>(null);
@@ -332,13 +360,22 @@ export function Enemies({
 
   const geometry = useMemo(
     () => ({
-      body: new THREE.BoxGeometry(ENEMY_BODY.bodyWidth, ENEMY_BODY.bodyHeight, ENEMY_BODY.bodyDepth),
-      head: new THREE.BoxGeometry(ENEMY_BODY.headWidth, ENEMY_BODY.headHeight, ENEMY_BODY.headDepth),
+      body: new THREE.BoxGeometry(
+        ENEMY_BODY.bodyWidth,
+        ENEMY_BODY.bodyHeight,
+        ENEMY_BODY.bodyDepth,
+      ),
+      head: new THREE.BoxGeometry(
+        ENEMY_BODY.headWidth,
+        ENEMY_BODY.headHeight,
+        ENEMY_BODY.headDepth,
+      ),
       arm: new THREE.BoxGeometry(ENEMY_BODY.armWidth, ENEMY_BODY.armHeight, ENEMY_BODY.armDepth),
       confetti: new THREE.PlaneGeometry(ENEMY_BODY.confettiSize, ENEMY_BODY.confettiSize),
       // 8면체는 구보다 훨씬 싸고, 이 크기에서는 구분되지 않는다.
       bolt: new THREE.OctahedronGeometry(ENEMY_BODY.boltRadius, 0),
       core: new THREE.SphereGeometry(ENEMY_BODY.coreRadius, 8, 6),
+      trail: new THREE.OctahedronGeometry(ENEMY_BODY.boltRadius, 0),
     }),
     [],
   );
@@ -356,7 +393,6 @@ export function Enemies({
       for (const item of created) item.dispose();
     };
   }, [geometry]);
-
 
   const burst = (x: number, y: number, z: number) => {
     for (let i = 0; i < PARTICLES_PER_HIT; i += 1) {
@@ -410,7 +446,11 @@ export function Enemies({
      * 판정이 **켜지는 프레임에** 한 발 나간다. 「판정이 살아 있으면 쏜다」로
      * 두면 0.05초 동안 프레임 수만큼 쏟아져 딱총이 기관총이 된다.
      */
-    if (weapon.bolt !== null && attack.current.phase === "active" && lastPhase.current !== "active") {
+    if (
+      weapon.bolt !== null &&
+      attack.current.phase === "active" &&
+      lastPhase.current !== "active"
+    ) {
       playerBolts.current = fireWeaponBolt(
         playerBolts.current,
         px,
@@ -471,7 +511,8 @@ export function Enemies({
         else targets.push({ x: enemy.x, z: enemy.z, radius: ENEMY_BODY.bodyWidth });
       }
       const bossIndex = targets.length;
-      if (link.bossHittable) targets.push({ x: link.bossX, z: link.bossZ, radius: BOSS_HIT_RADIUS });
+      if (link.bossHittable)
+        targets.push({ x: link.bossX, z: link.bossZ, radius: BOSS_HIT_RADIUS });
 
       const shots = stepPlayerBolts(playerBolts.current, dt, targets, isBlocked);
       playerBolts.current = shots.bolts;
@@ -619,26 +660,9 @@ export function Enemies({
       boltMesh.computeBoundingSphere();
     }
 
-    const myBoltMesh = playerBoltRef.current;
-    if (myBoltMesh) {
-      for (let i = 0; i < PLAYER_BOLT_MAX; i += 1) {
-        const bolt = playerBolts.current[i];
-        if (bolt) {
-          scratch.position.set(bolt.x, bolt.y, bolt.z);
-          scratch.euler.set(bolt.life * 14, Math.atan2(bolt.vx, bolt.vz), 0, "YXZ");
-          scratch.quaternion.setFromEuler(scratch.euler);
-          scratch.scale.set(0.8, 0.8, 1.4);
-        } else {
-          scratch.position.set(0, -999, 0);
-          scratch.quaternion.identity();
-          scratch.scale.set(0, 0, 0);
-        }
-        scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
-        myBoltMesh.setMatrixAt(i, scratch.matrix);
-      }
-      myBoltMesh.instanceMatrix.needsUpdate = true;
-      myBoltMesh.computeBoundingSphere();
-    }
+    paintArrowTrails(trailRef.current, playerBolts.current, scratch, reducedMotion);
+
+    paintPlayerBolts(playerBoltRef.current, playerBolts.current, scratch);
 
     /* ---------------- 빠져나간 빛 ---------------- */
     stepEmbers(embers.current, dt);
@@ -718,6 +742,13 @@ export function Enemies({
       */}
       <instancedMesh ref={playerBoltRef} args={[geometry.bolt, undefined, PLAYER_BOLT_MAX]}>
         <meshBasicMaterial color={PLAYER_BOLT_COLOR} toneMapped={false} />
+      </instancedMesh>
+      {/* 화살 자국 — 스스로 빛나고, 깊이를 안 적는다(마디끼리 겹칠 때 깜빡인다) */}
+      <instancedMesh
+        ref={trailRef}
+        args={[geometry.trail, undefined, trailInstanceCount(PLAYER_BOLT_MAX)]}
+      >
+        <meshBasicMaterial transparent depthWrite={false} toneMapped={false} />
       </instancedMesh>
       {/*
         가슴의 점. 로봇이 서 있는 동안 늘 보이고, 쓰러지면 아래 빛으로 빠져나간다.

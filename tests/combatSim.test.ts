@@ -3,10 +3,36 @@ import { readCode } from "./support/source";
 
 import { describe, expect, it } from "vitest";
 
-import { type AttackState, COMBAT_TUNING, createAttackState, createEnemies, ENEMY_STRIKE, type EnemyState, isAttackActive, isInAttackArc, resolveHits, stepAttack, stepEnemy } from "@/game/combat/combatSim";
-import { createPlayerCombat, isPlayerVulnerable, PLAYER_COMBAT, stepPlayerCombat } from "@/game/combat/playerCombat";
+import {
+  type AttackState,
+  COMBAT_TUNING,
+  createAttackState,
+  createEnemies,
+  ENEMY_STRIKE,
+  type EnemyState,
+  isAttackActive,
+  isInAttackArc,
+  resolveHits,
+  stepAttack,
+  stepEnemy,
+} from "@/game/combat/combatSim";
+import {
+  createPlayerCombat,
+  isPlayerVulnerable,
+  PLAYER_COMBAT,
+  stepPlayerCombat,
+} from "@/game/combat/playerCombat";
 import { WEAPONS } from "@/game/combat/weapons";
-import { consumeAttack, consumeRespawn, consumeSlam, projectAttackTiming, projectPlayerVitals, recordEnemyHits, type CombatSignals, type EnemyHitLink } from "@/game/combat/combatLink";
+import {
+  consumeAttack,
+  consumeRespawn,
+  consumeSlam,
+  projectAttackTiming,
+  projectPlayerVitals,
+  recordEnemyHits,
+  type CombatSignals,
+  type EnemyHitLink,
+} from "@/game/combat/combatLink";
 
 const FRAME = 1 / 60;
 
@@ -388,7 +414,13 @@ describe("stepPlayerCombat", () => {
 
   it("쓰러져 있는 동안에는 더 맞지 않는다", () => {
     const state = { ...createPlayerCombat(), hp: 0, downed: true, respawnRemaining: 1 };
-    const result = stepPlayerCombat(state, [makeEnemy({ x: 0, z: 1, mood: "chase", strikePhase: "active" })], 0, 0, FRAME);
+    const result = stepPlayerCombat(
+      state,
+      [makeEnemy({ x: 0, z: 1, mood: "chase", strikePhase: "active" })],
+      0,
+      0,
+      FRAME,
+    );
     expect(result.struck).toBe(false);
   });
 
@@ -595,18 +627,21 @@ describe("화면의 하트 수가 실제 체력과 같은가", () => {
    * 값을 박지 않는다. **하트를 그리는 수가 `maxHp`에서 오는지**만 본다 —
    * 체력을 바꾸면 화면도 함께 바뀌어야 한다.
    */
+  /*
+   * 규칙과 모양이 나뉘고 나서 이 길은 두 걸음이 됐다: 잇는 쪽이 정본에서
+   * 최대 체력을 읽어 넘기고, 모양 쪽이 **받은 수만큼** 그린다. 둘 다 본다 —
+   * 한쪽만 보면 나머지에서 수가 갈려도 통과한다.
+   */
   const panels = readCode("src/components/hud/StatusPanels.tsx");
+  const view = readCode("src/components/hud/views/HealthPanel.tsx");
 
   it("하트를 그리는 수가 정본에서 온다", () => {
-    expect(panels, "하트 수를 박아 두었다").toMatch(/const total = PLAYER_COMBAT\.maxHp;/);
+    expect(panels, "하트 수를 박아 두었다").toContain("PLAYER_COMBAT.maxHp");
   });
 
   it("그 수로 실제로 그린다", () => {
     // 값만 읽고 다른 수로 그리면 소용이 없다
-    const at = panels.indexOf("const total = PLAYER_COMBAT.maxHp;");
-    // 창을 넉넉히 잡는다 — 400자로 잘랐더니 렌더 줄이 들어오지 않아 헛짚었다
-    const after = panels.slice(at, at + 900);
-    expect(after, "읽어 놓고 그리지 않는다").toMatch(/Array\.from\(\{ length: total \}/);
+    expect(view, "읽어 놓고 그리지 않는다").toMatch(/Array\.from\(\{ length: view\.total \}/);
   });
 
   it("체력을 숫자로 박아 둔 곳이 없다", () => {
@@ -642,22 +677,14 @@ describe("적이 정해진 시간만큼 그 상태에 머무는가", () => {
   }
 
   it("쓰러진 적은 정해진 시간을 채우고 일어난다 — 곧바로 서면 정리한 감각이 없다", () => {
-    const held = dwell(
-      makeEnemy({ mood: "down", hp: 0, timer: COMBAT_TUNING.downSeconds }),
-      0,
-      1,
-    );
+    const held = dwell(makeEnemy({ mood: "down", hp: 0, timer: COMBAT_TUNING.downSeconds }), 0, 1);
     expect(held, `기상까지 ${held}초 (기대 ${COMBAT_TUNING.downSeconds}초)`).toBeGreaterThan(
       COMBAT_TUNING.downSeconds * 0.8,
     );
   });
 
   it("맞은 경직도 시간을 채운다 — 없으면 때린 손맛이 사라진다", () => {
-    const held = dwell(
-      makeEnemy({ mood: "hit", timer: COMBAT_TUNING.hitStunSeconds }),
-      0,
-      1,
-    );
+    const held = dwell(makeEnemy({ mood: "hit", timer: COMBAT_TUNING.hitStunSeconds }), 0, 1);
     expect(held, `경직 ${held}초 (기대 ${COMBAT_TUNING.hitStunSeconds}초)`).toBeGreaterThan(
       COMBAT_TUNING.hitStunSeconds * 0.8,
     );
@@ -929,7 +956,14 @@ describe("벽을 따라 미끄러지는가", () => {
 
   it("모서리에 몰리면 제자리다 — 뚫고 나가지 않는다", () => {
     const corner = (x: number, z: number) => x > 4 || z > 4;
-    const pushed = makeEnemy({ x: 3.9, z: 3.9, mood: "hit", timer: 1, velocityX: 20, velocityZ: 20 });
+    const pushed = makeEnemy({
+      x: 3.9,
+      z: 3.9,
+      mood: "hit",
+      timer: 1,
+      velocityX: 20,
+      velocityZ: 20,
+    });
     const after = stepEnemy(pushed, 0, 0, FRAME, 1, corner);
 
     expect(after.x, `모서리를 뚫었다: x=${after.x}`).toBeLessThanOrEqual(4);
@@ -993,7 +1027,13 @@ describe("한 대 맞았다고 쓰러지지는 않는가", () => {
     // 「한 대에 다 깎인다」와 「안 깎인다」 사이를 구분한다
     const full = createPlayerCombat().hp;
     const once = stepPlayerCombat(createPlayerCombat(), NEARBY, 0, 0, FRAME).state;
-    const twice = stepPlayerCombat({ ...once, invulnerableRemaining: 0 }, NEARBY, 0, 0, FRAME).state;
+    const twice = stepPlayerCombat(
+      { ...once, invulnerableRemaining: 0 },
+      NEARBY,
+      0,
+      0,
+      FRAME,
+    ).state;
 
     expect(once.hp, `한 대 뒤 ${once.hp} / 처음 ${full}`).toBeLessThan(full);
     expect(twice.hp, `두 대 뒤 ${twice.hp} / 한 대 뒤 ${once.hp}`).toBeLessThan(once.hp);

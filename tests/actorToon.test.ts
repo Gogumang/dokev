@@ -19,10 +19,7 @@ const sources = collectSources("src/game").filter((path) => path.endsWith(".tsx"
 describe("음영이 한 계열인가", () => {
   it("Lambert가 남아 있지 않다", () => {
     const offenders = sources.filter((path) => readCode(path).includes("meshLambertMaterial"));
-    expect(
-      offenders,
-      `Lambert가 남은 파일:\n${offenders.join("\n")}`,
-    ).toEqual([]);
+    expect(offenders, `Lambert가 남은 파일:\n${offenders.join("\n")}`).toEqual([]);
   });
 
   it("조명을 받는 액터가 공용 툰 재질을 쓴다", () => {
@@ -57,8 +54,13 @@ describe("음영이 한 계열인가", () => {
   });
 });
 
-describe("GLB 캐릭터", () => {
-  const model = readFileSync("src/game/player/CharacterModel.tsx", "utf8");
+describe("GLB 액터", () => {
+  /*
+   * 툰·림라이트·외곽선은 `toonModel.ts`가 정본이다. 대장도 GLB가 되면서
+   * **두 벌이 될 참**이었고, 그러면 한쪽만 고쳐져 주인공은 셀 셰이딩인데
+   * 대장만 매끈해지는 날이 온다.
+   */
+  const model = readFileSync("src/game/scene/toonModel.ts", "utf8");
 
   it("불러온 재질을 툰으로 갈아 끼운다", () => {
     // 주인공만 PBR로 남으면 화면 한가운데가 다른 게임이 된다

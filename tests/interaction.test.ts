@@ -126,7 +126,10 @@ describe("간판이 보이는 대로 말하는가", () => {
    */
   it("가게 수와 대사 수가 같다", () => {
     const source = readCode("src/game/world/interaction.ts");
-    const lines = source.slice(source.indexOf("const SIGN_LINES"), source.indexOf("];", source.indexOf("const SIGN_LINES")));
+    const lines = source.slice(
+      source.indexOf("const SIGN_LINES"),
+      source.indexOf("];", source.indexOf("const SIGN_LINES")),
+    );
     const count = (lines.match(/^\s*"/gm) ?? []).length;
     expect(count, `대사 ${count}줄, 가게 ${SHOP_BRANDS.length}종`).toBe(SHOP_BRANDS.length);
   });
@@ -137,7 +140,10 @@ describe("간판이 보이는 대로 말하는가", () => {
      * **이름이 실제로 들어 있는지**까지 본다.
      */
     const source = readCode("src/game/world/interaction.ts");
-    const lines = source.slice(source.indexOf("const SIGN_LINES"), source.indexOf("];", source.indexOf("const SIGN_LINES")));
+    const lines = source.slice(
+      source.indexOf("const SIGN_LINES"),
+      source.indexOf("];", source.indexOf("const SIGN_LINES")),
+    );
     const texts = [...lines.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
     SHOP_BRANDS.forEach((brand, index) => {
       expect(texts[index], `${index}번 가게 ${brand.long}의 대사가 다른 가게를 부른다`).toContain(
@@ -151,6 +157,8 @@ describe("간판이 보이는 대로 말하는가", () => {
     const source = readCode("src/game/world/interaction.ts");
     expect(source, "간판 종류를 보지 않는다").toContain("points[index].cell ?? index");
     const rig = readCode("src/game/scene/PlayerRig.tsx");
-    expect(rig, "간판 종류를 넘기지 않는다").toMatch(/signsHorizontal[\s\S]{0,120}cell: sign\.cell/);
+    expect(rig, "간판 종류를 넘기지 않는다").toMatch(
+      /signsHorizontal[\s\S]{0,120}cell: sign\.cell/,
+    );
   });
 });

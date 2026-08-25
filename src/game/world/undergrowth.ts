@@ -74,7 +74,10 @@ const AZALEA_REACH = 1.9;
  * 1,500개다.
  */
 const MIX: Record<string, { perBlock: number; weights: Record<Kind, number> }> = {
-  forest: { perBlock: 60, weights: { bush: 0.5, rock: 0.22, flower: 0.04, dry: 0.18, azalea: 0.06 } },
+  forest: {
+    perBlock: 60,
+    weights: { bush: 0.5, rock: 0.22, flower: 0.04, dry: 0.18, azalea: 0.06 },
+  },
   park: { perBlock: 44, weights: { bush: 0.3, rock: 0.08, flower: 0.34, dry: 0.1, azalea: 0.18 } },
   /*
    * 옛 마을에 가장 많이 둔다.
@@ -83,8 +86,14 @@ const MIX: Record<string, { perBlock: number; weights: Record<Kind, number> }> =
    * **눈높이**에 있다 — 담 아래를 채운 철쭉 무더기다. 이 구역에는 돌담이
    * 있으므로 그 그림이 그대로 나온다.
    */
-  shrine: { perBlock: 30, weights: { bush: 0.12, rock: 0.34, flower: 0.04, dry: 0.22, azalea: 0.28 } },
-  coast: { perBlock: 26, weights: { bush: 0.06, rock: 0.48, flower: 0.02, dry: 0.42, azalea: 0.02 } },
+  shrine: {
+    perBlock: 30,
+    weights: { bush: 0.12, rock: 0.34, flower: 0.04, dry: 0.22, azalea: 0.28 },
+  },
+  coast: {
+    perBlock: 26,
+    weights: { bush: 0.06, rock: 0.48, flower: 0.02, dry: 0.42, azalea: 0.02 },
+  },
 };
 
 /**
@@ -131,9 +140,7 @@ export function buildUndergrowth(
       if (insideBuilding) continue;
 
       // 연못 수면 위에 덤불이 나면 물에 심은 화분이 된다
-      const excluded = exclusions.some(
-        (spot) => Math.hypot(spot.x - x, spot.z - z) < spot.radius,
-      );
+      const excluded = exclusions.some((spot) => Math.hypot(spot.x - x, spot.z - z) < spot.radius);
       if (excluded) continue;
 
       const kind = pick(mix.weights, random());
@@ -202,7 +209,12 @@ function push(
         blockIndex,
         x + (random() - 0.5) * spread * 2,
         z + (random() - 0.5) * spread * 2,
-        { ...shape, width: shape.width * size, height: shape.height * size, depth: shape.depth * size },
+        {
+          ...shape,
+          width: shape.width * size,
+          height: shape.height * size,
+          depth: shape.depth * size,
+        },
       );
     }
     return;
@@ -245,12 +257,15 @@ function pushBlob(
  * 들꽃과 마른 풀은 발목(0.25~0.5m)이다. 셋이 같은 높이면 색만 다른 같은
  * 물건이 흩어진 것으로 보인다.
  */
-const SHAPES: Record<Kind, (random: () => number) => {
-  width: number;
-  height: number;
-  depth: number;
-  tone: number;
-}> = {
+const SHAPES: Record<
+  Kind,
+  (random: () => number) => {
+    width: number;
+    height: number;
+    depth: number;
+    tone: number;
+  }
+> = {
   bush: (random) => {
     const size = 0.75 + random() * 0.7;
     return {

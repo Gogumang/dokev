@@ -356,8 +356,6 @@ export function addStreetProps(
       continue;
     }
 
-
-
     /*
      * 나머지 자연 구역에는 **자판기까지만** 놓는다.
      *

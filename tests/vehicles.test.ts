@@ -168,7 +168,9 @@ describe("거치대 자리", () => {
     const covered = new Set(
       stands.filter((stand) => isUrbanBlock(stand.blockIndex)).map((stand) => stand.blockIndex),
     );
-    expect(covered.size, `선 구역 ${covered.size}개 / 도시 구역 ${urban.length}개`).toBe(urban.length);
+    expect(covered.size, `선 구역 ${covered.size}개 / 도시 구역 ${urban.length}개`).toBe(
+      urban.length,
+    );
   });
 
   it("자연 구역마다 조랑말이 있다 — 빈 들판에서는 걸어 나가야 한다", () => {
@@ -221,9 +223,7 @@ describe("거치대 자리", () => {
     const pitch = CITY.blockSize + CITY.roadWidth;
     for (const index of natural) {
       const { cx, cz } = blockCenter(index);
-      const nearest = Math.min(
-        ...stands.map((stand) => Math.hypot(stand.x - cx, stand.z - cz)),
-      );
+      const nearest = Math.min(...stands.map((stand) => Math.hypot(stand.x - cx, stand.z - cz)));
       expect(
         nearest,
         `구역 ${index}에서 가장 가까운 거치대까지 ${nearest.toFixed(0)}m`,
@@ -332,17 +332,15 @@ describe("세워 둔 모습", () => {
       3,
       5,
     );
-    expect(ponyBoxes.some((box) => box.tone === 5), "털색을 쓴 상자가 없다").toBe(true);
+    expect(
+      ponyBoxes.some((box) => box.tone === 5),
+      "털색을 쓴 상자가 없다",
+    ).toBe(true);
   });
 
   it("종류마다 상자 수가 다르다 — 같으면 무엇이 세워졌는지 구분되지 않는다", () => {
     const count = (cell: number) =>
-      buildStandBoxes(
-        stands.filter((stand) => stand.cell === cell).slice(0, 1),
-        1,
-        3,
-        5,
-      ).length;
+      buildStandBoxes(stands.filter((stand) => stand.cell === cell).slice(0, 1), 1, 3, 5).length;
     expect(count(0), "킥보드 상자가 없다").toBeGreaterThan(0);
     expect(count(1), "자전거 상자가 없다").toBeGreaterThan(0);
     expect(count(0), `킥보드 ${count(0)}개 vs 자전거 ${count(1)}개`).not.toBe(count(1));

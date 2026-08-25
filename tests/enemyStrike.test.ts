@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { COMBAT_TUNING, createEnemies, ENEMY_STRIKE, stepEnemyStrike, strikeWindupProgress, type EnemyState } from "@/game/combat/combatSim";
+import {
+  COMBAT_TUNING,
+  createEnemies,
+  ENEMY_STRIKE,
+  stepEnemyStrike,
+  strikeWindupProgress,
+  type EnemyState,
+} from "@/game/combat/combatSim";
 import { createPlayerCombat, PLAYER_COMBAT, stepPlayerCombat } from "@/game/combat/playerCombat";
 import { WEAPONS } from "@/game/combat/weapons";
 
@@ -164,8 +171,10 @@ describe("스폰 지점 비우기", () => {
 
     for (const enemy of enemies) {
       const distance = Math.hypot(enemy.x - spawn.x, enemy.z - spawn.z);
-      expect(distance, `(${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) → ${distance.toFixed(1)}m`)
-        .toBeGreaterThanOrEqual(spawn.radius);
+      expect(
+        distance,
+        `(${enemy.x.toFixed(1)}, ${enemy.z.toFixed(1)}) → ${distance.toFixed(1)}m`,
+      ).toBeGreaterThanOrEqual(spawn.radius);
     }
   });
 

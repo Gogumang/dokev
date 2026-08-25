@@ -121,9 +121,10 @@ describe("발소리 — 걷기와 달리기", () => {
   });
 
   it("달리기가 여운이 더 길다", () => {
-    expect(run.decaySeconds, `walk ${walk.decaySeconds}s, run ${run.decaySeconds}s`).toBeGreaterThan(
-      walk.decaySeconds,
-    );
+    expect(
+      run.decaySeconds,
+      `walk ${walk.decaySeconds}s, run ${run.decaySeconds}s`,
+    ).toBeGreaterThan(walk.decaySeconds);
   });
 
   it("크기만 다른 소리가 아니다", () => {

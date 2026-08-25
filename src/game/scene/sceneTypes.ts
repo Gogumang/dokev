@@ -7,6 +7,7 @@
  */
 
 import type { CombatCues } from "@/game/systems/audio/combat";
+import type { BossView } from "@/game/combat/bossSim";
 import type { CombatLink } from "@/game/combat/Enemies";
 import type { CompanionCommand, CompanionTarget } from "@/game/dokebi/companionMotion";
 import type { DiscoveryView, DokebiId } from "@/game/dokebi/roster";
@@ -25,7 +26,6 @@ import type { TimeOfDayId } from "@/game/world/timeOfDay";
 import type { ContextLossView } from "@/game/systems/contextLoss";
 import type { InputState } from "@/game/systems/input";
 import type { QualityLevel, QualityPreset } from "@/game/systems/quality";
-
 
 /**
  * 렌더 루프가 HUD에 넘기는 실측값.
@@ -47,7 +47,7 @@ export interface RuntimeStats {
    * 직후에 값을 채우고, 여기 표시로 PlayerRig가 덮어쓰지 않게 한다.
    */
   renderStatsOwned: boolean;
-  /** JS 힙 사용량(MB). 지원하지 않는 브라우저에서는 0 */
+  /** JS 힙(MB). 미지원 브라우저에서는 0 */
   heapMb: number;
   speed: number;
   /*
@@ -58,9 +58,8 @@ export interface RuntimeStats {
   grounded: boolean;
   /** 활강 중인지. 캐릭터 자세와 HUD가 읽는다 */
   gliding: boolean;
-  /** 도깨비 동료가 소환되어 있는지. 사운드가 읽는다 */
+  /** 동료가 소환되어 있는지 · 지금 서 있는 구역 — 둘 다 사운드가 읽는다 */
   companionPresent: boolean;
-  /** 지금 서 있는 구역. 사운드가 화음 진행에 쓴다 */
   district: DistrictId;
   /** 전투 사건 누적 수. 사운드가 차이만큼 소리를 낸다 */
   combat: CombatCues;
@@ -83,17 +82,17 @@ export interface RuntimeStats {
    * 바뀐다. 그래서 이 객체 안에 넣고 참조를 그대로 넘긴다.
    */
   downed: boolean;
-  /** 월드 좌표와 바라보는 방향(rad). 미니맵이 읽는다 */
   x: number;
   z: number;
   facing: number;
+  /** 화면이 보는 방향(rad). 몸이 아니라 눈이라 시점만 돌려도 바뀐다 — 지도가 이걸로 돈다 */
+  viewYaw: number;
   /**
    * 이번 프레임에 착지했다면 그 충돌 속도(m/s), 아니면 0.
    * 캐릭터가 착지 스쿼시 연출에 쓴다 — 카메라 흔들림과 같은 신호를 공유한다.
    */
   landingImpact: number;
 }
-
 
 export interface SceneProps {
   layout: CityLayout;
@@ -144,17 +143,14 @@ export interface SceneProps {
   /**
    * 미니 보스 상태. HUD가 체력 막대에 쓴다.
    *
-   * `distance`와 `phase`는 성능 패널에만 쓴다. 보스가 다가오지 않는 것을
-   * 브라우저에서 40초간 보고도 원인을 못 찾은 적이 있다 — 상태를 눈으로
-   * 볼 수 없으면 계측을 새로 붙이는 데만 한참이 걸린다.
+   * `distance`와 `phase`는 성능 패널이, `x`·`z`는 지도와 방향 화살표가 읽는다.
+   * 보스가 다가오지 않는 것을 브라우저에서 40초간 보고도 원인을 못 찾은 적이
+   * 있다 — 상태를 눈으로 볼 수 없으면 계측을 새로 붙이는 데만 한참이 걸린다.
+   *
+   * 모양을 여기 손으로 적어 두었다가 `BossView`에 칸이 늘어도 따라오지 않았다.
+   * 정본(`bossSim`)을 그대로 가리킨다.
    */
-  bossView: {
-    engaged: boolean;
-    healthRatio: number;
-    telegraph: boolean;
-    distance: number;
-    phase: string;
-  };
+  bossView: BossView;
   /**
    * 빛으로 여는 문. 씬이 매 프레임 갱신하고 HUD가 안내에 쓴다.
    *
