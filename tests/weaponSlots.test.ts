@@ -22,11 +22,14 @@ describe("weaponAtSlot", () => {
     }
   });
 
-  it("모든 무기에 번호가 있다 — 손에 잡히지 않는 무기가 없다", () => {
+  it("드는 무기에는 모두 번호가 있다", () => {
+    /*
+     * 은퇴한 무기에는 번호가 없다 — 그게 은퇴의 뜻이다. 드는 것만 셈한다.
+     */
     const reachable = new Set(
       Array.from({ length: WEAPON_ORDER.length }, (_, i) => weaponAtSlot(i + 1)),
     );
-    expect(reachable.size).toBe(Object.keys(WEAPONS).length);
+    expect(reachable.size).toBe(WEAPON_ORDER.length);
   });
 
   it("범위 밖이면 아무 일도 일어나지 않는다", () => {

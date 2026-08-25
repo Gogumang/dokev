@@ -222,19 +222,23 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
 };
 
 /**
- * 바꾸는 순서. **첫째가 시작 무기다.**
+ * **주인공이 드는 것.** 첫째가 시작 무기다.
  *
- * 표(`WEAPONS`)의 키 순서에 기대지 않는다 — 객체 키 순서에 조작 순서를
- * 맡기면 정의를 위아래로 옮기는 것만으로 손에 잡히는 무기가 바뀐다.
+ * 여섯을 만들어 놓고 **둘로 좁혔다.** 활이 「멀리서 한 발」을, 광선총이
+ * 그 반대편을 맡는다. 표(`WEAPONS`)의 키 순서에 기대지 않는다 — 키 순서에 조작 순서를 맡기면
+ * 정의를 위아래로 옮기는 것만으로 손에 잡히는 무기가 바뀐다.
  */
-export const WEAPON_ORDER: readonly WeaponId[] = [
-  "bat",
-  "sword",
-  "hammer",
-  "popgun",
-  "beam",
-  "bow",
-];
+export const WEAPON_ORDER: readonly WeaponId[] = ["bow", "beam"];
+
+/**
+ * 정의는 남기되 **들지 않는** 것들.
+ *
+ * 「정의만 있고 손에 잡히지 않는 무기는 없다」가 이 파일의 규칙이었다. 조용히
+ * 두면 빠뜨린 것으로 읽으므로 적는다 — 검사가 이 목록과 `WEAPON_ORDER`를
+ * 합쳐 정의 전체와 대조한다. 지우지 않는 이유: 부채꼴 판정과 휘두르는 자세가 아직 살아 있는데, 드는
+ * 둘이 모두 원거리라 **근접을 잴 자가 없어진다.**
+ */
+export const RETIRED_WEAPONS: readonly WeaponId[] = ["bat", "sword", "hammer", "popgun"];
 
 /** 시작 무기 */
 export const DEFAULT_WEAPON: WeaponId = WEAPON_ORDER[0];

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { BOSS } from "@/game/combat/bossSim";
 
 import { COMBAT_TUNING } from "@/game/combat/combatSim";
+import { DEFAULT_WEAPON, WEAPONS } from "@/game/combat/weapons";
 import { GRAPPLE, LOCOMOTION } from "@/game/config/tuning";
 import { createLocomotionState, stepLocomotion } from "@/game/player/locomotion";
 import { buildCityDetails } from "@/game/world/cityDetails";
@@ -32,7 +33,7 @@ describe("안내문이 실제 규칙과 맞는가", () => {
     다섯: 5,
   };
 
-  it("「n번 때리면」이 적 체력과 맞는다", () => {
+  it("「n번/n발」이 시작 무기로 실제 필요한 수와 맞는다", () => {
     /*
      * 예전에는 「두 번 때리면」이라는 **그 문장이 있는지**만 봤다. 그러면
      * 누가 힌트를 「세 번 때리면」으로 고쳐 적는 순간 `includes`가 거짓이
@@ -40,15 +41,22 @@ describe("안내문이 실제 규칙과 맞는가", () => {
      * 안내에만 반응하지 않는 꼴이다.
      *
      * 문장에서 수를 읽어 비교한다. 어떤 낱말을 쓰든 숫자가 맞아야 한다.
+     *
+     * **체력이 아니라 「몇 번 필요한가」와 비교한다.** 예전에는 체력과 바로
+     * 견줬는데, 그건 한 대에 1씩 깎는 무기만 있을 때 우연히 맞던 식이다 —
+     * 시작 무기가 활(피해 2)로 바뀌자 「두 번」이 거짓이 됐다. 「발」도 받는다:
+     * 쏘는 무기에 「때리면」이라고 적으면 그게 더 이상한 안내다.
      */
-    const claim = /(한|두|세|네|다섯|\d+)\s*번 때리면/.exec(hints);
-    expect(claim, `때리는 횟수를 말하는 힌트가 없다:\n${hints}`).not.toBeNull();
+    const claim = /(한|두|세|네|다섯|\d+)\s*(?:번|발)/.exec(hints);
+    expect(claim, `횟수를 말하는 힌트가 없다:\n${hints}`).not.toBeNull();
     if (!claim) return;
 
+    const damage = WEAPONS[DEFAULT_WEAPON].damage;
+    const needed = Math.ceil(COMBAT_TUNING.maxHp / damage);
     const said = COUNT_WORDS[claim[1]] ?? Number(claim[1]);
     expect(said, `수를 못 읽었다: ${claim[0]}`).toBeGreaterThan(0);
-    expect(said, `안내문은 ${claim[0]}인데 체력은 ${COMBAT_TUNING.maxHp}`).toBe(
-      COMBAT_TUNING.maxHp,
+    expect(said, `안내문은 ${claim[0]}인데 체력 ${COMBAT_TUNING.maxHp} / 피해 ${damage}`).toBe(
+      needed,
     );
   });
 

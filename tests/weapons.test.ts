@@ -4,6 +4,7 @@ import { COMBAT_TUNING } from "@/game/combat/combatSim";
 import { LOCOMOTION } from "@/game/config/tuning";
 import {
   nextWeapon,
+  RETIRED_WEAPONS,
   swingSeconds,
   weaponRange,
   WEAPON_ORDER,
@@ -20,10 +21,29 @@ import {
  * 갈라 둔 것과 같은 문제다. 그래서 「다르다」를 검사로 고정한다.
  */
 describe("무기 정의", () => {
-  it("순서 목록이 정의된 무기를 모두 담는다", () => {
-    // 목록에서 빠진 무기는 바꿔 가며 쓸 수 없다 — 정의만 있고 손에 잡히지 않는다
+  it("정의된 무기는 드는 것이거나 은퇴한 것이다", () => {
+    /*
+     * 원래는 「순서 목록이 정의를 모두 담는다」였다 — 정의만 있고 손에 잡히지
+     * 않는 무기를 막는 규칙이다.
+     *
+     * 주인공이 드는 것을 둘로 좁히면서 규칙을 넓혔다: 빠진 것은 **은퇴 목록에
+     * 적혀 있어야** 한다. 어느 쪽에도 없는 정의는 여전히 실수다.
+     */
     const defined = Object.keys(WEAPONS).sort();
-    expect([...WEAPON_ORDER].sort(), `order=${WEAPON_ORDER.join(",")}`).toEqual(defined);
+    const accounted = [...WEAPON_ORDER, ...RETIRED_WEAPONS].sort();
+    expect(accounted, `드는 것=${WEAPON_ORDER.join(",")}`).toEqual(defined);
+  });
+
+  it("드는 것과 은퇴한 것이 겹치지 않는다", () => {
+    // 겹치면 「은퇴했는데 손에 잡힌다」가 되어 목록이 거짓말을 한다
+    const carried = new Set<string>(WEAPON_ORDER);
+    const both = RETIRED_WEAPONS.filter((id) => carried.has(id));
+    expect(both, `양쪽에 있다: ${both.join(", ")}`).toEqual([]);
+  });
+
+  it("주인공은 활과 광선총을 든다", () => {
+    // 이 게임의 손맛을 정하는 줄이다 — 바꾸려면 여기부터 고쳐야 한다
+    expect([...WEAPON_ORDER]).toEqual(["bow", "beam"]);
   });
 
   it("id가 자기 자리와 맞는다", () => {
