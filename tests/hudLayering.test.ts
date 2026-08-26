@@ -110,10 +110,16 @@ describe("시간을 다루는 곳이 한 군데인가", () => {
     ["src/components/hud/SpeedLines.tsx", "속도선을 rAF로 직접 칠한다 — 리렌더를 피한다"],
   ]);
 
+  // 목록이 비면 「적어 두지 않은 곳에서 타이머를 걸지 않는다」가 헛돈다
   const hud = collectSources("src/components/hud").map((path) => ({
     path,
     text: readCode(path),
   }));
+
+  it("HUD 파일을 실제로 읽었다", () => {
+    // 비면 아래 둘이 빈 목록을 훑으며 통과한다
+    expect(hud.length, `읽은 HUD 파일 ${hud.length}개`).toBeGreaterThan(20);
+  });
 
   it("적어 두지 않은 곳에서 타이머를 걸지 않는다", () => {
     const offenders = hud

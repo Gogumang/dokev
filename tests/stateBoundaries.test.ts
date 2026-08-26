@@ -220,6 +220,28 @@ describe("한 번 켜지면 안 꺼지는 상태", () => {
     warned: "저장 실패는 한 판에 한 번만 알린다. 매번 뜨면 알림이 화면을 덮는다",
   };
 
+  it("한 방향 상태를 실제로 찾고 있다", () => {
+    /*
+     * 정규식이 `useRef(false)`·`useState(false)` 꼴을 글자로 찾는다. 표기가
+     * 바뀌거나(줄바꿈·타입 인자) 경로가 어긋나면 **하나도 못 찾은 채 빈
+     * 목록을 훑으며 통과한다.** ONE_WAY에 적어 둔 것이 실제로 잡히는지 본다.
+     */
+    const found = new Set<string>();
+    for (const path of collectSources("src")) {
+      const source = readCode(path);
+      for (const match of source.matchAll(/const (\w+) = useRef\((?:false|true)\)/g)) {
+        found.add(match[1]);
+      }
+      for (const match of source.matchAll(/const \[(\w+), set\w+\] = useState\(false\)/g)) {
+        found.add(match[1]);
+      }
+    }
+    expect(found.size, `찾은 불리언 상태 ${found.size}개`).toBeGreaterThan(10);
+
+    const listed = Object.keys(ONE_WAY).filter((name) => found.has(name));
+    expect(listed, `ONE_WAY에 적힌 것 중 실제로 찾은 것: ${listed.join(", ")}`).not.toEqual([]);
+  });
+
   it("근거 없는 한 방향 상태가 늘지 않는다", () => {
     const surprises: string[] = [];
 

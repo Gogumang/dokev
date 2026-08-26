@@ -38,6 +38,15 @@ const sources = collect("src").map((path) => ({
 }));
 
 describe("타입 우회", () => {
+  it("소스를 실제로 읽었다", () => {
+    /*
+     * 아래 다섯이 전부 「걸린 것이 없다」를 본다. 목록이 비면 **다섯이
+     * 한꺼번에 조용히 통과한다** — 경로가 바뀌거나 확장자 목록이 어긋나면
+     * 그렇게 되고, 화면에는 아무 표시도 안 난다.
+     */
+    expect(sources.length, `읽은 소스 ${sources.length}개`).toBeGreaterThan(50);
+  });
+
   it("any를 쓰지 않는다", () => {
     const offenders = sources
       .filter(({ text }) => /[:<(]\s*any\b/.test(text))
