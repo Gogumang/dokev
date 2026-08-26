@@ -362,7 +362,7 @@ describe("위쪽 가운데가 겹치지 않는가", () => {
      * 변경을 막는 검사는 결국 지워진다. 깊이로 자른다.
      */
     const body = containerBody("flex-col-reverse items-start");
-    for (const name of ["HealthPanel", "Minimap"]) {
+    for (const name of ["HealthPanel"]) {
       expect(body, `${name}이 컨테이너 밖에 있다`).toContain(`<${name}`);
     }
   });

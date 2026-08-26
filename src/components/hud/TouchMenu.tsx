@@ -11,7 +11,13 @@
  *
  * 그래서 지우는 대신 **입력 수단이 없는 쪽에만** 남긴다. 데스크톱에서는
  * 렌더되지 않는다.
+ *
+ * 그 여덟도 **접었다**(요청: 모바일 버튼을 웬만하면 다 빼 달라). 아래쪽
+ * 행동 버튼과 합쳐 열여덟이 화면에 떠 있었다 — 게임보다 조작이 넓었다.
+ * 평소에는 「메뉴」 하나만 뜨고, 누르면 펼쳐진다.
  */
+
+import { useState } from "react";
 
 import { HudButton } from "@/components/hud/HudButton";
 import { MotionToggle, SoundToggle } from "@/components/hud/MenuToggles";
@@ -44,47 +50,62 @@ export function TouchMenu({
   onTogglePerf: () => void;
   onExit: () => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   /*
-   * `flex-wrap`이 반드시 있어야 한다. 버튼 일곱 개가 480px인데 폰 가로 폭에서
-   * 안전 영역을 빼면 340px 남짓이라, 넘친 버튼은 화면 밖으로 밀려 아예 누를
-   * 수 없다.
+   * 펼치면 **세로로 쌓는다.**
+   *
+   * 예전에는 가로로 늘어놓고 `flex-wrap`으로 넘겼다. 여덟이 늘 떠 있을 때는
+   * 그것이 최선이었지만 — 접고 나니 이것은 「줄」이 아니라 **눌러서 여는
+   * 목록**이다. 세로가 그 뜻에 맞고, 폰 가로 폭을 넘길 일도 없어진다.
    */
   return (
     <div
-      className="absolute flex max-w-[calc(100vw-2rem)] flex-wrap justify-end gap-[var(--space-2)]"
+      className="absolute flex flex-col items-end gap-[var(--space-2)]"
       style={{ top: "var(--safe-top)", right: "var(--safe-right)" }}
     >
-      {/* 도깨비가 하나뿐일 때는 버튼을 숨긴다 — 눌러도 아무 일이 없다 */}
-      {dokebiUnlockedCount > 1 && (
-        <HudButton onClick={onCycleDokebi} label={`동료 바꾸기 (지금 ${dokebiName})`}>
-          {dokebiName}
-        </HudButton>
+      <HudButton
+        onClick={() => setOpen(!open)}
+        expanded={open}
+        label={open ? "메뉴 닫기" : "메뉴 열기"}
+      >
+        {open ? "닫기" : "메뉴"}
+      </HudButton>
+      {!open ? null : (
+        <>
+          {/* 도깨비가 하나뿐일 때는 버튼을 숨긴다 — 눌러도 아무 일이 없다 */}
+          {dokebiUnlockedCount > 1 && (
+            <HudButton onClick={onCycleDokebi} label={`동료 바꾸기 (지금 ${dokebiName})`}>
+              {dokebiName}
+            </HudButton>
+          )}
+          <SoundToggle input={input} />
+          <MotionToggle />
+          <HudButton
+            onClick={onToggleMap}
+            expanded={mapOpen}
+            label={mapOpen ? "도시 지도 닫기" : "도시 지도 열기"}
+          >
+            지도
+          </HudButton>
+          <HudButton
+            onClick={onToggleCodex}
+            expanded={codexOpen}
+            label={codexOpen ? "도감 닫기" : "도감 열기"}
+          >
+            도감
+          </HudButton>
+          <HudButton onClick={onTogglePhoto} label="포토 모드 켜기">
+            사진
+          </HudButton>
+          <HudButton onClick={onTogglePerf} pressed={showPerf} label="성능 패널 표시 전환">
+            성능
+          </HudButton>
+          <HudButton onClick={onExit} label="랜딩 화면으로 나가기">
+            나가기
+          </HudButton>
+        </>
       )}
-      <SoundToggle input={input} />
-      <MotionToggle />
-      <HudButton
-        onClick={onToggleMap}
-        expanded={mapOpen}
-        label={mapOpen ? "도시 지도 닫기" : "도시 지도 열기"}
-      >
-        지도
-      </HudButton>
-      <HudButton
-        onClick={onToggleCodex}
-        expanded={codexOpen}
-        label={codexOpen ? "도감 닫기" : "도감 열기"}
-      >
-        도감
-      </HudButton>
-      <HudButton onClick={onTogglePhoto} label="포토 모드 켜기">
-        사진
-      </HudButton>
-      <HudButton onClick={onTogglePerf} pressed={showPerf} label="성능 패널 표시 전환">
-        성능
-      </HudButton>
-      <HudButton onClick={onExit} label="랜딩 화면으로 나가기">
-        나가기
-      </HudButton>
     </div>
   );
 }

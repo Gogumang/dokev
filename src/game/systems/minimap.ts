@@ -32,6 +32,9 @@ export interface MapPoint {
  * 월드 좌표를 지도 좌표로 옮긴다.
  *
  * yaw는 플레이어가 보는 방향이고, 그 방향이 항상 위(+v)로 온다.
+ *
+ * 미니맵을 걷어낸 뒤로 이것을 쓰는 곳은 **대장 화살표**(`bossPointer`)
+ * 하나다. 화살표도 「내가 보는 쪽이 위」를 전제하므로 같은 변환이 맞다.
  */
 export function toMapPoint(
   worldX: number,
@@ -50,35 +53,6 @@ export function toMapPoint(
   };
 }
 
-export function mapDistance(point: MapPoint): number {
-  return Math.hypot(point.u, point.v);
-}
-
-/** 지도 안에 들어오는지. 반지름은 m 단위다 */
-export function isOnMap(point: MapPoint, rangeMeters: number = MINIMAP.rangeMeters): boolean {
-  return mapDistance(point) <= rangeMeters;
-}
-
-/**
- * 지도 밖의 표식을 테두리에 붙인다.
- *
- * 잘라 버리면 "목표가 어디에도 없다"로 보인다. 방향만이라도 남겨야 한다.
- */
-export function clampToRing(point: MapPoint, rangeMeters: number = MINIMAP.rangeMeters): MapPoint {
-  const distance = mapDistance(point);
-  /*
-   * 반경 안이면 그대로 둔다. **정확히 중심인 표식도 여기서 걸린다** — 그래서
-   * 아래에서 0으로 나눌 일이 없다.
-   *
-   * 「중심이면 방향을 정할 수 없으니 위로 둔다」는 줄이 아래에 있었는데,
-   * 여기를 지난 시점의 거리는 반드시 반경보다 크므로 **영영 안 밟히는 줄**이었다.
-   * 조건문 훑기가 「지워도 아무도 모른다」로 잡아 줘서 알았다.
-   */
-  if (distance <= rangeMeters) return point;
-  const scale = rangeMeters / distance;
-  return { u: point.u * scale, v: point.v * scale };
-}
-
 /** 구역 중심 간 거리 */
 const BLOCK_PITCH = CITY.blockSize + CITY.roadWidth;
 
@@ -89,17 +63,6 @@ const BLOCK_PITCH = CITY.blockSize + CITY.roadWidth;
  * 한가운데로 도로를 그린다 — 실제로 그렇게 틀렸다.
  */
 export const ROAD_CENTERS = LAYOUT_ROAD_CENTERS;
-
-/**
- * 지금 지도에 걸치는 도로 중심선만 고른다.
- *
- * 화면 밖 도로까지 그리면 선분이 수십 개로 늘고, 캔버스는 그걸 전부 자른다.
- */
-export function roadsInRange(center: number, rangeMeters: number): number[] {
-  // 회전하면 대각선 방향이 더 멀리 보인다. 루트2를 곱해 모서리까지 덮는다.
-  const reach = rangeMeters * Math.SQRT2;
-  return ROAD_CENTERS.filter((offset) => Math.abs(offset - center) <= reach);
-}
 
 /**
  * 지도에 찍을 표식 수. 이보다 많으면 점이 뭉쳐 아무 정보도 안 된다.
@@ -212,17 +175,6 @@ export function toFullMapPixel(
   const scale = fullMapScale(sizePx, spanMeters);
   const half = sizePx / 2;
   return { x: half + worldX * scale, y: half - worldZ * scale };
-}
-
-/** 지도 좌표를 캔버스 픽셀로. 캔버스는 아래가 +y라 v의 부호를 뒤집는다 */
-export function toCanvasPixel(
-  point: MapPoint,
-  sizePx: number = MINIMAP.sizePx,
-  rangeMeters: number = MINIMAP.rangeMeters,
-): { x: number; y: number } {
-  const half = sizePx / 2;
-  const scale = half / rangeMeters;
-  return { x: half + point.u * scale, y: half - point.v * scale };
 }
 
 /** 지도 표식이 흘러가는 곳 */

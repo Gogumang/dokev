@@ -175,7 +175,12 @@ describe("캔버스", () => {
      * 놓쳤다 — 표시로 삼은 것이 지도의 성질이 아니라 그때의 구현이었다.
      */
     const maps = sources.filter((file) => file.text.includes("describeMap("));
-    expect(maps.length, `찾은 지도 화면 ${maps.length}개`).toBeGreaterThan(1);
+    /*
+     * 하나다. 미니맵을 걷어내면서 둘에서 하나가 됐다 — 늘 떠 있는 148px짜리
+     * 판은 「세계가 먼저, UI는 나중에」와 어긋난다(DESIGN_GUIDE). 규칙은
+     * 그대로다: 지도를 그리는 화면은 **글로도** 내야 한다.
+     */
+    expect(maps.length, `찾은 지도 화면 ${maps.length}개`).toBeGreaterThan(0);
 
     /*
      * 만들기만 하고 화면에 안 내보내면 없는 것과 같다. 내는 방법은 둘 다

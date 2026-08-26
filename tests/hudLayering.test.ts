@@ -104,7 +104,6 @@ describe("시간을 다루는 곳이 한 군데인가", () => {
     ["src/components/hud/useSampled.ts", "표본을 뜨는 자리 그 자체"],
     ["src/components/hud/useHeld.ts", "같은 자리 — 표본을 상태에 접는다"],
     ["src/components/hud/useSampledSince.ts", "같은 자리 — 바뀐 뒤 흐른 시간을 잰다"],
-    ["src/components/hud/Minimap.tsx", "캔버스를 다시 칠한다 — React 상태가 아니다"],
     ["src/components/hud/CityMapCanvas.tsx", "같은 이유"],
     ["src/components/hud/MenuToggles.tsx", "입력 큐를 비운다 — 읽어서 그리는 일이 아니다"],
     ["src/components/hud/DemoGuide.tsx", "시연 코스의 경과 시간을 센다"],

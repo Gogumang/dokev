@@ -1,10 +1,15 @@
 "use client";
 
 /**
- * 터치 조작의 **행동 버튼** — 춤·살펴보기·음료·그래플·보드·점프.
+ * 늘 떠 있는 행동 버튼 — 살펴보기·탈것, 그리고 공격·점프.
  *
- * 동료 조작(부르기·능력·교체)과 나눈다. 저쪽은 「누구와 함께 있는가」이고
- * 여기는 「지금 무엇을 하는가」다.
+ * **여정이 요구하는 것만** 남긴다. 흔적을 주우려면 살펴보기가 있어야 하고
+ * (`stepInteraction`이 `talkQueued`를 본다), 「탈것을 탄다」 단계는 탈것
+ * 버튼 없이는 넘어갈 수 없다. 공격과 점프는 로봇 셋·대장·활강 1.5초가
+ * 걸려 있다.
+ *
+ * 나머지 여섯(춤·음료·그래플·무기·동료·능력)은 접었다
+ * (`TouchExtraButtons`). 폰 화면 아래 절반이 버튼으로 덮여 있었다.
  */
 
 import { HudButton } from "@/components/hud/HudButton";
@@ -23,51 +28,12 @@ export function TouchActionButtons({
   return (
     <>
       <HudButton
-        label="춤추기"
-        onClick={() => {
-          input.danceQueued = true;
-        }}
-      >
-        춤
-      </HudButton>
-      <HudButton
         label="가까운 주민이나 간판 살펴보기"
         onClick={() => {
           input.talkQueued = true;
         }}
       >
         살펴보기
-      </HudButton>
-      <HudButton
-        label="음료 뽑기"
-        onClick={() => {
-          input.drinkQueued = true;
-        }}
-      >
-        음료
-      </HudButton>
-      <HudButton
-        label="그래플 걸기"
-        onClick={() => {
-          input.grappleQueued = true;
-        }}
-      >
-        그래플
-      </HudButton>
-      {/*
-      무기 바꾸기.
-
-      키보드의 Q와 같은 신호를 큐에 담는다. 무엇으로 바뀌었는지는 이
-      버튼이 말하지 않는다 — 손가락에 가려지는 자리라, 알림은 화면
-      위쪽(`Notices`)이 맡는다.
-    */}
-      <HudButton
-        label="무기 바꾸기"
-        onClick={() => {
-          input.weaponQueued = true;
-        }}
-      >
-        무기
       </HudButton>
       <HudButton
         label={boardOn ? "탈것에서 내리기" : "탈것 타기"}
@@ -83,12 +49,6 @@ export function TouchActionButtons({
       >
         탈것
       </HudButton>
-      {/*
-      공격 버튼.
-
-      이게 없으면 모바일에서 퀘스트 4단계(로봇 3기)를 완주할 수 없다.
-      키보드의 J와 같은 신호를 큐에 담는다.
-    */}
       <TouchJumpButton input={input} />
     </>
   );

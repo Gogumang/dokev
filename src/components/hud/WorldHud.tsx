@@ -83,7 +83,7 @@ export function WorldHud(props: WorldHudProps) {
       <HudTopCenter hud={props} />
       {/* 대장 방향 화살표 — 뜨는 조건은 `bossPointer`가 정한다 */}
       <BossPointer stats={props.stats} boss={props.boss} reducedMotion={props.reducedMotion} />
-      <HudBottomLeft hud={props} discoveries={discoveries} />
+      <HudBottomLeft hud={props} />
       <HudSpeech hud={props} talkKey={keyLabel(CONTROL_CODES.talk)} />
       <HudBottomCenter hud={props} talkKey={keyLabel(CONTROL_CODES.talk)} />
       {/*

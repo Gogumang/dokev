@@ -652,7 +652,7 @@ describe("능력을 쓸 수 있는지 알려 주는가", () => {
    * 죽은 export 검사는 이걸 못 잡았다: 테스트가 import하고 있으면 「쓰이는
    * 중」으로 센다. 제품 코드에서 죽어도 테스트가 살려 둔다.
    */
-  const touch = readCode("src/components/hud/TouchButtons.tsx");
+  const touch = readCode("src/components/hud/TouchExtraButtons.tsx");
 
   /*
    * 원래는 `Companion.tsx`가 특정 글자를 담고 있는지로 봤다. 그 코드를

@@ -13,16 +13,9 @@ import {
   type BlipLink,
   BLOCK_CELL_METERS,
   blockCells,
-  clampToRing,
   collectBlips,
-  isOnMap,
   fullMapScale,
-  mapDistance,
   MAX_BLIPS,
-  MINIMAP,
-  ROAD_CENTERS,
-  roadsInRange,
-  toCanvasPixel,
   toFullMapPixel,
   toMapPoint,
   WORLD_SPAN_METERS,
@@ -56,103 +49,13 @@ describe("toMapPoint", () => {
     // 회전 행렬이 틀리면 여기서 깨진다
     for (const yaw of [0, 0.7, 2.4, -1.9]) {
       const point = toMapPoint(12, -5, 3, 4, yaw);
-      expect(mapDistance(point), `yaw ${yaw}`).toBeCloseTo(Math.hypot(12 - 3, -5 - 4), 6);
+      expect(Math.hypot(point.u, point.v), `yaw ${yaw}`).toBeCloseTo(Math.hypot(12 - 3, -5 - 4), 6);
     }
   });
 
   it("제자리에 서 있으면 중심이다", () => {
     const point = toMapPoint(30, -40, 30, -40, 1.2);
-    expect(mapDistance(point)).toBeCloseTo(0, 6);
-  });
-});
-
-describe("clampToRing", () => {
-  it("안쪽 점은 그대로 둔다", () => {
-    const point = { u: 3, v: 4 };
-    expect(clampToRing(point, 10)).toBe(point);
-  });
-
-  it("바깥 점은 테두리에 붙인다", () => {
-    // 잘라 버리면 "목표가 어디에도 없다"로 보인다
-    const clamped = clampToRing({ u: 300, v: 0 }, 10);
-    expect(mapDistance(clamped), `distance was: ${mapDistance(clamped)}`).toBeCloseTo(10, 6);
-  });
-
-  it("방향을 유지한다", () => {
-    const clamped = clampToRing({ u: 30, v: 40 }, 10);
-    expect(clamped.u / clamped.v).toBeCloseTo(30 / 40, 6);
-  });
-
-  it("중심에 겹치면 위쪽으로 둔다", () => {
-    // 0으로 나누면 NaN이 되고 표식이 사라진다
-    const clamped = clampToRing({ u: 0, v: 0 }, 10);
-    expect(Number.isFinite(clamped.u) && Number.isFinite(clamped.v)).toBe(true);
-  });
-});
-
-describe("isOnMap", () => {
-  it("반지름 안팎을 가른다", () => {
-    expect(isOnMap({ u: 0, v: 79 }, 80)).toBe(true);
-    expect(isOnMap({ u: 0, v: 81 }, 80)).toBe(false);
-  });
-});
-
-describe("도로", () => {
-  it("격자보다 한 줄 많다 — 가장자리 도로가 빠지지 않아야 한다", () => {
-    expect(ROAD_CENTERS.length).toBe(CITY.gridSize + 1);
-  });
-
-  it("도로가 구역 중심과 겹치지 않는다", () => {
-    /*
-     * 반 칸이 어긋나 도로 좌표가 구역 중심을 가리킨 적이 있다. 그 결과
-     * 미니맵이 건물 한가운데로 도로를 그리고, 도깨비 자리가 건물 안에 박혔다.
-     */
-    const pitch = CITY.blockSize + CITY.roadWidth;
-    const offset = (CITY.gridSize - 1) / 2;
-    const blockCenters = Array.from({ length: CITY.gridSize }, (_, c) => (c - offset) * pitch);
-
-    for (const road of ROAD_CENTERS) {
-      for (const block of blockCenters) {
-        expect(
-          Math.abs(road - block),
-          `road ${road} sits on block center ${block}`,
-        ).toBeGreaterThan(CITY.blockSize / 2);
-      }
-    }
-  });
-
-  it("도로가 두 구역 중심의 한가운데다", () => {
-    const pitch = CITY.blockSize + CITY.roadWidth;
-    const offset = (CITY.gridSize - 1) / 2;
-    // 첫 구역 중심 바로 앞 도로는 그 중심에서 반 칸 뒤에 있어야 한다
-    expect(ROAD_CENTERS[1]).toBeCloseTo((0 - offset) * pitch + pitch / 2, 6);
-  });
-
-  it("도로 간격이 구역 간격과 같다", () => {
-    const pitch = CITY.blockSize + CITY.roadWidth;
-    for (let i = 1; i < ROAD_CENTERS.length; i += 1) {
-      expect(ROAD_CENTERS[i] - ROAD_CENTERS[i - 1], `gap at ${i}`).toBeCloseTo(pitch, 6);
-    }
-  });
-
-  it("멀리 있는 도로는 걸러 낸다", () => {
-    const near = roadsInRange(0, 20);
-    expect(near.length, `near: ${near.join(",")}`).toBeLessThan(ROAD_CENTERS.length);
-  });
-
-  it("가까운 도로는 하나도 빠뜨리지 않는다", () => {
-    // 빠지면 지도에 길이 끊겨 보인다
-    const all = roadsInRange(0, 999);
-    expect(all).toEqual([...ROAD_CENTERS]);
-  });
-
-  it("회전해도 모서리까지 덮는다", () => {
-    // 지도가 도는 만큼 대각선 방향이 더 멀리 보인다
-    const pitch = CITY.blockSize + CITY.roadWidth;
-    const range = pitch * 1.1;
-    const covered = roadsInRange(ROAD_CENTERS[2], range);
-    expect(covered, `covered: ${covered.join(",")}`).toContain(ROAD_CENTERS[1]);
-    expect(covered).toContain(ROAD_CENTERS[3]);
+    expect(Math.hypot(point.u, point.v)).toBeCloseTo(0, 6);
   });
 });
 
@@ -199,25 +102,6 @@ describe("collectBlips", () => {
     const before = buffer;
     collectBlips([{ x: 1, z: 1 }], 0, 0, buffer, 80);
     expect(buffer).toBe(before);
-  });
-});
-
-describe("toCanvasPixel", () => {
-  it("중심은 캔버스 한가운데다", () => {
-    const pixel = toCanvasPixel({ u: 0, v: 0 });
-    expect(pixel.x).toBeCloseTo(MINIMAP.sizePx / 2, 6);
-    expect(pixel.y).toBeCloseTo(MINIMAP.sizePx / 2, 6);
-  });
-
-  it("위쪽(+v)이 캔버스에서는 작은 y다", () => {
-    // 캔버스는 아래가 +y다. 부호를 놓치면 지도가 위아래로 뒤집힌다.
-    const pixel = toCanvasPixel({ u: 0, v: 40 });
-    expect(pixel.y, `y was: ${pixel.y}`).toBeLessThan(MINIMAP.sizePx / 2);
-  });
-
-  it("반지름 끝이 캔버스 가장자리다", () => {
-    const pixel = toCanvasPixel({ u: MINIMAP.rangeMeters, v: 0 });
-    expect(pixel.x, `x was: ${pixel.x}`).toBeCloseTo(MINIMAP.sizePx, 6);
   });
 });
 
@@ -292,23 +176,17 @@ describe("보스 표식", () => {
      * 그리는 동안 표식은 제자리에 남아 있었다. 검사가 그 어긋남을 지키고 있었던
      * 셈이라, 이제 **매 프레임 흘러오는 자리**(`BossView.x`/`z`)를 요구한다.
      */
-    const source = readFileSync("src/components/hud/Minimap.tsx", "utf8");
+    // 미니맵을 걷어내 지도는 하나 남았다 — 규칙은 그대로다
     const full = readFileSync("src/game/systems/cityMapPaint.ts", "utf8");
-
-    for (const [name, text] of [
-      ["미니맵", source],
-      ["전체 지도", full],
-    ] as const) {
-      expect(text, `${name}이 대장의 지금 자리를 안 쓴다`).toContain("boss.x");
-      expect(text, `${name}이 대장의 지금 자리를 안 쓴다`).toContain("boss.z");
-      expect(text, `${name}이 세워 둔 자리를 그린다`).not.toMatch(/BOSS_HOME\.[xz]/);
-    }
+    expect(full, "전체 지도가 대장의 지금 자리를 안 쓴다").toContain("boss.x");
+    expect(full, "전체 지도가 대장의 지금 자리를 안 쓴다").toContain("boss.z");
+    expect(full, "전체 지도가 세워 둔 자리를 그린다").not.toMatch(/BOSS_HOME\.[xz]/);
   });
 
   it("보스가 지도 어디에도 없지 않다", () => {
     // 만들어 두고 알려 주지 않으면 없는 것과 같다
     const point = toMapPoint(BOSS_HOME.x, BOSS_HOME.z, BOSS_HOME.x, BOSS_HOME.z, 0);
-    expect(mapDistance(point)).toBe(0);
+    expect(Math.hypot(point.u, point.v), "보스 자리에 서 있는데 지도가 딴 곳을 가리킨다").toBe(0);
   });
 });
 
@@ -505,30 +383,5 @@ describe("적 표식이 지도로 가는가", () => {
 
     expect(out.enemyBlips, "버퍼가 바뀌었다").toBe(held);
     expect(out.enemyBlips[0], "좌표가 안 채워졌다").not.toBe(0);
-  });
-});
-
-describe("중심에 있는 표식", () => {
-  /*
-   * 「정확히 중심이면 방향을 정할 수 없다」를 막는 줄이 있었는데, 그 위의
-   * 「반경 안이면 그대로」가 이미 중심을 걸러서 **영영 안 밟히는 줄**이었다.
-   * 지우고, 대신 **왜 안 밟히는지**를 여기서 못 박는다.
-   */
-  it("중심의 표식은 그대로 둔다 — 테두리로 밀지 않는다", () => {
-    const center = clampToRing({ u: 0, v: 0 });
-    expect(center, `중심이 (${center.u}, ${center.v})로 밀렸다`).toEqual({ u: 0, v: 0 });
-  });
-
-  it("반경 안은 그대로, 밖은 테두리로", () => {
-    const inside = clampToRing({ u: 3, v: 4 }, 10);
-    expect(inside, "반경 안인데 밀렸다").toEqual({ u: 3, v: 4 });
-
-    const outside = clampToRing({ u: 30, v: 40 }, 10);
-    expect(Math.hypot(outside.u, outside.v), "테두리에 안 붙었다").toBeCloseTo(10, 6);
-  });
-
-  it("밖으로 밀린 표식도 방향은 그대로다 — 방향만이라도 남겨야 한다", () => {
-    const far = clampToRing({ u: 30, v: 40 }, 10);
-    expect(Math.atan2(far.u, far.v), "방향이 바뀌었다").toBeCloseTo(Math.atan2(30, 40), 6);
   });
 });
