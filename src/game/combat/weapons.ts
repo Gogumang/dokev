@@ -33,7 +33,18 @@ export interface BoltSpec {
   spawnHeight: number;
   /** 명중 판정 반경(m) */
   hitRadius: number;
-  /** 무지개 자국을 남기는지. **활만** — 35m를 나는 탄이라 어디로 갔는지가 안 읽혔다 */
+  /**
+   * 무지개 자국을 남기는지.
+   *
+   * **드는 둘 다 남긴다.** 원작에서 공격은 여러 색이 휘감긴 리본이고
+   * (frame-notes 084 「연둣빛 노랑·시안·분홍·마젠타가 S자로 휘감긴다」,
+   * 061 「색색 광선 다발」), 화면에서 채도를 독점하는 것이 그 리본이다.
+   * 한때 광선총만 청백색으로 되돌렸다가 고쳤다 — 그 청백색은 **이동용
+   * 빔**(066·067)이었고 공격이 아니었다.
+   *
+   * 그래도 깃발로 남긴다. 자국은 인스턴스가 탄 수만큼 곱해지므로
+   * (열두 발 × 열두 마디), 자국이 필요 없는 탄이 생기면 여기서 끈다.
+   */
   rainbow?: boolean;
 }
 
@@ -89,7 +100,7 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
      */
     knockbackScale: -0.9,
     /** 굵고 빠른 광선. 사거리 21m — 활(35m)보다 짧은 대신 주기가 절반이다 */
-    bolt: { speed: 30, lifeSeconds: 0.7, spawnHeight: 1.1, hitRadius: 0.9 },
+    bolt: { speed: 30, lifeSeconds: 0.7, spawnHeight: 1.1, hitRadius: 0.9, rainbow: true },
   },
   /**
    * 장난감 활 — 제일 멀리, 제일 세게, 제일 느리게.

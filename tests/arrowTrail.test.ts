@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ARROW_TRAIL, trailInstanceCount, trailSegment } from "@/game/combat/arrowTrail";
 import { RAINBOW } from "@/game/core/rainbow";
 import { fireWeaponBolt, PLAYER_BOLT_MAX } from "@/game/combat/projectiles";
-import { WEAPONS } from "@/game/combat/weapons";
+import { WEAPON_ORDER, WEAPONS } from "@/game/combat/weapons";
 
 /*
  * 화살이 남기는 무지개 자국.
@@ -91,15 +91,19 @@ describe("무지개인가", () => {
 });
 
 describe("누가 자국을 남기는가", () => {
-  it("활은 남기고 광선총은 안 남긴다", () => {
+  it("드는 무기가 모두 자국을 남긴다", () => {
     /*
-     * 35m를 나는 활은 **쏜 것이 어디로 갔는지**가 안 읽힌다. 광선총은 21m에
-     * 굵고 빨라서 탄 자체가 이미 읽힌다 — 둘 다 남기면 화면이 무지개로 찬다.
+     * 한때 활만 남겼다. 「광선총은 21m에 굵고 빨라서 탄 자체가 이미 읽힌다」가
+     * 이유였는데, **원작을 잘못 읽은 것이었다** — 청백색 빔으로 본
+     * frame-notes 066·067은 그래플로 나는 **이동 장면**이고, 공격은 084의
+     * 「연둣빛 노랑·시안·분홍·마젠타가 S자로 휘감긴 리본」과 061의 「색색 광선
+     * 다발」이다. 화면에서 채도를 독점하는 것이 공격 이펙트다.
+     *
+     * 드는 것이 둘뿐이라 「절반만 무지개」는 무기가 아니라 **실수로 읽힌다.**
      */
-    const bow = WEAPONS.bow.bolt;
-    const beam = WEAPONS.beam.bolt;
-    expect(bow?.rainbow, "활이 안 남긴다").toBe(true);
-    expect(beam?.rainbow ?? false, "광선총이 남긴다").toBe(false);
+    for (const id of WEAPON_ORDER) {
+      expect(WEAPONS[id].bolt.rainbow, `${id}가 자국을 안 남긴다`).toBe(true);
+    }
   });
 
   it("쏜 탄이 그 표시를 들고 간다", () => {
@@ -122,5 +126,37 @@ describe("인스턴스 예산", () => {
   it("한 화면에 감당할 만큼만 잡는다", () => {
     // 드로우콜은 하나지만 행렬은 매 프레임 다시 쓴다 — 수백 개는 그 자체로 비용이다
     expect(trailInstanceCount(PLAYER_BOLT_MAX)).toBeLessThanOrEqual(144);
+  });
+});
+
+describe("리본에 흰 코어가 있는가", () => {
+  /*
+   * 원작의 공격 이펙트는 여러 색이 휘감긴 리본인데 **가장 밝은 곳이 흰
+   * 코어**다(frame-notes 084 「가장 밝은 곳은 리본의 흰 코어」). 색만
+   * 늘어놓으면 리본이 아니라 **색종이 줄**이 된다 — 앞이 타서 하얗고 뒤로
+   * 갈수록 색이 드러나야 「지나간 자국」으로 읽힌다.
+   */
+  const segments = Array.from({ length: ARROW_TRAIL.segments }, (_, i) =>
+    trailSegment(i, 0, false),
+  );
+
+  it("앞이 가장 하얗다", () => {
+    expect(segments[0].whiteness, `첫 마디 ${segments[0].whiteness}`).toBe(1);
+  });
+
+  it("뒤로 갈수록 색이 드러난다", () => {
+    for (let i = 1; i < segments.length; i += 1) {
+      expect(segments[i].whiteness, `${i}번 마디`).toBeLessThanOrEqual(segments[i - 1].whiteness);
+    }
+  });
+
+  it("꼬리는 흰빛이 없다 — 남으면 리본 끝이 하얗게 뜬다", () => {
+    expect(segments[segments.length - 1].whiteness).toBe(0);
+  });
+
+  it("코어가 리본의 일부다 — 전부 희면 색이 사라진다", () => {
+    const white = segments.filter((segment) => segment.whiteness > 0).length;
+    expect(white, `${white}/${segments.length} 마디가 흰빛`).toBeLessThan(segments.length / 2);
+    expect(white, "흰 코어가 아예 없다").toBeGreaterThan(1);
   });
 });

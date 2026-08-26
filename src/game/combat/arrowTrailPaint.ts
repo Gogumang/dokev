@@ -16,11 +16,11 @@ import { RAINBOW, rainbowAt, rainbowFlow } from "@/game/core/rainbow";
 import { PLAYER_BOLT_MAX, type PlayerBolt } from "@/game/combat/projectiles";
 
 /**
- * 무지개를 안 남기는 탄의 색.
+ * 자국을 안 남기는 탄의 색.
  *
- * 원작의 원거리 사격이 이 색이다 — frame-notes 066·067이 「굵은 청백색 빔」을
- * 적고, 두 프레임 모두 **가장 밝은 곳이 그 빔의 코어(순백)**다. 적 탄(붉은색)과
- * 반대편이기도 해서, 날아다니는 둘 중 무엇을 피해야 하는지가 순간에 갈린다.
+ * 지금 드는 둘은 모두 자국을 남기므로 **화면에 안 나온다.** 깃발을 끄는 탄이
+ * 생기면 이 색으로 난다 — 적 탄(붉은색)과 반대편이라 날아다니는 둘 중 무엇을
+ * 피해야 하는지가 순간에 갈린다.
  */
 const PLAIN_BOLT_COLOR = "#5ce1ff";
 
@@ -136,7 +136,21 @@ export function paintArrowTrails(
        * **색을 어둡게** 해서 같은 인상을 만든다 — 가산이 아니라 일반 합성이라
        * 어두워지면 뒤로 물러나 보인다.
        */
-      scratch.color.set(RAINBOW[segment.colorIndex]).multiplyScalar(segment.opacity);
+      /*
+       * 불투명도는 인스턴스마다 다를 수 없다(재질 하나를 나눠 쓴다). 대신
+       * **색을 어둡게** 해서 같은 인상을 만든다.
+       *
+       * 어둡게 하기 **전에** 흰빛을 섞는다. 순서가 반대면 꼬리에서 흰빛이
+       * 다시 살아나 리본 끝이 하얗게 뜬다 — 코어는 앞에만 있어야 한다.
+       */
+      scratch.color.set(RAINBOW[segment.colorIndex]);
+      if (segment.whiteness > 0) {
+        // 흰색을 향해 각 채널을 끌어올린다 — `Color` 하나를 더 만들지 않는다
+        scratch.color.r += (1 - scratch.color.r) * segment.whiteness;
+        scratch.color.g += (1 - scratch.color.g) * segment.whiteness;
+        scratch.color.b += (1 - scratch.color.b) * segment.whiteness;
+      }
+      scratch.color.multiplyScalar(segment.opacity);
       mesh.setColorAt(at, scratch.color);
     }
   }

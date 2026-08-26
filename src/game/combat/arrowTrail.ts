@@ -38,6 +38,17 @@ export const ARROW_TRAIL = {
    * 자국」으로 읽힌다.
    */
   flowPerSecond: 2.4,
+  /**
+   * 앞쪽 몇 마디가 흰빛에 가까운가(0~1).
+   *
+   * 원작의 공격 이펙트는 **여러 색이 휘감긴 리본인데 가장 밝은 곳이 흰
+   * 코어**다(frame-notes 084: 「가장 밝은 곳은 리본의 흰 코어」). 색만
+   * 늘어놓으면 리본이 아니라 색종이 줄이 된다 — 앞이 타서 하얗고 뒤로
+   * 갈수록 색이 드러나야 「지나간 자국」으로 읽힌다.
+   *
+   * 0.35면 열두 마디 중 앞 넷쯤이 흰빛을 머금는다.
+   */
+  coreRatio: 0.35,
 } as const;
 
 /** 마디 하나가 그려질 자리와 모습 */
@@ -48,6 +59,13 @@ export interface TrailSegment {
   readonly opacity: number;
   /** `RAINBOW`의 몇 번째 색인가 */
   readonly colorIndex: number;
+  /**
+   * 흰빛을 얼마나 섞는가(0~1). 1이면 거의 하얗다.
+   *
+   * 색 자체를 여기서 만들지 않는다 — 섞는 일은 three의 `Color`가 훨씬 싸고,
+   * 이 파일은 three를 모른다.
+   */
+  readonly whiteness: number;
 }
 
 /**
@@ -74,6 +92,8 @@ export function trailSegment(index: number, life: number, reducedMotion: boolean
     // 꼬리는 완전히 사라진다 — 남아 있으면 리본이 아니라 막대다
     opacity: ARROW_TRAIL.headOpacity * (1 - t),
     colorIndex,
+    // 앞에서 1, `coreRatio` 지점에서 0. 그 뒤로는 색이 그대로 드러난다
+    whiteness: Math.max(0, 1 - t / ARROW_TRAIL.coreRatio),
   };
 }
 
