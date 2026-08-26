@@ -36,7 +36,8 @@ export type ZoneId =
   | "shrine"
   | "park"
   | "forest"
-  | "coast";
+  | "coast"
+  | "site";
 
 /** 그 구역 바닥이 무엇으로 덮이는지. 지면 색과 발소리가 이걸 따라간다. */
 export type GroundKind = "asphalt" | "stone" | "grass" | "sand" | "dirt";
@@ -197,6 +198,40 @@ export const ZONES: Record<ZoneId, Zone> = {
     mood: { fogNearScale: 1, fogFarScale: 1, tint: "#ffe6c4", tintStrength: 0.1 },
     build: { minLots: 2, maxLots: 2, minHeight: 6, maxHeight: 10, gapChance: 1, tones: [0] },
   },
+  /**
+   * 공사장 — **대장과 싸우는 자리.**
+   *
+   * 고물 대장이 도로 교차로에 서 있었다. 교차로는 13×13m인데 대장의 내려치는
+   * 반경이 6.2m라 **물러설 자리가 없었다** — 예고를 보고 피하는 것이 이 싸움의
+   * 전부인데, 피할 곳이 없으면 예고 링은 장식이 된다. 블록 하나(34m)를 통째로
+   * 비워 준다.
+   *
+   * 자리가 「공사장」인 것은 이름에서 나왔다. 대장은 **고물 대장**이고
+   * (`assets/concepts/meshy/bosses/scrap-foreman-*`), 고물을 다루는 것이
+   * 있어야 할 곳은 번화가 한복판의 파헤쳐진 터다. 세계관과도 맞는다 —
+   * 도깨비는 문제가 보이는 방식이고, 공사장은 어른 눈에 그냥 공사장이다.
+   *
+   * 건물을 세우지 않는다(`gapChance: 1`). 나무도 없다 — 파헤친 땅에 가로수가
+   * 서 있으면 공사장이 아니라 공원이다. `isUrban`에도 넣지 않는다: 보도블록이
+   * 깔리면 흙이 통째로 덮여 「건물만 없는 광장」이 된다.
+   */
+  site: {
+    id: "site",
+    name: "고물 공사장",
+    subtitle: "파헤친 땅에 쇳더미가 쌓여 있다",
+    ground: "dirt",
+    /* 도로(아스팔트)보다 밝아야 한다 — 검사가 그 대비를 지킨다 */
+    groundColor: "#8a7a63",
+    /* 콘크리트 회색. 여덟 구역 어느 색과도 멀다 — 검사가 그 거리를 잰다 */
+    mapColor: "#8c8c96",
+    treeDensity: 0,
+    treeSpecies: "broadleaf",
+    treeScale: 1,
+    blossomChance: 0,
+    /* 파헤친 땅이라 먼지가 앉는다 — 번화가보다 조금 더 뿌옇고 누렇다 */
+    mood: { fogNearScale: 0.88, fogFarScale: 0.92, tint: "#d8c49a", tintStrength: 0.2 },
+    build: { minLots: 2, maxLots: 2, minHeight: 6, maxHeight: 10, gapChance: 1, tones: [1] },
+  },
   downtown: {
     id: "downtown",
     name: "번화가",
@@ -332,6 +367,9 @@ export const ZONES: Record<ZoneId, Zone> = {
  *   서(col 0~1)  → 주택가·공원
  *   동(col 5)    → 해안
  *   남(row 5)    → 시장
+ *
+ * 번화가 여덟 중 하나(row 4 col 2)를 **공사장**으로 바꿨다. 대장이 서 있던
+ * 교차로 바로 옆이라 가는 길은 그대로이고, 싸울 자리만 넓어진다.
  * 어느 쪽으로 달려도 두 구역 안에 「다른 것」이 나오게 두었다. 세 구역을
  * 지나야 바뀌면 그 전에 방향을 되돌린다.
  */
@@ -340,11 +378,20 @@ const MAP_ROWS: readonly (readonly ZoneId[])[] = [
   ["forest", "park", "park", "shrine", "shrine", "coast"],
   ["residential", "park", "downtown", "downtown", "downtown", "coast"],
   ["residential", "residential", "downtown", "plaza", "downtown", "coast"],
-  ["residential", "residential", "downtown", "downtown", "downtown", "coast"],
+  ["residential", "residential", "site", "downtown", "downtown", "coast"],
   ["market", "market", "market", "market", "coast", "coast"],
 ];
 
 export const ZONE_MAP: readonly ZoneId[] = MAP_ROWS.flat();
+
+/**
+ * 공사장이 놓인 구역 번호.
+ *
+ * 대장이 이 블록의 한가운데에 선다(`BOSS_HOME`). 번호를 두 곳에 적으면
+ * 구역을 옮길 때 대장만 남는다 — 지도에서 찾아간 사람이 빈 터에 서게 된다.
+ * 지도에 실제로 하나뿐인지는 검사가 확인한다.
+ */
+export const SITE_BLOCK_INDEX = ZONE_MAP.indexOf("site");
 
 /**
  * 격자 한 변의 칸 수.
@@ -367,12 +414,38 @@ export const ZONE_GRID_SIZE = MAP_ROWS.length;
  * 켜야 한다.
  */
 export function isUrban(id: ZoneId): boolean {
+  /*
+   * 공사장은 여기 없다. 번화가 한복판이지만 **파헤쳐 놓은 땅**이라 인도도
+   * 점자블록도 깔려 있지 않다 — 켜 두었더니 보도블록이 흙을 통째로 덮어
+   * 「건물만 없는 광장」이 됐다. 둘레 도로의 연석과 가로등은 이웃 번화가가
+   * 그대로 들고 있으므로 경계는 끊기지 않는다.
+   */
   return id === "plaza" || id === "downtown" || id === "market" || id === "residential";
 }
 
 /** 구역 번호에 도시 시설물이 놓이는가. 배치 루프가 한 줄로 거르려고 쓴다. */
 export function isUrbanBlock(blockIndex: number): boolean {
   return isUrban(zoneForBlock(blockIndex).id);
+}
+
+/**
+ * 발밑에 풀이 자라는 땅인가.
+ *
+ * 「도시가 아니면 자연」으로 갈라 두었었다. 공사장이 생기면서 그 이분법이
+ * 깨진다 — 포장하지 않았지만 **파헤친 땅**이라, 잡초가 덮이면 공사장이
+ * 아니라 들판이 된다.
+ *
+ * 선돌은 여기서 가르지 않는다. 공사장에도 선다 — 흙 위에 선 회색 기둥은
+ * 그대로 **철골**로 읽히고, 그래플을 걸 지점이기도 하다(도시 어디에 서도
+ * 사거리 안에 걸 것이 있어야 한다, `grappleCoverage`). 대장이 쓰는 것은
+ * 블록 한가운데이고 기둥은 흩어져 서므로 물러설 자리를 먹지 않는다.
+ *
+ * 스위치를 여덟 개로 쪼개지 않는다. 「도시가 포장했는가」와 「풀이
+ * 자라는가」 **둘**이고, 공사장만 양쪽 다 아니다.
+ */
+export function growsWeeds(blockIndex: number): boolean {
+  const id = zoneForBlock(blockIndex).id;
+  return !isUrban(id) && id !== "site";
 }
 
 /** 구역 번호 → 성격. 지도 밖 번호는 가장자리 성격으로 잘라 낸다. */

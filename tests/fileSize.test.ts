@@ -54,7 +54,7 @@ const LEGACY = new Map<string, number>([
   ["src/app/play/PlayClient.tsx", 800],
   ["src/game/combat/Boss.tsx", 467],
   ["src/game/combat/Enemies.tsx", 691],
-  ["src/game/combat/bossSim.ts", 384],
+  ["src/game/combat/bossSim.ts", 391],
   ["src/game/combat/combatSim.ts", 674],
   ["src/game/config/tuning.ts", 541],
   ["src/game/dokebi/companionMotion.ts", 482],
@@ -68,7 +68,7 @@ const LEGACY = new Map<string, number>([
   ["src/game/scene/cameraFrame.ts", 324],
   ["src/game/scene/sceneTypes.ts", 311],
   ["src/game/systems/audio/index.ts", 471],
-  ["src/game/systems/audio/music.ts", 418],
+  ["src/game/systems/audio/music.ts", 423],
   ["src/game/systems/audio/voices.ts", 578],
   ["src/game/systems/capture.ts", 344],
   ["src/game/systems/input.ts", 528],
@@ -92,7 +92,7 @@ const LEGACY = new Map<string, number>([
   ["src/game/world/trees.ts", 499],
   ["src/game/world/undergrowth.ts", 325],
   ["src/game/world/vehicleStands.ts", 334],
-  ["src/game/world/zones.ts", 403],
+  ["src/game/world/zones.ts", 476],
 ]);
 
 describe("파일 크기", () => {

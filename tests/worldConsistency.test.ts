@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BOSS_HOME } from "@/game/combat/bossSim";
+import { BOSS, BOSS_HOME } from "@/game/combat/bossSim";
 import { COMBAT_TUNING, createEnemies } from "@/game/combat/combatSim";
 import { LOCOMOTION } from "@/game/config/tuning";
 import { DOKEBI, DOKEBI_ORDER, DISCOVERY_RADIUS } from "@/game/dokebi/roster";
@@ -11,6 +11,7 @@ import { blockCells } from "@/game/systems/minimap";
 import { VENDING } from "@/game/systems/vending";
 import { buildCityDetails } from "@/game/world/cityDetails";
 import { blockCenter, buildCityLayout, CITY, ROAD_CENTERS } from "@/game/world/cityLayout";
+import { SITE_BLOCK_INDEX } from "@/game/world/zones";
 import { courtyardSpawnZ } from "@/game/world/courtyard";
 import { buildPedestrians, CROWD } from "@/game/world/crowdLayout";
 import { roadCenters, TRAFFIC } from "@/game/world/trafficLayout";
@@ -758,10 +759,26 @@ describe("미니 보스 자리", () => {
    */
   const home = BOSS_HOME;
 
-  it("도로 교차점 위에 있다", () => {
-    const onRoadX = ROAD_CENTERS.some((center) => Math.abs(center - home.x) < 1e-6);
-    const onRoadZ = ROAD_CENTERS.some((center) => Math.abs(center - home.z) < 1e-6);
-    expect(onRoadX && onRoadZ, `boss home (${home.x}, ${home.z}) is not on a crossing`).toBe(true);
+  it("공사장 한가운데다", () => {
+    /*
+     * **교차로 위에 있는지를 보던 검사였다.** 교차로는 13×13m인데 대장의
+     * 내려치는 반경이 6.2m라 물러설 자리가 없었다 — 검사가 그 좁은 자리를
+     * 지키고 있었던 셈이다. 이제 건물을 세우지 않는 블록의 한가운데를 본다.
+     */
+    const center = blockCenter(SITE_BLOCK_INDEX);
+    expect(home.x, `boss home x ${home.x}`).toBeCloseTo(center.cx, 6);
+    expect(home.z, `boss home z ${home.z}`).toBeCloseTo(center.cz, 6);
+  });
+
+  it("물러설 자리가 내려치는 반경보다 넓다", () => {
+    /*
+     * 예고를 보고 물러서는 것이 이 싸움의 전부다. 블록 반폭이 충격 반경보다
+     * 좁으면 벽에 붙어 맞을 수밖에 없다.
+     */
+    const halfBlock = CITY.blockSize / 2;
+    expect(halfBlock, `블록 반폭 ${halfBlock}m vs 충격 ${BOSS.slamRadius}m`).toBeGreaterThan(
+      BOSS.slamRadius * 2,
+    );
   });
 
   it("충돌체 안이 아니다", () => {

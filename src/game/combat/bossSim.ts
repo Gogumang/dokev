@@ -10,7 +10,8 @@
  * three.js에 의존하지 않는다.
  */
 
-import { ROAD_CENTERS } from "@/game/world/cityLayout";
+import { blockCenter } from "@/game/world/cityLayout";
+import { SITE_BLOCK_INDEX } from "@/game/world/zones";
 
 export const BOSS = {
   /** 최대 체력. 일반 로봇(2)보다 훨씬 두껍다 */
@@ -39,12 +40,18 @@ export const BOSS = {
 } as const;
 
 /**
- * 보스가 서 있는 자리.
+ * 보스가 서 있는 자리 — **공사장 한복판.**
  *
- * 씬과 지도가 같은 값을 써야 한다 — 표식과 실제 위치가 어긋나면 지도를 보고
- * 찾아간 사람이 빈 교차로에 서게 된다. 좌표를 두 번 적지 않는다.
+ * 도로 교차로에 세워 두었었다. 교차로는 13×13m인데 `slamRadius`가 6.2m라
+ * **물러설 자리가 없었다** — 예고를 보고 피하는 것이 이 싸움의 전부인데,
+ * 사방이 건물이면 예고 링은 장식이 된다. 이제 건물을 세우지 않는 블록
+ * 하나(34m)의 한가운데에 선다(`ZONES.site`).
+ *
+ * 좌표를 손으로 적지 않는다. 구역이 옮겨 가면 대장도 따라가야 하고, 두 곳에
+ * 적으면 표식과 실제 위치가 어긋나 지도를 보고 찾아간 사람이 빈 터에 선다.
  */
-export const BOSS_HOME = { x: ROAD_CENTERS[2], z: ROAD_CENTERS[5] } as const;
+const SITE_CENTER = blockCenter(SITE_BLOCK_INDEX);
+export const BOSS_HOME = { x: SITE_CENTER.cx, z: SITE_CENTER.cz } as const;
 
 export type BossPhase = "idle" | "chase" | "windup" | "slam" | "recover" | "stagger" | "down";
 

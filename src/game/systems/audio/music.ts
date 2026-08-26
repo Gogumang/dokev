@@ -120,6 +120,11 @@ const PROGRESSION_BY_DISTRICT: Record<DistrictId, readonly number[]> = {
   plaza: CHORD_PROGRESSION,
   // 번화가는 5도가 자주 나와 들뜬다.
   downtown: [0, 7, 5, 7, 3, 10, 5, 7],
+  /*
+   * 공사장은 대장과 싸우는 자리다. 근음을 오래 끌어 **긴장을 눌러 둔다** —
+   * 여기서 곡이 들뜨면 예고를 보고 피하는 리듬과 따로 논다.
+   */
+  site: [0, 0, 3, 3, 0, 0, 5, 3],
   // 시장은 걸음이 빨라지는 곳이라 근음이 자주 바뀐다.
   market: [0, 5, 3, 8, 5, 10, 3, 7],
   // 주택가는 같은 음을 오래 끌어 한산하게 둔다.

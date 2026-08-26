@@ -27,7 +27,7 @@ import {
 } from "@/game/world/courtyard";
 import { buildOldTown } from "@/game/world/oldTown";
 import { buildHillside } from "@/game/world/hillside";
-import { isUrbanBlock, zoneForBlock } from "@/game/world/zones";
+import { growsWeeds, isUrbanBlock, zoneForBlock } from "@/game/world/zones";
 
 export interface BoxInstance {
   x: number;
@@ -586,7 +586,7 @@ export function buildCityLayout(): CityLayout {
    * 있는데, 그 자리는 바로 위에서 정해진다.
    */
   const undergrowthBlocks = Array.from({ length: totalBlocks }, (_, index) => index)
-    .filter((index) => !isUrbanBlock(index))
+    .filter(growsWeeds)
     .map((index) => ({
       blockIndex: index,
       zoneId: zoneForBlock(index).id,
