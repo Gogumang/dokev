@@ -42,3 +42,6 @@ next-env.d.ts
 
 # 랄프 루프 로컬 상태
 .claude/*.local.md
+
+# 시연 영상 — `pnpm demo:render`가 뽑는다. 720p 1분이면 100MB가 넘어 저장소에 둘 것이 아니다
+*.mp4

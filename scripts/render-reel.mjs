@@ -254,8 +254,13 @@ async function main() {
     "-framerate", "60",
     "-i", join(frameDir, "%05d.jpg"),
     ...(opts.music ? ["-ss", opts.musicStart, "-i", opts.music] : []),
+    /*
+     * **밝기 범위를 명시한다.** JPEG 프레임은 풀레인지(0~255)라, 그냥 두면
+     * `yuvj420p`/`pc`로 태깅돼 나온다 — 편집기나 일부 플레이어에서 밝기가
+     * 들뜨거나 눌려 보인다. 방송 범위(16~235)로 눕혀서 어디서 열어도 같게 한다.
+     */
+    "-vf", "scale=out_range=tv,format=yuv420p",
     "-c:v", "libx264",
-    "-pix_fmt", "yuv420p",
     "-crf", "16",
     "-preset", "slow",
     ...(opts.music ? ["-c:a", "aac", "-b:a", "192k", "-shortest"] : []),
