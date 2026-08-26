@@ -314,19 +314,6 @@ describe("public에 에셋이 들어오지 않는가", () => {
      * `BossPhase`가 일곱이다. 버릴 것이 없어서 안 버렸다.
      */
     "public/models/boss-scrap-foreman.glb",
-    /*
-     * 타는 것 둘 — 조랑말 자리의 여우와 장난감 자동차 자리의 카트.
-     *
-     * 원본은 각각 10.8MB·11.4MB(17만·23만 삼각형)였고, 차량 셋과 같은 절차를
-     * 거쳐 1,992·3,470 삼각형이 됐다. 예산도 차량과 같은 자를 쓴다 — **동작이
-     * 없어서** 뼈를 들고 오는 동료·대장이 아니라 차량 쪽이다.
-     *
-     * 아이가 **올라타 화면 가운데에 오는 것**이라 실루엣이 가장 크게 읽힌다.
-     * 원통 넷에 상자 하나로는 「말」도 「차」도 아니었다. 못 받으면 그 상자
-     * 몸이 그대로 선다(`RiddenVehicleShapes.tsx`).
-     */
-    "public/models/ride-pony.glb",
-    "public/models/ride-toycar.glb",
   ]);
 
   it("정해 둔 것 말고는 에셋이 없다", () => {
@@ -352,9 +339,7 @@ describe("public에 에셋이 들어오지 않는가", () => {
      * 실제로 원본은 셋 다 117MB가 넘었고, 그때도 합계 자만 있었다면 「셋 다
      * 크다」가 「합계가 크다」 한 줄로 뭉개졌다.
      */
-    for (const path of [...ALLOWED].filter(
-      (name) => name.startsWith("public/models/traffic-") || name.startsWith("public/models/ride-"),
-    )) {
+    for (const path of [...ALLOWED].filter((name) => name.startsWith("public/models/traffic-"))) {
       const kb = statSync(path).size / 1024;
       expect(kb, `${path} ${kb.toFixed(0)}KB`).toBeLessThan(350);
     }
@@ -423,9 +408,9 @@ describe("public에 에셋이 들어오지 않는가", () => {
 
   it("파일이 조용히 늘지 않는다", () => {
     /*
-     * 확장자만 막으면 `.json` 데이터나 새 SVG가 슬금슬금 는다. 지금 열여섯이고
-     * (배경 차량 셋·동료 셋·보스·타는 것 둘이 늘었다), **줄이는 것은 언제든
-     * 환영**이라 상한만 둔다.
+     * 확장자만 막으면 `.json` 데이터나 새 SVG가 슬금슬금 는다. 지금 열넷이고
+     * (배경 차량 셋·동료 셋·보스가 늘었다), **줄이는 것은 언제든 환영**이라
+     * 상한만 둔다.
      */
     expect(files.length, `public 파일 ${files.length}개:\n${files.join("\n")}`).toBeLessThanOrEqual(
       16,

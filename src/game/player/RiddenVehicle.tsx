@@ -19,7 +19,6 @@ import * as THREE from "three";
 
 import { isVehicle, PLAYER_HEIGHT, type LocomotionMode } from "@/game/config/tuning";
 import { PLAYER_BODY, VEHICLE_BODY } from "@/game/player/characterBody";
-import { RiddenVehicleModel } from "@/game/player/RiddenVehicleModel";
 import { PonyShape, ToyCarShape } from "@/game/player/RiddenVehicleShapes";
 import { ToonMaterial } from "@/game/scene/ToonMaterial";
 
@@ -33,19 +32,6 @@ const RUBBER = "#d8d3c8";
 /** 조랑말 걸음의 빠르기(rad/s)와 폭(rad) */
 const PONY_STEP_RATE = 6.5;
 const PONY_STEP_SWING = 0.45;
-
-/**
- * 모델이 떴을 때의 몸통 흔들림 — 위아래(m)와 앞뒤 기울기(rad).
- *
- * 모델에는 **동작이 없다.** 다리를 돌리는 것은 상자 몸에만 되는 일이라, 모델을
- * 그대로 두면 여우가 미끄러진다 — 파일이 원래 경고하던 그 그림이다. 대신 몸
- * 전체를 걸음 주기에 맞춰 띄웠다 내린다. 네발짐승의 달리기는 다리보다 **등의
- * 오르내림**이 먼저 읽히므로, 다리가 없어도 「뛴다」가 성립한다.
- *
- * 값이 작은 이유: 아이가 등에 타고 있어서 크게 흔들면 **아이가 공중에 뜬다.**
- */
-const PONY_BOB_HEIGHT = 0.06;
-const PONY_BOB_PITCH = 0.05;
 
 /** 치수는 이름 있는 표에서 온다 — 여기서 짧게 부른다 */
 const B = PLAYER_BODY;
@@ -62,8 +48,6 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
   const skateboard = useRef<THREE.Group>(null);
   const toycar = useRef<THREE.Group>(null);
   const pony = useRef<THREE.Group>(null);
-  /** 모델 몸통. 동작이 없어서 여기를 흔든다 */
-  const ponyBob = useRef<THREE.Group>(null);
   const jetski = useRef<THREE.Group>(null);
   /** 조랑말 다리 넷. 걸음을 만들려면 개별로 돌려야 한다 */
   const ponyLegs = useRef<(THREE.Mesh | null)[]>([]);
@@ -152,23 +136,12 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
      * 짚도록 대각선끼리 위상을 맞춘다.
      */
     if (mode === "pony") {
-      const phase = clock.elapsedTime * PONY_STEP_RATE;
-      const swing = Math.sin(phase) * PONY_STEP_SWING;
+      const swing = Math.sin(clock.elapsedTime * PONY_STEP_RATE) * PONY_STEP_SWING;
       for (let i = 0; i < ponyLegs.current.length; i += 1) {
         const leg = ponyLegs.current[i];
         if (!leg) continue;
         // 0·3이 한 쌍, 1·2가 다른 쌍 — 대각선끼리 같이 나간다
         leg.rotation.x = i === 0 || i === 3 ? swing : -swing;
-      }
-
-      /*
-       * 모델 쪽은 등이 오르내린다. 걸음의 **두 배**로 흔드는 이유: 네발짐승은
-       * 한 걸음에 앞다리와 뒷다리가 각각 땅을 짚어 등이 두 번 오르내린다.
-       */
-      const body = ponyBob.current;
-      if (body) {
-        body.position.y = (Math.sin(phase * 2) * 0.5 + 0.5) * PONY_BOB_HEIGHT;
-        body.rotation.x = Math.cos(phase * 2) * PONY_BOB_PITCH;
       }
     }
   });
@@ -261,11 +234,7 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
         자동차를 운전하는 것과는 다르다. 바퀴 넷이 실루엣을 정한다.
       */}
       <group ref={toycar} visible={riding && motion.mode === "toycar"}>
-        <RiddenVehicleModel
-          url="/models/ride-toycar.glb"
-          heightMeters={V.carHeight + V.carWheelRadius * 2}
-          fallback={<ToyCarShape geometry={geometry} />}
-        />
+        <ToyCarShape geometry={geometry} />
       </group>
 
       {/*
@@ -273,13 +242,7 @@ export function RiddenVehicle({ motion }: RiddenVehicleProps) {
         따로 돌린다. 자연 구역에서만 만난다(`PASTURE_VEHICLES`).
       */}
       <group ref={pony} visible={riding && motion.mode === "pony"}>
-        <group ref={ponyBob}>
-          <RiddenVehicleModel
-            url="/models/ride-pony.glb"
-            heightMeters={V.ponyLegHeight + V.ponyBodyHeight}
-            fallback={<PonyShape geometry={geometry} legs={ponyLegs} />}
-          />
-        </group>
+        <PonyShape geometry={geometry} legs={ponyLegs} />
       </group>
 
       {/*
