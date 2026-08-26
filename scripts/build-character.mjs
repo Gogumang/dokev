@@ -46,6 +46,20 @@ const TEXTURE_SIZE = 1024;
 /** JPEG 품질. 78이면 눈에 띄는 손실 없이 원본의 6% 크기가 된다 */
 const TEXTURE_QUALITY = 78;
 
+/**
+ * 안 쓰는 텍스처 자리에 넣는 1×1 JPEG.
+ *
+ * 이미지를 배열에서 **빼지 않는다.** 빼면 텍스처·재질이 가리키는 번호가
+ * 전부 밀려서 다시 적어야 하고, 하나만 놓쳐도 엉뚱한 그림이 붙는다.
+ * 자리는 두고 알맹이만 비운다.
+ */
+const TINY_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAP//////////////////////////////////////" +
+    "////////////////////////////////////////////////////wgALCAABAAEBAREA/8QA" +
+    "FBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+  "base64",
+);
+
 function readGlb(path) {
   const buf = readFileSync(path);
   if (buf.readUInt32LE(0) !== 0x46546c67) throw new Error(`glTF 파일이 아니다: ${path}`);
@@ -136,7 +150,7 @@ function build(bodyPath, clipPath, outPath) {
   const nodeByName = new Map(json.nodes.map((node, index) => [node.name, index]));
 
   /** 새로 쌓을 뷰들 */
-  const views = json.bufferViews.map((view, index) => ({
+  let views = json.bufferViews.map((view, index) => ({
     bytes: viewBytes(base, index),
     stride: view.byteStride,
     target: view.target,
@@ -173,11 +187,132 @@ function build(bodyPath, clipPath, outPath) {
     }
   }
 
-  // 텍스처 교체 — 여기가 전체 크기의 대부분이다
-  const image = json.images[0];
-  const jpeg = shrinkTexture(viewBytes(base, image.bufferView));
-  views[image.bufferView] = { bytes: jpeg };
-  image.mimeType = "image/jpeg";
+  /*
+   * 텍스처 교체 — 여기가 전체 크기의 대부분이다.
+   *
+   * **전부 줄인다.** 예전에는 `images[0]` 하나만 줄였다. 그때 쓰던 몸은
+   * 이미지가 하나여서 드러나지 않았는데, 다른 모델로 갈아 끼우니 이미지가
+   * 둘이었고 **몸 색을 담은 쪽이 두 번째**였다 — 줄인 것은 안 쓰는 맵이고
+   * 4.6MB짜리 원본 PNG가 그대로 실려 파일이 1.7MB에서 8MB가 됐다.
+   *
+   * 「첫 번째가 베이스 컬러」는 glTF가 보장하지 않는다. 세면 되는 일을
+   * 순서에 맡기지 않는다.
+   */
+  /*
+   * 쓰는 것만 남긴다.
+   *
+   * Meshy는 알베도를 **`emissiveTexture`로도 한 벌 더** 실어 보낸다
+   * (`emissiveFactor: [1,1,1]`이라 모델이 스스로 빛난다). 이 게임은 GLB를
+   * 받자마자 툰 재질로 갈아 끼우면서 `map`만 가져가므로(`toonModel.paintToon`)
+   * 그 한 벌은 **한 번도 샘플링되지 않는다** — 500KB를 그냥 지고 다닌다.
+   */
+  const used = new Set();
+  for (const material of json.materials ?? []) {
+    const at = material.pbrMetallicRoughness?.baseColorTexture?.index;
+    if (at !== undefined) used.add(json.textures[at].source);
+    material.emissiveTexture = undefined;
+    material.emissiveFactor = undefined;
+  }
+
+  for (const [at, image] of json.images.entries()) {
+    if (!used.has(at)) {
+      views[image.bufferView] = { bytes: TINY_JPEG };
+      image.mimeType = "image/jpeg";
+      continue;
+    }
+    const jpeg = shrinkTexture(viewBytes(base, image.bufferView));
+    views[image.bufferView] = { bytes: jpeg };
+    image.mimeType = "image/jpeg";
+  }
+
+  /*
+   * 아무도 안 부르는 접근자를 버린다.
+   *
+   * 바탕이 동작을 열아홉 개 들고 있는데 여섯만 옮겨 붙인다. `animations`
+   * 목록에서는 사라지지만 **그것들이 쓰던 접근자와 뷰는 그대로 남는다** —
+   * 고아 1,400개가 467KB를 붙들고, JSON에도 200KB를 더 얹었다. 파일이
+   * 1.7MB에서 2.2MB로 늘어난 몫의 대부분이 이것이었다.
+   *
+   * 번호를 다시 매기는 일이라 **가리키는 곳을 하나도 빠뜨리면 안 된다.**
+   * 하나만 놓쳐도 엉뚱한 뼈가 움직이거나 메시가 통째로 사라진다 — 그래서
+   * 아래에서 한 곳씩 이름을 대고 옮긴다.
+   */
+  const liveAccessors = new Set();
+  for (const mesh of json.meshes ?? []) {
+    for (const primitive of mesh.primitives ?? []) {
+      for (const key of Object.keys(primitive.attributes ?? {})) {
+        liveAccessors.add(primitive.attributes[key]);
+      }
+      if (primitive.indices !== undefined) liveAccessors.add(primitive.indices);
+      for (const target of primitive.targets ?? []) {
+        for (const key of Object.keys(target)) liveAccessors.add(target[key]);
+      }
+    }
+  }
+  for (const skin of json.skins ?? []) {
+    if (skin.inverseBindMatrices !== undefined) liveAccessors.add(skin.inverseBindMatrices);
+  }
+  for (const animation of json.animations ?? []) {
+    for (const sampler of animation.samplers) {
+      liveAccessors.add(sampler.input);
+      liveAccessors.add(sampler.output);
+    }
+  }
+
+  const liveViews = new Set();
+  for (const at of liveAccessors) {
+    const view = json.accessors[at]?.bufferView;
+    if (view !== undefined) liveViews.add(view);
+  }
+  for (const image of json.images ?? []) liveViews.add(image.bufferView);
+
+  const viewIndex = new Map();
+  const keptViews = [];
+  views.forEach((view, at) => {
+    if (!liveViews.has(at)) return;
+    viewIndex.set(at, keptViews.length);
+    keptViews.push(view);
+  });
+
+  const accessorIndex = new Map();
+  const keptAccessors = [];
+  json.accessors.forEach((accessor, at) => {
+    if (!liveAccessors.has(at)) return;
+    accessorIndex.set(at, keptAccessors.length);
+    keptAccessors.push(
+      accessor.bufferView === undefined
+        ? accessor
+        : { ...accessor, bufferView: viewIndex.get(accessor.bufferView) },
+    );
+  });
+
+  json.accessors = keptAccessors;
+  for (const image of json.images ?? []) image.bufferView = viewIndex.get(image.bufferView);
+  for (const mesh of json.meshes ?? []) {
+    for (const primitive of mesh.primitives ?? []) {
+      for (const key of Object.keys(primitive.attributes ?? {})) {
+        primitive.attributes[key] = accessorIndex.get(primitive.attributes[key]);
+      }
+      if (primitive.indices !== undefined) {
+        primitive.indices = accessorIndex.get(primitive.indices);
+      }
+      for (const target of primitive.targets ?? []) {
+        for (const key of Object.keys(target)) target[key] = accessorIndex.get(target[key]);
+      }
+    }
+  }
+  for (const skin of json.skins ?? []) {
+    if (skin.inverseBindMatrices !== undefined) {
+      skin.inverseBindMatrices = accessorIndex.get(skin.inverseBindMatrices);
+    }
+  }
+  for (const animation of json.animations ?? []) {
+    for (const sampler of animation.samplers) {
+      sampler.input = accessorIndex.get(sampler.input);
+      sampler.output = accessorIndex.get(sampler.output);
+    }
+  }
+  views = keptViews;
 
   // 뷰를 차례로 쌓으며 위치를 다시 적는다
   const chunks = [];
