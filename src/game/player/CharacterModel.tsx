@@ -23,6 +23,7 @@ import { MAX_DELTA_SECONDS, PLAYER_HEIGHT } from "@/game/config/tuning";
 import { loadGltf, type LoadedModel } from "@/game/scene/modelCache";
 import { createOutline, disposeOutline, paintToon } from "@/game/scene/toonModel";
 import {
+  attackPlaybackRate,
   CLIP,
   clipFor,
   freezes,
@@ -208,8 +209,14 @@ export function CharacterModel({ motion, fallback, fade }: CharacterModelProps) 
     /*
      * 멈춰 세울 때는 **재생 속도를 0으로** 둔다. `paused`를 쓰면 섞는 중에도
      * 멈춰 다음 동작으로 넘어가지 못한다.
+     *
+     * 공격은 **무기 주기에 맞춰** 늘린다. 걷기·달리기가 이동 속도에 맞춰
+     * 빨라지는 것과 같은 이유다 — 그림이 규칙보다 길면 잘리고 짧으면 남는다.
      */
-    action.timeScale = freezes(motion) ? 0 : playbackRate(motion);
+    if (freezes(motion)) action.timeScale = 0;
+    else if (wanted === CLIP.attack)
+      action.timeScale = attackPlaybackRate(action.getClip().duration, motion.weapon);
+    else action.timeScale = playbackRate(motion);
 
     active.update(Math.min(rawDelta, MAX_DELTA_SECONDS));
   });

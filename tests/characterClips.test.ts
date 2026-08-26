@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 
 import { bothWays, describeSplit } from "./support/bothWays";
 
+import { DEFAULT_WEAPON, swingSeconds, WEAPON_ORDER, WEAPONS } from "@/game/combat/weapons";
 import {
+  attackPlaybackRate,
   CLIP,
   clipFor,
   freezes,
@@ -30,6 +32,7 @@ function at(overrides: Partial<ClipInput> = {}): ClipInput {
     grounded: true,
     gliding: false,
     attackElapsed: null,
+    weapon: DEFAULT_WEAPON,
     emote: createEmoteState(),
     downed: false,
     ...overrides,
@@ -167,5 +170,68 @@ describe("끝 자세에서 멈추는 동작", () => {
   it("걷기·달리기는 반복한다 — 멈추면 한 걸음 뒤 굳는다", () => {
     expect(holdsLastFrame(CLIP.walk)).toBe(false);
     expect(holdsLastFrame(CLIP.run)).toBe(false);
+  });
+});
+
+describe("공격 동작이 무기 주기와 줄을 서는가", () => {
+  /*
+   * 파일에서 실제 길이를 읽는다. 상수로 적어 두면 모델을 바꿀 때 조용히
+   * 틀려지고, 틀린 줄은 **화면에서 팔이 잘려야** 안다.
+   */
+  const attackSeconds: number = (() => {
+    const buf = readFileSync("public/character.glb");
+    const json = JSON.parse(buf.subarray(20, 20 + buf.readUInt32LE(12)).toString("utf8"));
+    const clip = (json.animations ?? []).find(
+      (item: { name: string }) => item.name === CLIP.attack,
+    );
+    if (!clip) return 0;
+    // 길이는 **입력 접근자의 최댓값**이다 — 마지막 키프레임의 시각
+    let last = 0;
+    for (const sampler of clip.samplers as { input: number }[]) {
+      const max = json.accessors[sampler.input]?.max?.[0];
+      if (typeof max === "number") last = Math.max(last, max);
+    }
+    return last;
+  })();
+
+  it("공격 동작 길이를 실제로 읽었다", () => {
+    // 못 읽으면 아래 검사들이 0을 재며 통과한다
+    expect(attackSeconds, `${CLIP.attack} 길이`).toBeGreaterThan(0);
+  });
+
+  it("드는 무기 어느 쪽이든 한 주기에 정확히 한 번 재생된다", () => {
+    /*
+     * 이것이 어긋나면 셋이 한꺼번에 어긋난다 — 자세가 다 잡히기 전에 탄이
+     * 나가거나, 다 쏘고 나서도 팔이 계속 움직이거나, 동작이 잘려 기본 자세로
+     * 튄다. 잽은 1.77초인데 활은 0.86초라 실제로 잘리고 있었다.
+     */
+    for (const id of WEAPON_ORDER) {
+      const rate = attackPlaybackRate(attackSeconds, id);
+      const played = attackSeconds / rate;
+      expect(
+        played,
+        `${id}: ${played.toFixed(2)}초 재생 / 주기 ${swingSeconds(WEAPONS[id])}초`,
+      ).toBeCloseTo(swingSeconds(WEAPONS[id]), 5);
+    }
+  });
+
+  it("길이를 모르면 늘리지 않는다", () => {
+    // 0으로 나누면 timeScale이 Infinity가 되고, 그러면 동작이 통째로 사라진다
+    expect(attackPlaybackRate(0, DEFAULT_WEAPON)).toBe(1);
+    expect(attackPlaybackRate(-1, DEFAULT_WEAPON)).toBe(1);
+  });
+
+  it("탄이 나가는 순간이 동작 한가운데쯤이다", () => {
+    /*
+     * 판정이 켜지는 순간(준비 끝)에 한 발 나간다(`Enemies.tsx`). 그 자리가
+     * 동작의 맨 앞이면 **자세를 잡기도 전에** 나가고, 맨 뒤면 다 끝난 뒤에
+     * 나간다 — 둘 다 「포즈 나오고 쏜다」로 안 읽힌다.
+     */
+    for (const id of WEAPON_ORDER) {
+      const weapon = WEAPONS[id];
+      const at = weapon.timing.windupSeconds / swingSeconds(weapon);
+      expect(at, `${id}: 동작의 ${(at * 100).toFixed(0)}% 지점에서 쏜다`).toBeGreaterThan(0.15);
+      expect(at, `${id}: 동작의 ${(at * 100).toFixed(0)}% 지점에서 쏜다`).toBeLessThan(0.75);
+    }
   });
 });

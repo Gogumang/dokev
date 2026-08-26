@@ -13,6 +13,7 @@
  * 난다」가 생긴다.
  */
 
+import { swingSeconds, WEAPONS, type WeaponId } from "@/game/combat/weapons";
 import { isVehicle, type LocomotionMode } from "@/game/config/tuning";
 import { POSE_TUNING } from "@/game/player/characterPose";
 import type { EmoteState } from "@/game/player/emote";
@@ -48,6 +49,15 @@ export interface ClipInput {
   gliding: boolean;
   /** 휘두르기 경과 시간(초). 안 휘두르면 null */
   attackElapsed: number | null;
+  /**
+   * 지금 든 무기.
+   *
+   * 경과 시간만으로는 부족하다 — 그 시간이 0.52초짜리 주기의 절반인지
+   * 0.86초짜리의 3분의 1인지에 따라 동작이 어디까지 가 있어야 하는지가
+   * 다르다. 절차적 캐릭터는 처음부터 이 값을 보고 있었고(`Character.tsx`),
+   * 모델 쪽만 안 보고 있었다.
+   */
+  weapon: WeaponId;
   /** 감정 표현 상태 */
   emote: EmoteState;
   /** 쓰러져 있는지 */
@@ -123,6 +133,26 @@ export function playbackRate(input: ClipInput): number {
 
   const reference = input.speed >= POSE_TUNING.runSpeed ? POSE_TUNING.runSpeed : WALK_REFERENCE;
   return Math.min(1.8, Math.max(0.6, input.speed / reference));
+}
+
+/**
+ * 공격 동작의 재생 속도.
+ *
+ * **동작을 무기 주기에 맞춰 늘리거나 줄인다.** 이것이 없으면 1.77초짜리 잽이
+ * 0.86초(활)에 잘려 나가 — 팔을 뻗다 말고 기본 자세로 튄다. 광선총(0.52초)에서는
+ * 3분의 1도 못 간다. 그림과 규칙이 갈라지는 자리이고, 대장의 예고에서 같은
+ * 문제를 이미 이렇게 풀었다(`bossPlaybackRate`).
+ *
+ * 맞춰 두면 셋이 저절로 줄을 선다: 준비 구간에 자세가 잡히고, 판정이 켜지는
+ * 순간(준비 끝)에 탄이 나가고, 후딜이 끝나면 동작도 함께 끝나 기본 자세로
+ * 돌아간다.
+ *
+ * @param clipSeconds 동작 자체의 길이(초). 0이면 늘리지 않는다
+ */
+export function attackPlaybackRate(clipSeconds: number, weapon: WeaponId): number {
+  const swing = swingSeconds(WEAPONS[weapon]);
+  if (clipSeconds <= 0 || swing <= 0) return 1;
+  return clipSeconds / swing;
 }
 
 /**

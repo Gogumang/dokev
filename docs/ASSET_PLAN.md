@@ -88,10 +88,15 @@ TRAILER 8.2의 실루엣 원칙이었는데, 걷는 동작을 가진 두 발 생
 
 ## 4. 예산
 
-지금 외부 에셋은 아홉이다 — `character.glb`(920KB), `title-street.webp`(137KB),
+지금 외부 에셋은 열하나다 — `character.glb`(1.7MB), `title-street.webp`(137KB),
 배경 차량 셋(`public/models/traffic-*.glb`, 103~122KB), 동료 셋
 (`public/models/companion-*.glb`, 330~436KB), 미니 보스
-(`public/models/boss-scrap-foreman.glb`, 758KB). 남은 동료는 로봇 하나다.
+(`public/models/boss-scrap-foreman.glb`, 740KB), 타는 것 둘
+(`public/models/ride-*.glb`, 114~129KB — 조랑말 자리의 여우, 장난감 자동차
+자리의 카트). 남은 동료는 로봇 하나다.
+
+**건물은 여기 없다.** 3.2절의 결정대로 절차형으로 남는다 — 컨셉 이미지 넷은
+파사드·지붕 팔레트의 기준이지 반입 대상이 아니다.
 
 | 항목 | 지금 | 상한 |
 |---|---|---|

@@ -1,3 +1,4 @@
+import { DEFAULT_WEAPON } from "@/game/combat/weapons";
 import { describe, expect, it } from "vitest";
 
 import { bothWays, describeSplit } from "./support/bothWays";
@@ -63,6 +64,7 @@ function riding(mode: ClipInput["mode"]): ClipInput {
     grounded: true,
     gliding: false,
     attackElapsed: null,
+    weapon: DEFAULT_WEAPON,
     emote: createEmoteState(),
     downed: false,
   };

@@ -1,36 +1,44 @@
 /**
- * 캐릭터 GLB 하나로 합치기.
+ * 캐릭터 GLB 하나로 합치기 — **몸 하나에 동작을 옮겨 붙인다.**
  *
- * Meshy가 내보낸 원본은 **동작마다 파일이 따로**이고, 파일마다 같은 메시와
- * 2048px 텍스처가 통째로 들어 있다 — 12개를 그대로 쓰면 68MB이고, 같은 메시를
- * 열두 번 받는 셈이다.
+ * 몸과 동작이 다른 파일에서 온다. Meshy의 자동 리깅은 **표준 뼈대 하나**를
+ * 쓰므로(조인트 24개, `Hips`부터 이름·순서가 같다), 어느 모델에서 뽑은
+ * 동작이든 다른 모델에 그대로 얹힌다 — 그 덕에 「이 몸이 마음에 드는데 동작이
+ * 둘뿐」인 상황을 몸만 갈아 끼워 푼다.
  *
- * 그래서 하나를 바탕으로 삼고 **나머지에서 동작만 떼어 붙인다.** 텍스처는
- * 파일의 92%였으므로 줄이는 것이 곧 크기다 — 1024px JPEG로 바꾼다.
+ * 텍스처는 파일의 92%였으므로 줄이는 것이 곧 크기다 — 1024px JPEG로 바꾼다.
  *
  * 이 스크립트를 저장소에 두는 이유는 **결과물이 어디서 왔는지 남기기 위해서**다.
  * `public/character.glb`만 있으면 다음 사람은 그 안을 열어 보기 전에는 무엇이
  * 들어 있는지 모른다.
  *
  * 쓰는 법:
- *   node scripts/build-character.mjs <원본 폴더> [출력 경로]
+ *   node scripts/build-character.mjs <몸 GLB> <동작 GLB> [출력 경로]
+ *
+ * 뼈대가 다르면 **조용히 망가진다**(붙일 곳을 못 찾은 채널을 버리므로 일부만
+ * 움직인다). 그래서 먼저 조인트를 대조하고, 어긋나면 멈춘다.
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-/** 바탕으로 쓸 파일에 들어 있는 동작 */
-const BASE_CLIP = "Running";
-
 /**
- * 함께 넣을 동작들.
+ * 옮겨 붙일 동작들.
  *
- * 열두 개를 다 넣지 않는다 — 게임이 쓰지 않는 동작도 키프레임만큼 자리를
- * 차지한다. 화면에 실제로 나오는 것만 고른다.
+ * 원본이 든 것을 다 넣지 않는다 — 게임이 쓰지 않는 동작도 키프레임만큼 자리를
+ * 차지한다. `characterClips.ts`의 `CLIP`이 부르는 여섯만 고르고, 검사가 그
+ * 목록과 파일을 **양쪽으로** 대조한다.
  */
-const EXTRA_CLIPS = ["Walking", "Attack", "Dead", "Arise", "Skill_03"];
+const CLIPS = [
+  "Running",
+  "Walking",
+  "Left_Jab_from_Guard",
+  "Knock_Down",
+  "Idle_15",
+  "Lunge_Spin_Kick",
+];
 
 /** 텍스처 한 변(px). 캐릭터가 화면에서 작아 2048은 과하다 */
 const TEXTURE_SIZE = 1024;
@@ -54,10 +62,10 @@ function viewBytes(glb, index) {
   return glb.bin.subarray(from, from + view.byteLength);
 }
 
-function findFile(dir, clip) {
-  const hit = readdirSync(dir).find((name) => name.includes(`_Animation_${clip}_`));
-  if (!hit) throw new Error(`동작 파일을 못 찾았다: ${clip}`);
-  return join(dir, hit);
+/** 그 파일의 뼈대 — 조인트 이름을 순서대로 */
+function jointNames(glb) {
+  const joints = glb.json.skins?.[0]?.joints ?? [];
+  return joints.map((index) => glb.json.nodes[index].name);
 }
 
 /**
@@ -99,9 +107,27 @@ function pad4(length) {
   return (4 - (length % 4)) % 4;
 }
 
-function build(sourceDir, outPath) {
-  const base = readGlb(findFile(sourceDir, BASE_CLIP));
+function build(bodyPath, clipPath, outPath) {
+  const base = readGlb(bodyPath);
+  const source = readGlb(clipPath);
+
+  /*
+   * 뼈대가 같은지부터 본다. 다르면 채널이 붙을 곳을 못 찾아 **조용히 버려지고**,
+   * 화면에서는 「팔만 움직이는 캐릭터」로 나온다 — 오류도 없이.
+   */
+  const mine = jointNames(base);
+  const theirs = jointNames(source);
+  const same = mine.length === theirs.length && mine.every((name, i) => name === theirs[i]);
+  if (!same) {
+    throw new Error(
+      `뼈대가 다르다 — 몸 ${mine.length}개, 동작 ${theirs.length}개.\n` +
+        `  몸:   ${mine.slice(0, 6).join(", ")}\n  동작: ${theirs.slice(0, 6).join(", ")}`,
+    );
+  }
+
   const json = structuredClone(base.json);
+  // 바탕이 들고 온 동작은 버린다 — 아래에서 고른 것만 다시 채운다
+  json.animations = [];
 
   /*
    * 노드는 **이름으로** 맞춘다. 파일마다 노드 순서가 같다는 보장이 없고,
@@ -116,9 +142,11 @@ function build(sourceDir, outPath) {
     target: view.target,
   }));
 
-  for (const clip of EXTRA_CLIPS) {
-    const extra = readGlb(findFile(sourceDir, clip));
-    for (const animation of extra.json.animations ?? []) {
+  for (const clip of CLIPS) {
+    const extra = source;
+    const wanted = (extra.json.animations ?? []).filter((item) => item.name === clip);
+    if (wanted.length === 0) throw new Error(`동작이 없다: ${clip}`);
+    for (const animation of wanted) {
       const samplers = [];
 
       for (const sampler of animation.samplers) {
@@ -194,12 +222,12 @@ function build(sourceDir, outPath) {
   return { clips: json.animations.map((animation) => animation.name), bytes: total };
 }
 
-const [dir, out = "public/character.glb"] = process.argv.slice(2);
-if (!dir) {
-  console.error("쓰는 법: node scripts/build-character.mjs <원본 폴더> [출력 경로]");
+const [body, clips, out = "public/character.glb"] = process.argv.slice(2);
+if (!body || !clips) {
+  console.error("쓰는 법: node scripts/build-character.mjs <몸 GLB> <동작 GLB> [출력 경로]");
   process.exit(1);
 }
 
-const result = build(dir, out);
+const result = build(body, clips, out);
 console.log(`${out} — ${(result.bytes / 1024).toFixed(0)}KB`);
 for (const name of result.clips) console.log(`  ${name}`);
