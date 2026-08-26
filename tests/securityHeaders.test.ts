@@ -80,4 +80,34 @@ describe("응답 헤더", () => {
       expect(line, `${rule}에 blob:이 없다`).toContain("blob:");
     }
   });
+
+  /*
+   * **이 검사가 없어서 배포본이 몇 판을 흰 인형으로 돌았다.**
+   *
+   * three의 GLTFLoader는 GLB 안에 박힌 텍스처를 꺼내 blob URL로 만들고,
+   * `createImageBitmap`이 있는 브라우저에서는 `ImageBitmapLoader`로 읽는다.
+   * 그건 `<img>`가 아니라 **`fetch()`**라서 `img-src`가 아니라 `connect-src`의
+   * 지배를 받는다 — `img-src`에 `blob:`을 열어 둔 것만으로는 소용이 없었다.
+   *
+   * CSP를 개발 서버에는 안 붙이므로 로컬에서는 끝까지 멀쩡하고 **배포해야만**
+   * 캐릭터·대장·동료·차량이 전부 텍스처 없는 흰 덩어리로 나온다.
+   */
+  it("모델 텍스처를 막지 않는다 — GLTFLoader는 blob을 fetch로 읽는다", () => {
+    const policy = /const CONTENT_SECURITY_POLICY = \[([\s\S]*?)\]\.join/.exec(config)?.[1] ?? "";
+    const line = /"connect-src[^"]*"/.exec(policy)?.[0] ?? "";
+    expect(line, "connect-src 줄을 못 읽었다").not.toBe("");
+    expect(line, "connect-src에 blob:이 없다 — 배포본에서 모든 GLB가 텍스처 없이 뜬다").toContain(
+      "blob:",
+    );
+  });
+
+  it("three가 실제로 fetch 쓰는 로더를 고른다 — 이 검사의 전제다", () => {
+    /*
+     * 위 검사는 「GLTFLoader가 `ImageBitmapLoader`를 쓴다」를 전제로 한다.
+     * three가 그 선택을 바꾸면 전제가 무너지고, 그때 이 검사는 **맞는 것을
+     * 틀린 이유로** 지키게 된다.
+     */
+    const loader = readFileSync("node_modules/three/examples/jsm/loaders/GLTFLoader.js", "utf8");
+    expect(loader, "GLTFLoader가 ImageBitmapLoader를 안 쓴다").toContain("new ImageBitmapLoader(");
+  });
 });

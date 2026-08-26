@@ -53,7 +53,23 @@ const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
   "font-src 'self'",
-  "connect-src 'self'",
+  /*
+   * `blob:`이 없으면 **모델 텍스처가 통째로 안 뜬다.**
+   *
+   * three의 GLTFLoader는 GLB 안에 박힌 이미지를 꺼내 blob URL로 만들고,
+   * `createImageBitmap`이 있는 브라우저에서는 `ImageBitmapLoader`로 읽는다.
+   * 그건 `<img>`가 아니라 **`fetch()`**라서 `img-src`가 아니라 여기의 지배를
+   * 받는다 — `img-src`에 `blob:`을 열어 둔 것만으로는 소용이 없었다.
+   *
+   * 배포본에서 캐릭터·대장·동료·차량이 전부 **텍스처 없는 흰 덩어리**로
+   * 나왔다. 콘솔에는 `Couldn't load texture blob:...`이 GLB 수만큼 찍힌다.
+   * CSP를 개발 서버에 안 붙이므로(아래 `isProduction`) 로컬에서는 멀쩡하고
+   * **배포해야만 보인다** — 그래서 오래 안 잡혔다.
+   *
+   * 위험하지 않다. blob URL은 이 페이지가 스스로 만든 것이고 같은 출처다 —
+   * 남의 데이터를 가리키는 blob을 만들 방법이 없다.
+   */
+  "connect-src 'self' blob:",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
