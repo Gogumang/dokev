@@ -17,6 +17,18 @@ import { resolveCompanionStrikes, type EnemyState } from "@/game/combat/combatSi
 import type { BossBoltLink } from "@/game/combat/bossSim";
 import { companionBossDamage, COMPANION_STRIKE } from "@/game/dokebi/companionStrike";
 
+/**
+ * 동료 타격이 대장에 대해 알아야 하는 것.
+ *
+ * `summonAtBoss`가 `bossSim`이 아니라 여기 있는 이유: 저 깃발은 대장의 상태가
+ * 아니라 **소환과 동료 타격 사이의 약속**이다. 대장 쪽에 두면 대장이 우리 편
+ * 두 시스템의 사정을 알아야 한다.
+ */
+export interface CompanionBossLink extends BossBoltLink {
+  /** 도깨비가 대장 쪽에 나가 있는가(소환 중). 나가 있으면 곁에서는 안 때린다 */
+  summonAtBoss: boolean;
+}
+
 export interface CompanionHits {
   /** 이번 프레임에 맞은 로봇들. 제자리에서 이미 고쳐졌다 */
   struck: EnemyState[];
@@ -32,7 +44,7 @@ export interface CompanionHits {
  * 프레임에 두 번 맞은 것으로 세어 대장이 계속 비틀거린다.
  */
 export function recordCompanionHits(
-  link: BossBoltLink,
+  link: CompanionBossLink,
   /** 동료가 이번 프레임에 친 자리. 꺼내는 것은 프레임 루프 쪽 몫이다 */
   spots: readonly { x: number; z: number }[],
   enemies: EnemyState[],
@@ -47,9 +59,17 @@ export function recordCompanionHits(
     COMPANION_STRIKE.knockbackScale,
   );
 
-  const bossDamage = link.bossHittable
-    ? companionBossDamage(spots, link.bossX, link.bossZ, bossRadius)
-    : 0;
+  /*
+   * 도깨비가 대장 쪽에 나가 있으면(`summonAtBoss`) 여기서는 안 넣는다.
+   *
+   * 같은 넷이 대장 둘레에서 역할을 쓰는 중이다. 양쪽에서 다 때리면 화면에
+   * 보이는 것보다 두 배로 깎이고, 12 체력이 3~4초에 사라진다 — 예고를 보고
+   * 피하는 것이 이 싸움의 전부인데 피할 싸움 자체가 없어진다.
+   */
+  const bossDamage =
+    link.bossHittable && !link.summonAtBoss
+      ? companionBossDamage(spots, link.bossX, link.bossZ, bossRadius)
+      : 0;
   link.bossBoltDamage += bossDamage;
 
   return { struck, bossDamage };

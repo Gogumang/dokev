@@ -147,8 +147,8 @@ export interface CombatLink {
   bossX: number;
   bossZ: number;
   bossHittable: boolean;
-  /** 탄이 대장에게 넣은 피해. 탄이 쌓고 보스가 비운다 */
   bossBoltDamage: number;
+  summonAtBoss: boolean;
   /** 미니 보스를 쓰러뜨린 적이 있는지. 퀘스트가 읽는다 */
   bossDefeated: boolean;
   /** 전투 사건 누적 수. 사운드가 읽는다 */

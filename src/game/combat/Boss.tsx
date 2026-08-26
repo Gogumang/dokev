@@ -215,6 +215,11 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
     if (engaged && canSummon(summon.current, distance, met)) {
       summon.current = requestSummon(summon.current, met);
     }
+    /*
+     * 나가 있는 동안에는 주인공 곁에서 또 때리지 않는다 — 같은 넷이다
+     * (`companionHits`). 두 시스템이 서로를 모르면 양쪽에서 다 깎는다.
+     */
+    link.summonAtBoss = summon.current.phase === "active";
 
     const tick = stepSummon(summon.current, dt, {
       x: boss.current.x,

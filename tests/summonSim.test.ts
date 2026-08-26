@@ -12,7 +12,7 @@ import {
   SUMMON,
   type SummonState,
 } from "@/game/combat/summonSim";
-import { DOKEBI_ORDER } from "@/game/dokebi/roster";
+import { DOKEBI, DOKEBI_ORDER } from "@/game/dokebi/roster";
 
 /*
  * 보스전 도깨비 소환.
@@ -119,12 +119,41 @@ describe("도깨비마다 다른 일을 한다", () => {
     expect(new Set(roles).size, `역할 ${roles.join(", ")}`).toBe(DOKEBI_ORDER.length);
   });
 
-  it("「먼 불빛」만 피해를 준다", () => {
-    const alone = advance(summoned(["jajeong"]), SUMMON.durationSeconds);
-    const others = advance(summoned(["chorong", "geueum", "mulbineul"]), SUMMON.durationSeconds);
+  it("「반딧불」만 피해를 준다", () => {
+    const alone = advance(summoned(["chorong"]), SUMMON.durationSeconds);
+    const others = advance(summoned(["geueum", "mulbineul", "jajeong"]), SUMMON.durationSeconds);
 
-    expect(alone.damage, `자정 혼자 ${alone.damage}`).toBeGreaterThan(0);
+    expect(alone.damage, `초롱 혼자 ${alone.damage}`).toBeGreaterThan(0);
     expect(others.damage, `나머지 셋이 ${others.damage}만큼 때렸다`).toBe(0);
+  });
+
+  /*
+   * 이 검사가 이 기능의 요점이다.
+   *
+   * 처음에는 자정이 피해였는데 자정은 **대장을 눕혀야 열린다.** 첫 대장전에는
+   * 피해를 주는 역할이 아예 없어서 표식·유인·회복만 돌았다 — 이기는 데 필요한
+   * 것이 이기고 나서 열리는 순환이었다. 넷을 다 모아 놓고 봐야만 보였다.
+   */
+  it("첫 대장전에 나올 수 있는 도깨비만으로도 피해가 들어간다", () => {
+    const firstFight = DOKEBI_ORDER.filter((id) => !DOKEBI[id].requiresBoss);
+    expect(firstFight.length, "대장 전에 만날 수 있는 도깨비가 없다").toBeGreaterThan(0);
+
+    const tick = advance(summoned(firstFight), SUMMON.durationSeconds);
+    expect(
+      tick.damage,
+      `대장 전에 만날 수 있는 ${firstFight.join("·")}가 12초 동안 ${tick.damage}만큼 때렸다`,
+    ).toBeGreaterThan(0);
+  });
+
+  it("늘 곁에 있는 도깨비가 피해를 맡는다 — 조건이 붙으면 또 못 만날 수 있다", () => {
+    const damaging = DOKEBI_ORDER.filter((id) => roleForDokebi(id) === "burst");
+    expect(damaging.length, "피해 역할이 없다").toBeGreaterThan(0);
+    for (const id of damaging) {
+      const spirit = DOKEBI[id];
+      expect(spirit.requiresBoss, `${spirit.name}이 대장을 눕혀야 열린다 — 순환이다`).toBe(false);
+      expect(spirit.requiredDefeats, `${spirit.name}에 처치 조건이 붙어 있다`).toBe(0);
+      expect(spirit.requiresQuest, `${spirit.name}에 여정 조건이 붙어 있다`).toBe(false);
+    }
   });
 
   it("「물무늬」만 회복시킨다", () => {
@@ -153,8 +182,8 @@ describe("도깨비마다 다른 일을 한다", () => {
     expect(distance, `보스에서 ${distance.toFixed(2)}m`).toBeCloseTo(SUMMON.orbitRadius, 5);
   });
 
-  it("「반딧불」은 피해가 아니라 빈틈을 만든다", () => {
-    const mark = advance(summoned(["chorong"]), SUMMON.durationSeconds);
+  it("「먼 불빛」은 피해가 아니라 빈틈을 만든다", () => {
+    const mark = advance(summoned(["jajeong"]), SUMMON.durationSeconds);
 
     expect(mark.markHits, `표식 ${mark.markHits}회`).toBeGreaterThan(0);
     expect(mark.damage, "표식이 피해로 새어 나갔다").toBe(0);

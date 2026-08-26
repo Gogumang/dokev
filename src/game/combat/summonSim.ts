@@ -46,7 +46,7 @@ export const SUMMON = {
   orbitSpeed: 1.1,
   /** 한 도깨비가 능력을 쓰는 간격(초) */
   strikeIntervalSeconds: 1.6,
-  /** 「먼 불빛」 한 방의 피해. 보스 체력이 12이니 12초 동안 일곱 번쯤 들어간다 */
+  /** 「반딧불」 한 방의 피해. 보스 체력이 12이니 12초 동안 일곱 번쯤 들어간다 */
   burstDamage: 1,
   /** 「물무늬」 한 번의 회복량. 플레이어 최대 체력이 5다 */
   mendHeal: 0.5,
@@ -59,13 +59,13 @@ export const SUMMON = {
  * 도깨비가 전투에서 갑자기 불을 뿜으면 도감의 설명과 화면이 따로 논다.
  */
 export type SummonRole =
-  /** 빛으로 약한 자리를 드러낸다 — 보스가 더 빨리 비틀거린다 */
+  /** 빛이 한꺼번에 번져 약한 자리를 드러낸다 — 보스가 더 빨리 비틀거린다 */
   | "mark"
   /** 연기로 시선을 끈다 — 보스가 플레이어 대신 이쪽을 쫓는다 */
   | "lure"
   /** 물무늬로 상처를 씻는다 — 플레이어를 회복시킨다 */
   | "mend"
-  /** 멀리까지 번지는 빛 — 직접 피해를 준다 */
+  /** 짧고 강하게 터지는 빛 — 직접 피해를 준다 */
   | "burst";
 
 /**
@@ -73,12 +73,24 @@ export type SummonRole =
  *
  * `roster`에 두지 않는다. 저쪽은 도감과 동료 동행이 쓰는 정본이고, 여기 값은
  * **보스전에서만** 뜻이 있다. 섞어 두면 도감에 전투 용어가 새어 나온다.
+ *
+ * ---
+ *
+ * 초롱과 자정을 **맞바꿨다.** 처음에는 자정이 피해(`burst`)였는데, 자정은
+ * **대장을 눕혀야 열린다**(`roster`의 `requiresBoss`). 즉 첫 대장전에서는
+ * 피해를 주는 역할이 아예 없었다 — 표식·유인·회복만 돌고 체력은 주인공
+ * 혼자 깎았다. **이기는 데 필요한 것이 이기고 나서 열리는** 순환이라,
+ * 넷을 다 모아 놓고 봐야만 보이는 종류였다.
+ *
+ * 그래서 늘 곁에 있는 초롱(`requiredDefeats: 0`)이 피해를 맡는다. 사연도
+ * 이쪽이 낫다 — 초롱은 「짧고 강하게 밝힌다」고 적혀 있고, 자정은 「멀리까지
+ * 빛이 번져 골목 구석까지 **한꺼번에 드러난다**」다. 드러내는 쪽이 표식이다.
  */
 const ROLE_BY_DOKEBI: Record<DokebiId, SummonRole> = {
-  chorong: "mark",
+  chorong: "burst",
   geueum: "lure",
   mulbineul: "mend",
-  jajeong: "burst",
+  jajeong: "mark",
 };
 
 export function roleForDokebi(id: DokebiId): SummonRole {

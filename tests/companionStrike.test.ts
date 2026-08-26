@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { createEnemies, resolveCompanionStrikes, type EnemyState } from "@/game/combat/combatSim";
@@ -224,7 +226,7 @@ describe("동료가 대장을 친다", () => {
  */
 describe("동료의 타격을 로봇과 대장이 나눠 받는다", () => {
   function link() {
-    return { bossX: 0, bossZ: 5, bossHittable: true, bossBoltDamage: 0 };
+    return { bossX: 0, bossZ: 5, bossHittable: true, bossBoltDamage: 0, summonAtBoss: false };
   }
 
   it("대장 피해를 탄과 같은 통로에 싣는다", () => {
@@ -252,5 +254,58 @@ describe("동료의 타격을 로봇과 대장이 나눠 받는다", () => {
     const hits = recordCompanionHits(boss, [{ x: 0, z: 0 }], enemies, 1.9);
     expect(hits.struck.length, "로봇이 안 맞았다").toBe(1);
     expect(hits.bossDamage, "대장이 안 맞았다").toBe(COMPANION_STRIKE.damage);
+  });
+});
+
+/*
+ * 양쪽에서 다 때리면 안 된다.
+ *
+ * 도깨비는 한 몸이다. 대장전에는 넷이 대장 둘레로 나가 역할을 쓰는데
+ * (`summonSim`), 주인공 곁의 동료 타격은 그 사실을 몰라 **같은 넷이 두 곳에서
+ * 때리고 있었다.** 두 시스템이 서로를 모르니 화면으로는 알아채기 어렵고,
+ * 숫자로만 대장이 두 배로 빨리 눕는다.
+ */
+describe("도깨비가 대장 쪽에 나가 있으면 곁에서는 안 때린다", () => {
+  const spot = [{ x: 0, z: 0 }];
+
+  it("소환 중에는 동료 타격이 대장에게 안 들어간다", () => {
+    const boss = { bossX: 0, bossZ: 5, bossHittable: true, bossBoltDamage: 0, summonAtBoss: true };
+    expect(recordCompanionHits(boss, spot, [], 1.9).bossDamage).toBe(0);
+    expect(boss.bossBoltDamage, "두 곳에서 다 때렸다").toBe(0);
+  });
+
+  it("소환이 끝나면 다시 곁에서 거든다", () => {
+    const boss = { bossX: 0, bossZ: 5, bossHittable: true, bossBoltDamage: 0, summonAtBoss: false };
+    expect(recordCompanionHits(boss, spot, [], 1.9).bossDamage).toBe(COMPANION_STRIKE.damage);
+  });
+
+  it("소환 중에도 로봇은 여전히 친다 — 막는 것은 대장 쪽뿐이다", () => {
+    const boss = { bossX: 0, bossZ: 5, bossHittable: true, bossBoltDamage: 0, summonAtBoss: true };
+    const enemies = [{ ...createEnemies(1, 40, 1)[0], x: 0, z: 2, hp: COMBAT_TUNING.maxHp }];
+    expect(recordCompanionHits(boss, spot, enemies, 1.9).struck.length).toBe(1);
+  });
+});
+
+/*
+ * 배선. 규칙만 맞고 깃발을 안 세우면 아무것도 안 막힌다 — 실제로 `Boss.tsx`의
+ * 한 줄을 `false`로 바꿔 봤더니 2,945개가 전부 통과했다.
+ */
+describe("대장 쪽에서 깃발을 세운다", () => {
+  const boss = readFileSync("src/game/combat/Boss.tsx", "utf8");
+
+  it("소환 단계를 그대로 깃발에 옮긴다", () => {
+    expect(boss, "`summonAtBoss`를 아예 안 쓴다").toContain("link.summonAtBoss");
+    /*
+     * `false`로 못 박아 두면 막는 규칙이 영영 안 걸리고, `true`로 못 박으면
+     * 동료가 대장을 영영 못 때린다. 소환 단계를 **읽어서** 넣어야 한다.
+     */
+    expect(boss, "깃발이 소환 단계를 안 본다 — 상수로 못 박으면 한쪽이 영영 안 일어난다").toMatch(
+      /link\.summonAtBoss\s*=\s*summon\.current\.phase\s*===\s*"active"/,
+    );
+  });
+
+  it("이 검사가 실제 파일을 읽고 있다", () => {
+    // 경로가 바뀌면 빈 문자열을 훑으며 조용히 통과한다
+    expect(boss.length, `Boss.tsx ${boss.length}자`).toBeGreaterThan(1000);
   });
 });

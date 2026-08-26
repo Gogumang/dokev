@@ -101,14 +101,12 @@ export function GameScene(props: SceneProps) {
       abilityRequests: 0,
       bossSlamHit: false,
       summonHeal: 0,
-      /*
-       * 대장의 자리. 보스가 매 프레임 덮어쓴다 — 여기 값은 첫 프레임에만
-       * 쓰이고, `bossHittable`이 false라 그 프레임에는 아무것도 못 맞힌다.
-       */
+      /* 대장의 자리. 보스가 덮어쓴다 — `bossHittable`이 false라 첫 프레임엔 아무것도 못 맞힌다 */
       bossX: 0,
       bossZ: 0,
       bossHittable: false,
       bossBoltDamage: 0,
+      summonAtBoss: false,
       /*
        * 이어받은 판에서도 보스를 눕힌 사실이 남아야 한다. 새 저장 필드는
        * 필요 없다 — 보스 여정을 마쳤다는 것이 이미 저장되어 있다.
