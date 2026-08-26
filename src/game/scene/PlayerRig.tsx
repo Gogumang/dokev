@@ -55,7 +55,7 @@ import {
   consumeLookDelta,
   consumeZoom,
 } from "@/game/systems/input";
-import { projectCompanionTarget, resetCompanionEffects } from "@/game/dokebi/companionMotion";
+import { projectCompanionTarget, resetCompanionEffects } from "@/game/dokebi/companionProjection";
 import {
   projectCharacterCues,
   projectCombatView,

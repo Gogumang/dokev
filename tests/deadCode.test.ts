@@ -131,22 +131,31 @@ describe("테스트가 살려 두는 죽은 코드", () => {
   };
 
   it("새로 죽은 코드가 조용히 늘지 않는다", () => {
+    /*
+     * 파일을 **한 번만** 읽는다.
+     *
+     * 처음에는 export를 볼 때마다 나머지 소스를 전부 다시 읽었다 — 파일 200개 ×
+     * export 700개면 디스크를 14만 번 두드린다. 소스가 늘면서 5초 제한을 넘겼고,
+     * 그때 화면에 뜨는 것은 「죽은 코드를 찾았다」가 아니라 **timeout**이라
+     * 한동안 「가끔 실패하는 검사」로 보였다. 혼자 돌리면 통과하고 전체에서만
+     * 걸린 것도 그래서다.
+     */
     const sources = collect("src");
+    const text = new Map(sources.map((path) => [path, readFileSync(path, "utf8")]));
     const testText = collect("tests")
       .map((path) => readFileSync(path, "utf8"))
       .join("\n");
 
     const surprises: string[] = [];
-    for (const path of sources) {
-      const text = readFileSync(path, "utf8");
-      for (const match of text.matchAll(/^export (?:const|function|class) (\w+)/gm)) {
+    for (const [path, source] of text) {
+      for (const match of source.matchAll(/^export (?:const|function|class) (\w+)/gm)) {
         const name = match[1];
-        const ownUses = (text.match(new RegExp(`\\b${name}\\b`, "g")) ?? []).length;
-        const usedElsewhere = sources.some(
-          (other) =>
-            other !== path && new RegExp(`\\b${name}\\b`).test(readFileSync(other, "utf8")),
+        const word = new RegExp(`\\b${name}\\b`);
+        const ownUses = (source.match(new RegExp(`\\b${name}\\b`, "g")) ?? []).length;
+        const usedElsewhere = [...text].some(
+          ([other, otherText]) => other !== path && word.test(otherText),
         );
-        const usedByTests = new RegExp(`\\b${name}\\b`).test(testText);
+        const usedByTests = word.test(testText);
         if (ownUses <= 1 && !usedElsewhere && usedByTests && !(name in KEPT)) {
           surprises.push(`${path}: ${name}`);
         }

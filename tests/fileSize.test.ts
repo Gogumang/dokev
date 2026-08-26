@@ -57,7 +57,7 @@ const LEGACY = new Map<string, number>([
   ["src/game/combat/bossSim.ts", 384],
   ["src/game/combat/combatSim.ts", 674],
   ["src/game/config/tuning.ts", 541],
-  ["src/game/dokebi/companionMotion.ts", 561],
+  ["src/game/dokebi/companionMotion.ts", 482],
   ["src/game/dokebi/roster.ts", 579],
   ["src/game/player/Character.tsx", 401],
   ["src/game/player/RiddenVehicle.tsx", 351],

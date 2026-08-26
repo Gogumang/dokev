@@ -12,36 +12,39 @@
  * 걸어 둘 이유도 사라졌다.
  */
 /**
- * 도깨비 동료 — 렌더와 애니메이션. 색과 능력은 데리고 다니는 도깨비를 따른다.
+ * 도깨비 동료 — 자리·빛·능력 연출. 몸은 `CompanionModel`이 맡는다.
  *
- * 실루엣 원칙 (TRAILER 8.2 지원형 동료): 작고, 둥글고, 떠 있고, 스스로 빛난다.
- * 등불 몸통 + 회전하는 부적 고리 + 꼬리 불꽃. 뿔 달린 전통 도깨비를 따라가지
- * 않는 대신, 노을과 골목 어둠 양쪽에서 눈에 띄는 밝은 덩어리를 목표로 했다.
+ * 실루엣 원칙 (TRAILER 8.2 지원형 동료): 작고, 빠르고, 스스로 빛난다.
+ * **「떠 있고」가 빠졌다** — 등불이던 시절의 원칙이라, 걷는 동작을 든 두 발
+ * 생물에게는 성립하지 않는다(공중에서 다리를 저으면 버그로 읽힌다).
  *
- * 몸통과 눈은 조명을 받지 않는 재질을 쓴다. 스스로 빛나는 존재라는 인상이
- * 흐려지면 그냥 떠다니는 공이 되기 때문이다.
+ * 등불 몸은 아직 안 온 로봇(자정)과 못 받은 경우를 위해 fallback으로 남는다.
+ * 그때 몸통과 눈이 조명을 안 받는 것은 그대로다 — 스스로 빛나는 인상이
+ * 흐려지면 그냥 떠다니는 공이 된다.
  */
 
 import { MAX_DELTA_SECONDS } from "@/game/config/tuning";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { COMPANION_BODY } from "@/game/dokebi/companionBody";
 import { CompanionAbilityVfx } from "@/game/dokebi/CompanionAbilityVfx";
+import { CompanionLantern } from "@/game/dokebi/CompanionLantern";
+import { CompanionModel } from "@/game/dokebi/CompanionModel";
+import { COMPANION_SHAPE } from "@/game/dokebi/companionShapes";
 import { BASE_LIGHT_RANGE, type DokebiSpirit } from "@/game/dokebi/roster";
-import { ToonMaterial } from "@/game/scene/ToonMaterial";
 import {
   bobOffset,
   companionFormationScale,
   createCompanionState,
   isAbilityActive,
-  projectCompanionEffects,
   stepCompanion,
   type CompanionCommand,
   type CompanionState,
   type CompanionTarget,
 } from "@/game/dokebi/companionMotion";
+import { projectCompanionEffects } from "@/game/dokebi/companionProjection";
 
 export interface CompanionProps {
   /** GameScene이 매 프레임 갱신하는 공유 객체. 값이 아니라 참조를 받는다 */
@@ -102,37 +105,29 @@ export function Companion({
   const state = useRef<CompanionState>(createCompanionState(target.position, slot, formationScale));
   const ringSpin = useRef(0);
   const blinkTimer = useRef(0);
-
-  // 지오메트리는 한 번만 만들어 재사용한다. 매 렌더 새로 만들면 GPU 버퍼가 계속 쌓인다.
-  const geometry = useMemo(
-    () => ({
-      body: new THREE.SphereGeometry(COMPANION_BODY.bodyRadius, 16, 12),
-      ring: new THREE.TorusGeometry(COMPANION_BODY.ringRadius, COMPANION_BODY.ringThickness, 8, 24),
-      eye: new THREE.SphereGeometry(COMPANION_BODY.eyeRadius, 8, 6),
-      flame: new THREE.ConeGeometry(COMPANION_BODY.flameRadius, COMPANION_BODY.flameHeight, 8),
-      cap: new THREE.CylinderGeometry(
-        COMPANION_BODY.capTopRadius,
-        COMPANION_BODY.capBottomRadius,
-        COMPANION_BODY.capHeight,
-        10,
-      ),
-    }),
-    [],
-  );
+  /*
+   * GLB가 실제로 섰는가.
+   *
+   * 등불 몸은 모델이 없는 도깨비(아직 안 온 로봇)와 못 받은 경우를 위해 남는다.
+   * 모델이 섰으면 꼬리 불꽃을 감춘다 — 걸어 다니는 곰 뒤에 불꽃이 매달려 있으면
+   * 등불이던 시절의 부품만 남은 것으로 보인다. 부적 고리와 눈은 fallback 안에
+   * 있어서 저절로 사라진다.
+   */
+  const modelShown = useRef(false);
 
   /*
-   * 언마운트 시 지오메트리를 해제한다.
-   *
-   * R3F는 씬 그래프에 붙인 객체는 정리하지만 **컴포넌트가 직접 만들어 넘긴
-   * 것은 건드리지 않는다.** 해제하지 않으면 /play를 드나들 때마다 GPU 버퍼가
-   * 쌓인다. City.tsx가 이미 같은 방식으로 정리하고 있다.
+   * 꼬리 불꽃만 여기 남는다. 등불 몸과 달리 `bodyRef` **밖에** 매달려 있어서
+   * (기울기를 반대로 받아야 한다) 같이 옮기면 기울기가 두 번 걸린다.
    */
-  useLayoutEffect(() => {
-    const created = Object.values(geometry);
-    return () => {
-      for (const item of created) item.dispose();
-    };
-  }, [geometry]);
+  const flame = useMemo(
+    () => new THREE.ConeGeometry(COMPANION_BODY.flameRadius, COMPANION_BODY.flameHeight, 8),
+    [],
+  );
+  useLayoutEffect(() => () => flame.dispose(), [flame]);
+  const shape = COMPANION_SHAPE[spirit.id];
+  const handleShown = useCallback((shown: boolean) => {
+    modelShown.current = shown;
+  }, []);
 
   useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
@@ -181,6 +176,7 @@ export function Companion({
     }
 
     if (tailRef.current) {
+      tailRef.current.visible = !modelShown.current;
       // 꼬리 불꽃은 기울기 반대로 젖혀진다.
       tailRef.current.rotation.x = -next.lean * 1.6;
       const flicker = reducedMotion ? 1 : 1 + Math.sin(next.bobPhase * 3.1) * 0.18;
@@ -219,38 +215,24 @@ export function Companion({
   return (
     <group ref={rootRef}>
       <group ref={bodyRef}>
-        {/* 등불 몸통 — 스스로 빛나므로 조명을 받지 않는다 */}
-        <mesh geometry={geometry.body}>
-          <meshBasicMaterial color={spirit.bodyColor} toneMapped={false} />
-        </mesh>
-
-        {/* 위쪽 뚜껑 — 등불이라는 신호. 여기만 조명을 받아 입체감을 남긴다 */}
-        <mesh geometry={geometry.cap} position={[0, 0.36, 0]}>
-          <ToonMaterial color={spirit.accentColor} />
-        </mesh>
-
-        {/* 눈 — 앞면(+z)에 둔다. 방향을 읽을 수 있어야 한다 */}
-        <mesh ref={eyeLeftRef} geometry={geometry.eye} position={[-0.12, 0.05, 0.3]}>
-          <meshBasicMaterial color="#2b2028" toneMapped={false} />
-        </mesh>
-        <mesh ref={eyeRightRef} geometry={geometry.eye} position={[0.12, 0.05, 0.3]}>
-          <meshBasicMaterial color="#2b2028" toneMapped={false} />
-        </mesh>
-
-        {/* 부적 고리 — 회전하면서 도깨비라는 인상을 만든다 */}
-        <mesh ref={ringRef} geometry={geometry.ring} rotation={[Math.PI / 2, 0, 0]}>
-          <meshBasicMaterial
-            color={spirit.accentColor}
-            toneMapped={false}
-            transparent
-            opacity={0.85}
-          />
-        </mesh>
+        <CompanionModel
+          shape={shape}
+          source={state}
+          onShown={handleShown}
+          fallback={
+            <CompanionLantern
+              spirit={spirit}
+              ringRef={ringRef}
+              eyeLeftRef={eyeLeftRef}
+              eyeRightRef={eyeRightRef}
+            />
+          }
+        />
       </group>
 
       {/* 꼬리 불꽃 — 뒤쪽(-z)에 매단다 */}
       <group ref={tailRef} position={[0, -0.12, -0.36]}>
-        <mesh geometry={geometry.flame} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh geometry={flame} rotation={[Math.PI / 2, 0, 0]}>
           <meshBasicMaterial color="#ff8a3d" toneMapped={false} transparent opacity={0.75} />
         </mesh>
       </group>

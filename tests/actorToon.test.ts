@@ -30,7 +30,7 @@ describe("음영이 한 계열인가", () => {
     const actors = [
       "src/game/player/Character.tsx",
       "src/game/player/RiddenVehicle.tsx",
-      "src/game/dokebi/Companion.tsx",
+      "src/game/dokebi/CompanionLantern.tsx",
       "src/game/dokebi/Shrine.tsx",
       "src/game/combat/Boss.tsx",
       "src/game/combat/Enemies.tsx",

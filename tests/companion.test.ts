@@ -20,13 +20,15 @@ import {
   type CompanionTarget,
   canUseAbility,
   isAbilityActive,
+  showsOnMap,
+  type CompanionCommand,
+} from "@/game/dokebi/companionMotion";
+import {
   projectCompanionEffects,
   projectCompanionTarget,
   resetCompanionEffects,
-  showsOnMap,
   type CompanionEffects,
-  type CompanionCommand,
-} from "@/game/dokebi/companionMotion";
+} from "@/game/dokebi/companionProjection";
 
 const FRAME = 1 / 60;
 
