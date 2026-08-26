@@ -38,6 +38,7 @@ import {
   type CameraTuning,
 } from "@/game/scene/cameraRig";
 import { clearedCameraPoint } from "@/game/scene/cameraClear";
+import { shakeOffset } from "@/game/scene/cameraShake";
 import { faceShot, FINISHER } from "@/game/scene/finisher";
 import type { LookState } from "@/game/scene/lookControl";
 
@@ -49,6 +50,8 @@ export interface CameraFrameState {
   discoveryPulseSeconds: number | null;
   /** 첫 프레임에 지연 없이 붙이기 위한 깃발 */
   initialized: boolean;
+  /** 이 카메라가 살아온 시간(초). 착지 흔들림이 벽시계 대신 이것을 본다 */
+  elapsed: number;
   position: THREE.Vector3;
   lookTarget: THREE.Vector3;
   /** 프레임마다 재사용하는 임시 벡터. 매번 만들면 GC가 튄다 */
@@ -64,6 +67,7 @@ export function createCameraFrame(): CameraFrameState {
     combatEase: 0,
     discoveryPulseSeconds: null,
     initialized: false,
+    elapsed: 0,
     position: new THREE.Vector3(),
     lookTarget: new THREE.Vector3(),
     scratch: {
@@ -252,11 +256,10 @@ export function recordCameraFrame(
     CHARACTER_FADE,
   );
 
+  state.elapsed += input.dt;
   camera.position.copy(state.position);
-  if (input.shake > 0.0005) {
-    // 상하로만 흔든다. 좌우로 흔들면 진행 방향이 흔들려 멀미가 심해진다.
-    camera.position.y += Math.sin(performance.now() * 0.06) * input.shake;
-  }
+  // 상하로만 흔든다. 좌우로 흔들면 진행 방향이 흔들려 멀미가 심해진다.
+  camera.position.y += shakeOffset(state.elapsed, input.shake);
 
   // 시선은 진행 방향으로 조금 앞서 나간다 — 빠를수록 더 멀리 본다.
   // 포토 모드에서는 시선 선행을 끈다 — 구도를 잡는데 시선이 미끄러지면 안 된다.

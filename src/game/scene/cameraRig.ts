@@ -38,41 +38,6 @@ export interface CameraTuning {
   followLambda: number;
 }
 
-/**
- * 착지 흔들림을 한 프레임 진행한다.
- *
- * `PlayerRig`의 프레임 루프 안에 손으로 적혀 있던 계산이다. 카메라를 흔드는
- * 일이므로 여기가 제 자리이고, 무엇보다 **저기 있을 때는 잴 수가 없었다** —
- * 「세게 떨어질수록 크게 흔들린다」와 「가만히 두면 멎는다」가 화면을 봐야만
- * 확인되는 규칙이었다.
- *
- * 저감 모션이면 새 흔들림을 받지 않는다. 다만 **이미 흔들리던 것은 감쇠시킨다** —
- * 도중에 설정을 켜면 흔들린 채로 굳는다.
- */
-export function stepLandingShake(
-  current: number,
-  /** 이번 프레임의 착지 충돌 속도(m/s). 착지하지 않았으면 0 */
-  impact: number,
-  dt: number,
-  reducedMotion: boolean,
-  tuning: {
-    minImpactSpeed: number;
-    maxImpactSpeed: number;
-    maxAmplitude: number;
-    decayPerSecond: number;
-  },
-): number {
-  let next = current;
-
-  if (impact > tuning.minImpactSpeed && !reducedMotion) {
-    const strength = inverseLerpClamped(tuning.minImpactSpeed, tuning.maxImpactSpeed, impact);
-    next = Math.max(next, strength * tuning.maxAmplitude);
-  }
-
-  // 비율 감쇠라 0에 점근한다. 음수로 내려가지 않게 바닥을 둔다
-  return Math.max(0, next - tuning.decayPerSecond * next * dt);
-}
-
 /** 속도를 0~1로 편 값. 거리·시야각·시선 선행이 모두 이 하나를 쓴다 */
 export function speedRatio(speed: number, reference: number): number {
   return inverseLerpClamped(0, reference, speed);
@@ -226,10 +191,9 @@ function blockedAt(o: Vec3, d: Vec3, at: number, boxes: readonly Aabb[]): boolea
  * 카메라가 건물을 뚫지 않도록 플레이어~카메라 구간을 훑어 막힌 거리를 찾는다.
  *
  * **성긴 스캔으로 막힌 구간을 찾고, 그 안을 이분 탐색으로 좁힌다.**
- * 예전에는 성긴 스캔만 하고 「막힌 표본 하나 앞」을 돌려줘 답이 0.7m
- * 단위로만 나왔다 — 비스듬히 붙으면 0.7m를 통째로 양보해 뒤통수가 화면을
- * 덮었고, 시점을 돌리면 그 간격만큼 **툭툭 끊어져** 들어왔다 나갔다.
- * 이분 탐색 다섯 번이면 0.02m까지 좁혀진다. 상자 검사만 다섯 번 는다.
+ * 예전에는 「막힌 표본 하나 앞」을 돌려줘 답이 0.7m 단위로만 나왔다 —
+ * 비스듬히 붙으면 그만큼 통째로 양보해 뒤통수가 화면을 덮었고, 시점을 돌리면
+ * 그 간격만큼 **툭툭 끊어졌다.** 이분 탐색 다섯 번이면 0.02m까지 좁혀진다.
  */
 export function findCameraDistance(
   origin: Vec3,

@@ -42,6 +42,9 @@ const CAST_AHEAD = 3.2;
 /** 잠길 때 찌가 내려가는 깊이(m) */
 const DIP = 0.42;
 
+/** 찌가 물결에 오르내리는 속도(rad/s). 예전 `performance.now() / 620`을 초로 옮긴 값 */
+const DRIFT_RATE = 1 / 0.62;
+
 export function Pier({
   halfExtent,
   link,
@@ -52,6 +55,14 @@ export function Pier({
 }) {
   const bobber = useRef<THREE.Mesh>(null);
   const fishing = useRef<FishingState>(createFishing());
+  /*
+   * 찌가 물결에 얹혀 흔들린 시간(초).
+   *
+   * `performance.now()`를 직접 봤다. 화면에서는 똑같지만 **같은 판을 두 번
+   * 돌려도 찌가 다른 자리에 있다** — 시연 영상을 프레임 단위로 뽑을 때
+   * 그 한 줄이 재생을 결정적이지 않게 만든다.
+   */
+  const drifted = useRef(0);
 
   const boxes = useMemo(() => buildPier(halfExtent), [halfExtent]);
   const deckY = useMemo(() => pierDeckY(halfExtent), [halfExtent]);
@@ -75,6 +86,7 @@ export function Pier({
 
   useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, MAX_DELTA_SECONDS);
+    drifted.current += dt;
     const atTip = Math.hypot(link.position.x - tip.x, link.position.z - tip.z) <= REACH;
 
     /*
@@ -106,7 +118,7 @@ export function Pier({
      * 그 차이가 이 놀이의 유일한 신호다 — 둘이 비슷하면 언제 눌러야 할지
      * 화면에서 알 수 없다.
      */
-    const drift = Math.sin(performance.now() / 620) * 0.06;
+    const drift = Math.sin(drifted.current * DRIFT_RATE) * 0.06;
     mesh.position.set(tip.x + CAST_AHEAD, SEA_LEVEL + drift - (phase === "bite" ? DIP : 0), tip.z);
   });
 

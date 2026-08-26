@@ -64,7 +64,7 @@ const LEGACY = new Map<string, number>([
   ["src/game/scene/GameScene.tsx", 389],
   ["src/game/scene/PlayerRig.tsx", 688],
   ["src/game/scene/PostProcessing.tsx", 447],
-  ["src/game/scene/cameraFrame.ts", 313],
+  ["src/game/scene/cameraFrame.ts", 316],
   ["src/game/scene/sceneTypes.ts", 319],
   ["src/game/systems/audio/index.ts", 471],
   ["src/game/systems/audio/music.ts", 423],

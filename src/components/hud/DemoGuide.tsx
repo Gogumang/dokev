@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 
+import { reelOn } from "@/game/demo/reelMode";
 import { beatAt, DEMO_SECONDS, type DemoBeat } from "@/game/systems/demoRoute";
 
 export interface DemoGuideProps {
@@ -28,6 +29,16 @@ function timecode(seconds: number): string {
 export function DemoGuide({ beats }: DemoGuideProps) {
   const [elapsed, setElapsed] = useState(0);
 
+  /*
+   * 촬영 모드에서는 뜨지 않는다.
+   *
+   * 두 가지 이유가 겹친다. 이 안내는 **벽시계로 경과를 세는데**(아래 타이머)
+   * 촬영 모드의 시계는 바깥이 한 프레임씩 넘겨 주는 것이라, 두 시각이
+   * 갈라져 엉뚱한 장면 이름이 뜬다. 그리고 애초에 이 안내는 **조작하는
+   * 사람에게 다음 키를 알려 주는 것**이라 영상에 박힐 것이 아니다.
+   */
+  const hidden = reelOn();
+
   useEffect(() => {
     /*
      * 1초마다 센다. 프레임마다 갱신하면 초당 60번 리렌더가 되고, 이 저장소가
@@ -39,6 +50,8 @@ export function DemoGuide({ beats }: DemoGuideProps) {
     }, 250);
     return () => window.clearInterval(timer);
   }, []);
+
+  if (hidden) return null;
 
   const beat = beatAt(beats, elapsed);
   const index = beats.indexOf(beat);

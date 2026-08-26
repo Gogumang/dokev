@@ -179,6 +179,12 @@ export function buildDemoRoute(layout: CityLayout): DemoBeat[] {
       mode: "walk",
       x: BOSS_HOME.x,
       z: BOSS_HOME.z + 14,
+      /*
+       * 키가 비어 있었다. 「마지막 한 방」인데 무엇으로 치는지가 대본에
+       * 없어서, 따라 하는 사람은 이 10초 동안 손을 놓게 된다 — 자동 조종을
+       * 붙이면서 대본과 대조해 보고 알았다(`tests/autopilot.test.ts`).
+       */
+      keys: "J",
     },
   ];
 }

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm test",
-    "format": "biome check src tests --write"
+    "format": "biome check src tests --write",
+    "demo:render": "node scripts/render-reel.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",

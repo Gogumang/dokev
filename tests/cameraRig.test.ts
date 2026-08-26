@@ -12,9 +12,9 @@ import {
   lookAheadDistance,
   orbitDirection,
   speedRatio,
-  stepLandingShake,
   vistaOpenness,
 } from "@/game/scene/cameraRig";
+import { stepLandingShake } from "@/game/scene/cameraShake";
 import { combatPressure } from "@/game/combat/combatLink";
 
 /*

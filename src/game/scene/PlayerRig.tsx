@@ -75,7 +75,7 @@ import {
   stepVending,
   type VendingState,
 } from "@/game/systems/vending";
-import { stepLandingShake } from "@/game/scene/cameraRig";
+import { stepLandingShake } from "@/game/scene/cameraShake";
 import { recordLook, type LookState } from "@/game/scene/lookControl";
 import { createCameraFrame, recordCameraFrame } from "@/game/scene/cameraFrame";
 import {

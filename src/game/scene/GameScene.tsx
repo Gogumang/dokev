@@ -24,6 +24,8 @@ import type { PlayerLink, SceneProps } from "@/game/scene/sceneTypes";
  * 바꾸는 것은 이 정리의 목적이 아니다.
  */
 export type { RuntimeStats } from "@/game/scene/sceneTypes";
+import { ReelPilot } from "@/game/demo/ReelPilot";
+import { reelOn } from "@/game/demo/reelMode";
 import { ClueGlow } from "@/game/quest/ClueGlow";
 import { pendingClues } from "@/game/quest/clues";
 import { isCalmStep } from "@/game/quest/questContent";
@@ -212,6 +214,8 @@ export function GameScene(props: SceneProps) {
 
   return (
     <Canvas
+      /* 촬영 모드에서는 시계를 바깥에 넘긴다 — 실시간으로 그리면 프레임이 떨어진다 */
+      frameloop={reelOn() ? "never" : "always"}
       shadows={quality.shadows}
       dpr={[1, quality.maxPixelRatio]}
       /*
@@ -350,19 +354,16 @@ export function GameScene(props: SceneProps) {
         />
       ))}
       {/*
-        동료 빛에 드러나는 흔적.
+        동료 빛에 드러나는 흔적. 도감이 「숨은 흔적을 잠깐 빛나게 한다」고
+        약속하는데 흔적은 월드에 그려지지도 않았다.
 
-        도감이 「주변에 숨은 흔적을 잠깐 빛나게 한다」고 약속하는데 흔적은
-        월드에 그려지지도 않았다. 목록은 찾은 개수가 바뀔 때만 다시 만든다 —
-        흔적은 셋뿐이고 늘기만 한다.
-
-        **동료보다 뒤에 둔다.** 이 컴포넌트는 동료가 쓴 빛 반경을 *읽는* 쪽이고,
-        R3F는 JSX 형제 순서대로 프레임을 돈다. 앞에 두었더니 `PlayerRig`가 막
-        0으로 되돌린 값을 읽어 **아무것도 드러나지 않았다** — 적이 동료 뒤에
-        있는 것과 같은 이유다(되돌리기 → 합치기 → 읽기).
+        **동료보다 뒤에 둔다.** 동료가 쓴 빛 반경을 *읽는* 쪽이고 R3F는 JSX
+        형제 순서대로 돈다 — 앞에 두었더니 `PlayerRig`가 막 0으로 되돌린 값을
+        읽어 아무것도 드러나지 않았다(되돌리기 → 합치기 → 읽기).
       */}
       <ClueGlow link={playerLink} clues={pendingClueList} reducedMotion={reducedMotion} />
-      {/* 장난감 로봇 적 — 같은 링크에서 위치·방향·공격 입력을 읽는다 */}
+      {/* 시연 영상 촬영 — 꺼져 있으면 아무 일도 하지 않는다 */}
+      <ReelPilot on={reelOn()} input={props.input} stats={props.stats} layout={layout} />
       {/*
         후처리는 씬의 마지막에 단다.
         **priority 1이라 R3F의 자동 렌더가 꺼지고 여기가 유일한 렌더 지점이
