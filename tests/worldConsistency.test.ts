@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { BOSS, BOSS_HOME } from "@/game/combat/bossSim";
 import { COMBAT_TUNING, createEnemies } from "@/game/combat/combatSim";
 import { LOCOMOTION } from "@/game/config/tuning";
 import { DOKEBI, DOKEBI_ORDER, DISCOVERY_RADIUS } from "@/game/dokebi/roster";
@@ -11,7 +10,7 @@ import { blockCells } from "@/game/systems/minimap";
 import { VENDING } from "@/game/systems/vending";
 import { buildCityDetails } from "@/game/world/cityDetails";
 import { blockCenter, buildCityLayout, CITY, ROAD_CENTERS } from "@/game/world/cityLayout";
-import { SITE_BLOCK_INDEX } from "@/game/world/zones";
+
 import { courtyardSpawnZ } from "@/game/world/courtyard";
 import { buildPedestrians, CROWD } from "@/game/world/crowdLayout";
 import { roadCenters, TRAFFIC } from "@/game/world/trafficLayout";

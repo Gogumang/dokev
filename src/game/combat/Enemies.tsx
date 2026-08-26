@@ -32,7 +32,6 @@ import {
   stepAttack,
   stepEnemy,
   stepEnemyStrike,
-  resolveCompanionStrikes,
   strikeEnemy,
   strikeWindupProgress,
   type AttackState,
@@ -45,11 +44,11 @@ import {
 } from "@/game/combat/playerCombat";
 import {
   consumeAttack,
+  consumeCompanionStrikes,
   consumeSlam,
   consumeSummonHeal,
   projectAttackTiming,
   projectPlayerVitals,
-  consumeCompanionStrikes,
   recordEnemyHits,
 } from "@/game/combat/combatLink";
 import {
@@ -82,7 +81,7 @@ import {
   type Particle,
 } from "@/game/combat/vfxPaint";
 import { WEAPONS, type WeaponId } from "@/game/combat/weapons";
-import { COMPANION_STRIKE } from "@/game/dokebi/companionStrike";
+import { recordCompanionHits } from "@/game/combat/companionHits";
 import { createSeededRandom } from "@/game/core/mathx";
 import type { CombatCues } from "@/game/systems/audio/combat";
 import { projectEnemyBlips } from "@/game/systems/minimap";
@@ -501,18 +500,19 @@ export function Enemies({
     }
 
     /* ---------------- 동료의 타격 ---------------- */
-    const companionStruck = resolveCompanionStrikes(
-      enemies.current,
+    const companion = recordCompanionHits(
+      link,
       consumeCompanionStrikes(link),
-      COMPANION_STRIKE.reachMeters,
-      COMPANION_STRIKE.damage,
-      COMPANION_STRIKE.knockbackScale,
+      enemies.current,
+      BOSS_HIT_RADIUS,
     );
-    for (const enemy of companionStruck) {
+    for (const enemy of companion.struck) {
       if (!reducedMotion) burst(enemy.x, 0.9, enemy.z);
       if (enemy.mood === "down") releaseEmber(embers.current, enemy.x, enemy.z);
     }
-    recordEnemyHits(link, companionStruck);
+    recordEnemyHits(link, companion.struck);
+    // 대장은 몸이 커서 중심에서 터뜨리면 안에 묻힌다 — 어깨 높이에 둔다
+    if (companion.bossDamage > 0 && !reducedMotion) burst(link.bossX, 1.8, link.bossZ);
 
     // 보스의 충격도 원거리 피해와 같은 통로로 넣는다. 무적 시간이 한 번만 걸린다.
     const slam = consumeSlam(link) ? 1 : 0;

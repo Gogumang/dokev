@@ -204,12 +204,32 @@ export function lookAheadDistance(
   return photoMode ? 0 : tuning.lookAheadMax * speed01;
 }
 
+/** 카메라가 이보다 가까이는 안 붙는다(m). 더 붙으면 머리 안이다 */
+const MIN_CAMERA_DISTANCE = 1.4;
+/** 콜라이더에 두는 여유(m). 벽면에 딱 붙으면 면이 깜빡인다 */
+const WALL_MARGIN = 0.5;
+
+/** 구간 위 한 점이 상자 안(여유 포함)인가 */
+function blockedAt(o: Vec3, d: Vec3, at: number, boxes: readonly Aabb[]): boolean {
+  const [x, y, z] = [o.x + d.x * at, o.y + d.y * at, o.z + d.z * at];
+  return boxes.some(
+    (box) =>
+      y < box.top &&
+      x > box.minX - WALL_MARGIN &&
+      x < box.maxX + WALL_MARGIN &&
+      z > box.minZ - WALL_MARGIN &&
+      z < box.maxZ + WALL_MARGIN,
+  );
+}
+
 /**
  * 카메라가 건물을 뚫지 않도록 플레이어~카메라 구간을 훑어 막힌 거리를 찾는다.
  *
- * 정밀한 스윕 대신 구간 샘플링을 쓴다. 블록아웃의 상자 크기에 비해 샘플 간격이
- * 충분히 촘촘해 놓치는 경우가 없고, 콜라이더 수백 개에 대해서도 프레임당
- * 0.1ms 수준으로 끝난다.
+ * **성긴 스캔으로 막힌 구간을 찾고, 그 안을 이분 탐색으로 좁힌다.**
+ * 예전에는 성긴 스캔만 하고 「막힌 표본 하나 앞」을 돌려줘 답이 0.7m
+ * 단위로만 나왔다 — 비스듬히 붙으면 0.7m를 통째로 양보해 뒤통수가 화면을
+ * 덮었고, 시점을 돌리면 그 간격만큼 **툭툭 끊어져** 들어왔다 나갔다.
+ * 이분 탐색 다섯 번이면 0.02m까지 좁혀진다. 상자 검사만 다섯 번 는다.
  */
 export function findCameraDistance(
   origin: Vec3,
@@ -217,29 +237,19 @@ export function findCameraDistance(
   maxDistance: number,
   boxes: readonly Aabb[],
 ): number {
-  const samples = 10;
-  const margin = 0.5;
-
-  for (let i = 1; i <= samples; i += 1) {
-    const distance = (maxDistance * i) / samples;
-    const x = origin.x + direction.x * distance;
-    const y = origin.y + direction.y * distance;
-    const z = origin.z + direction.z * distance;
-
-    for (const box of boxes) {
-      if (y >= box.top) continue;
-      if (
-        x > box.minX - margin &&
-        x < box.maxX + margin &&
-        z > box.minZ - margin &&
-        z < box.maxZ + margin
-      ) {
-        // 막힌 지점 직전까지만 물러난다.
-        return Math.max(1.4, (maxDistance * (i - 1)) / samples);
-      }
+  const step = maxDistance / 10;
+  for (let i = 1; i <= 10; i += 1) {
+    if (!blockedAt(origin, direction, step * i, boxes)) continue;
+    // `clear`는 뚫린 것이 확인된 마지막 거리, `blocked`는 막힌 첫 거리다.
+    let clear = step * (i - 1);
+    let blocked = step * i;
+    for (let refine = 0; refine < 5; refine += 1) {
+      const middle = (clear + blocked) / 2;
+      if (blockedAt(origin, direction, middle, boxes)) blocked = middle;
+      else clear = middle;
     }
+    return Math.max(MIN_CAMERA_DISTANCE, clear);
   }
-
   return maxDistance;
 }
 

@@ -106,29 +106,38 @@ describe("카메라가 벽 안에 남지 않는다", () => {
     expect(CAMERA_COLLIDER_RADIUS, "0이면 아무것도 밀어내지 않는다").toBeGreaterThan(0);
   });
 
-  it("PlayerRig가 플레이어와 같은 함수로 카메라를 밀어낸다", () => {
+  it("카메라도 플레이어와 같은 함수로 밀어낸다", () => {
     /*
-     * 카메라만 따로 밀어내는 식을 새로 쓰면 두 판정이 갈라지고, 그러면
-     * 플레이어는 못 들어가는 자리에 **카메라만 들어가는 자리**가 생긴다.
-     * 배선을 확인한다 — 함수만 있고 걸지 않으면 화면은 그대로다.
-     */
-    /*
-     * 둘 다 프레임 루프에서 떼어 냈다 — 순서가 곧 정확성인 단계들이라
-     * 늘어놓으면 그 순서가 코드로 드러나지 않았다. 플레이어는 `groundStep`
-     * (이동 → 밀어내기 → 발밑 정착), 카메라는 `cameraFrame`(당기기 →
-     * 지면 여유 → 밀어내기 → 클로즈업 섞기).
-     *
      * **같은 함수를 쓰는지**가 이 검사의 요점이다. 카메라만 따로 밀어내는
      * 식을 새로 쓰면 두 판정이 갈라지고, 그러면 플레이어는 못 들어가는
      * 자리에 카메라만 들어가는 자리가 생긴다.
+     *
+     * 둘 다 프레임 루프에서 떼어 냈다 — 순서가 곧 정확성인 단계들이라
+     * 늘어놓으면 그 순서가 코드로 드러나지 않았다. 플레이어는 `groundStep`
+     * (이동 → 밀어내기 → 발밑 정착), 카메라는 `cameraClear`(지면 여유 →
+     * 밀어내기) 하나로 모았다.
+     */
+    const clear = readFileSync("src/game/scene/cameraClear.ts", "utf8");
+    const step = readFileSync("src/game/player/groundStep.ts", "utf8");
+    expect(clear, "카메라를 밀어내지 않는다").toContain("CAMERA_COLLIDER_RADIUS");
+
+    const clearUses = (clear.match(/resolveHorizontalCollisions\(/g) ?? []).length;
+    const stepUses = (step.match(/resolveHorizontalCollisions\(/g) ?? []).length;
+    expect(clearUses, `카메라 밀어내기 ${clearUses}회 — 1회여야 한다`).toBe(1);
+    expect(stepUses, `플레이어 밀어내기 ${stepUses}회 — 1회여야 한다`).toBe(1);
+  });
+
+  it("목표 자리와 그려질 자리 **둘 다** 내보낸다", () => {
+    /*
+     * 목표(`desired`)에만 걸었더니 그리로 눅여 가는 0.3~0.5초 동안 카메라가
+     * 벽 안에 있었다 — 도시를 훑어 재 보니 134,600프레임 중 590이 건물
+     * 안이었다. 실제 그림은 `cameraOcclusion`이 잡고, 여기서는 **두 자리에
+     * 다 걸려 있는지** 배선만 본다.
      */
     const frame = readFileSync("src/game/scene/cameraFrame.ts", "utf8");
-    const step = readFileSync("src/game/player/groundStep.ts", "utf8");
-    expect(frame, "카메라를 밀어내지 않는다").toContain("CAMERA_COLLIDER_RADIUS");
-
-    const frameUses = (frame.match(/resolveHorizontalCollisions\(/g) ?? []).length;
-    const stepUses = (step.match(/resolveHorizontalCollisions\(/g) ?? []).length;
-    expect(frameUses, `카메라 밀어내기 ${frameUses}회 — 1회여야 한다`).toBe(1);
-    expect(stepUses, `플레이어 밀어내기 ${stepUses}회 — 1회여야 한다`).toBe(1);
+    const calls = (frame.match(/clearedCameraPoint\(/g) ?? []).length;
+    expect(calls, `내보내기 ${calls}곳 — 목표와 그려질 자리, 2곳이어야 한다`).toBe(2);
+    expect(frame, "그려질 자리에 안 건다").toContain("clearedCameraPoint(state.position");
+    expect(frame, "목표 자리에 안 건다").toContain("clearedCameraPoint(state.scratch.desired");
   });
 });

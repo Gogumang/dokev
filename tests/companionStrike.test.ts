@@ -4,10 +4,14 @@ import { createEnemies, resolveCompanionStrikes, type EnemyState } from "@/game/
 import { COMBAT_TUNING } from "@/game/combat/combatSim";
 import {
   canStrike,
+  companionBossDamage,
   COMPANION_STRIKE,
   firstStrikeDelay,
   stepStrikeCooldown,
 } from "@/game/dokebi/companionStrike";
+import { BOSS } from "@/game/combat/bossSim";
+import { recordCompanionHits } from "@/game/combat/companionHits";
+import { COMPANION_TUNING } from "@/game/dokebi/companionMotion";
 import { swingSeconds, WEAPON_ORDER, WEAPONS } from "@/game/combat/weapons";
 
 /*
@@ -148,5 +152,105 @@ describe("누구를 치는가", () => {
       0,
     );
     expect(struck.length).toBe(2);
+  });
+});
+
+/*
+ * 대장에게도 넣는다.
+ *
+ * 세기를 따로 두지 않고 **닿는 거리에 값을 맡긴다.** 동료는 주인공 뒤를
+ * 도므로 동료의 손이 대장에게 닿는다는 것은 곧 주인공이 내려치기 반경
+ * 가까이 들어와 있다는 뜻이다 — 그 관계가 실제로 성립하는지를 잰다.
+ */
+describe("동료가 대장을 친다", () => {
+  /** 대장 몸 반지름. `Enemies.tsx`의 BOSS_HIT_RADIUS와 같은 값이다 */
+  const bossRadius = 1.9;
+
+  it("닿으면 피해가 들어간다", () => {
+    expect(companionBossDamage([{ x: 0, z: 0 }], 0, 6, bossRadius)).toBe(COMPANION_STRIKE.damage);
+  });
+
+  it("멀면 0이다 — 대장 앞까지 안 오면 몫이 없다", () => {
+    expect(companionBossDamage([{ x: 0, z: 0 }], 0, 12, bossRadius)).toBe(0);
+  });
+
+  it("넷이 붙으면 넷 몫이 한꺼번에 들어간다", () => {
+    const spots = [
+      { x: 0, z: 0 },
+      { x: 1, z: 0 },
+      { x: 0, z: 1 },
+      { x: -1, z: 0 },
+    ];
+    expect(companionBossDamage(spots, 0, 5, bossRadius)).toBe(COMPANION_STRIKE.damage * 4);
+  });
+
+  it("칠 자리가 없으면 0이다", () => {
+    expect(companionBossDamage([], 0, 0, bossRadius)).toBe(0);
+  });
+
+  /*
+   * 이것이 이 기능의 균형 전부다. 깨지면 동료가 **안전한 자리에서** 대장을
+   * 깎게 되고, 그러면 예고를 보고 피하는 이 싸움이 기다리기만 하면 되는
+   * 것이 된다.
+   */
+  it("동료의 손이 대장에 닿으면 주인공은 이미 내려치기 사정권이다", () => {
+    /* 동료가 설 수 있는 가장 먼 자리 — 뒷줄(slot 2·3)이다 */
+    const orbit = COMPANION_TUNING.followDistance + COMPANION_TUNING.slotDistanceStep;
+    const companionReach = COMPANION_STRIKE.reachMeters + bossRadius;
+    /* 동료가 대장 쪽으로 최대한 나가 있어도 주인공은 이만큼까지만 물러설 수 있다 */
+    const playerAtFarthest = companionReach + orbit;
+
+    expect(orbit, "동료가 주인공 뒤 몇 미터를 도는지").toBeGreaterThan(0);
+    expect(
+      playerAtFarthest,
+      `동료가 닿는 가장 먼 자리(${playerAtFarthest}m)가 인지 반경(${BOSS.aggroRadius}m) 안이다`,
+    ).toBeLessThan(BOSS.aggroRadius);
+    /*
+     * 동료가 대장 **반대쪽**에 있으면 주인공은 그만큼 더 들어와야 한다 —
+     * 그 자리가 내려치기 반경 안이다.
+     */
+    expect(
+      companionReach - orbit,
+      `가장 나쁜 자리에서 주인공이 서는 곳(${companionReach - orbit}m)이 내려치기 반경(${BOSS.slamRadius}m) 안이다`,
+    ).toBeLessThan(BOSS.slamRadius);
+  });
+});
+
+/*
+ * 배선. 값이 맞아도 실어 보내지 않으면 대장은 안 맞는다.
+ *
+ * 실제로 이 검사를 빠뜨린 채 `link.bossBoltDamage += ...` 한 줄을 지워
+ * 봤더니 **모든 검사가 통과했다.** 규칙만 재고 배선을 안 재면 그렇게 된다.
+ */
+describe("동료의 타격을 로봇과 대장이 나눠 받는다", () => {
+  function link() {
+    return { bossX: 0, bossZ: 5, bossHittable: true, bossBoltDamage: 0 };
+  }
+
+  it("대장 피해를 탄과 같은 통로에 싣는다", () => {
+    const boss = link();
+    const hits = recordCompanionHits(boss, [{ x: 0, z: 0 }], [], 1.9);
+    expect(hits.bossDamage).toBe(COMPANION_STRIKE.damage);
+    expect(boss.bossBoltDamage, "`bossBoltDamage`에 안 실었다 — 대장이 안 맞는다").toBe(
+      COMPANION_STRIKE.damage,
+    );
+  });
+
+  it("맞힐 수 없는 대장에게는 안 넣는다 — 누워 있거나 아직 안 만났다", () => {
+    const boss = { ...link(), bossHittable: false };
+    expect(recordCompanionHits(boss, [{ x: 0, z: 0 }], [], 1.9).bossDamage).toBe(0);
+    expect(boss.bossBoltDamage).toBe(0);
+  });
+
+  it("같은 자리 하나로 로봇과 대장을 **둘 다** 친다", () => {
+    /*
+     * 자리를 두 번 꺼내면 뒤쪽이 빈 목록을 받는다. 한 자리에서 둘이 다
+     * 맞는지가 그 실수를 잡는다.
+     */
+    const boss = link();
+    const enemies = [{ ...createEnemies(1, 40, 1)[0], x: 0, z: 2, hp: COMBAT_TUNING.maxHp }];
+    const hits = recordCompanionHits(boss, [{ x: 0, z: 0 }], enemies, 1.9);
+    expect(hits.struck.length, "로봇이 안 맞았다").toBe(1);
+    expect(hits.bossDamage, "대장이 안 맞았다").toBe(COMPANION_STRIKE.damage);
   });
 });

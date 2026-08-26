@@ -16,8 +16,6 @@ import * as THREE from "three";
 import { combatPressure } from "@/game/combat/combatLink";
 import {
   CAMERA,
-  CAMERA_COLLIDER_RADIUS,
-  CAMERA_GROUND_CLEARANCE,
   CHARACTER_FADE,
   isVehicle,
   RUN_CAMERA,
@@ -26,7 +24,7 @@ import {
 } from "@/game/config/tuning";
 import { damp, lerp } from "@/game/core/mathx";
 import { fovPulse, FOV_PULSE_SECONDS } from "@/game/dokebi/discoveryEffect";
-import { resolveHorizontalCollisions, type Aabb, type Vec3 } from "@/game/player/locomotion";
+import type { Aabb, Vec3 } from "@/game/player/locomotion";
 import {
   characterAlpha,
   findCameraDistance,
@@ -39,9 +37,9 @@ import {
   stepFollowYaw,
   type CameraTuning,
 } from "@/game/scene/cameraRig";
+import { clearedCameraPoint } from "@/game/scene/cameraClear";
 import { faceShot, FINISHER } from "@/game/scene/finisher";
 import type { LookState } from "@/game/scene/lookControl";
-import { surfaceHeight } from "@/game/world/sidewalks";
 
 /** 프레임을 넘어 살아남는 카메라 상태 */
 export interface CameraFrameState {
@@ -177,35 +175,15 @@ export function recordCameraFrame(
     .addScaledVector(state.scratch.direction, allowedDistance);
 
   /*
-   * 카메라가 언덕을 파고들지 않게 한다.
+   * 언덕과 벽에서 내보낸다.
    *
-   * 충돌체는 건물뿐이라 지형은 막아 주지 않는다. 내리막을 등지고 서면
-   * 카메라가 뒤쪽 언덕 **속**으로 들어가 화면이 흙빛 한 장이 된다.
-   * 지면 위 최소 높이만 지켜 준다 — 시선 방향은 그대로 두므로 구도가
-   * 흔들리지 않는다.
+   * 충돌체는 건물뿐이라 지형은 막아 주지 않는다 — 내리막을 등지고 서면
+   * 카메라가 뒤쪽 언덕 **속**으로 들어가 화면이 흙빛 한 장이 된다. 벽 쪽은
+   * `findCameraDistance`가 당겨 오지만 **최소 거리(1.4m)가 바닥**이라, 벽에
+   * 바짝 붙어 서면 그 지점이 벽 안일 수 있다.
    */
-  const cameraGround =
-    surfaceHeight(state.scratch.desired.x, state.scratch.desired.z) + CAMERA_GROUND_CLEARANCE;
-  if (state.scratch.desired.y < cameraGround) state.scratch.desired.y = cameraGround;
-
-  /*
-   * 그래도 벽 안이면 밀어낸다.
-   *
-   * `findCameraDistance`는 카메라를 당겨 오지만 **최소 거리(1.4m)가 바닥**이라,
-   * 벽에 바짝 붙어 서면 그 지점이 벽 안일 수 있다. 달리다 옛 마을 집에
-   * 붙었더니 화면이 통째로 벽 내부가 됐다.
-   *
-   * 플레이어를 밀어내는 것과 **같은 함수**를 쓴다. 카메라만 따로 밀어내는
-   * 식을 새로 쓰면 두 판정이 갈라지고, 그러면 플레이어는 못 들어가는 자리에
-   * 카메라만 들어가는 자리가 생긴다.
-   */
-  const cleared = resolveHorizontalCollisions(
-    state.scratch.desired,
-    CAMERA_COLLIDER_RADIUS,
-    input.colliders,
-  );
-  state.scratch.desired.x = cleared.x;
-  state.scratch.desired.z = cleared.z;
+  const clearedDesired = clearedCameraPoint(state.scratch.desired, input.colliders);
+  state.scratch.desired.set(clearedDesired.x, clearedDesired.y, clearedDesired.z);
 
   /*
    * 마무리 연출 — 카메라를 아이 얼굴 앞으로 데려간다.
@@ -246,6 +224,17 @@ export function recordCameraFrame(
       input.tuning.followLambda,
       input.dt,
     );
+  }
+
+  /*
+   * **그려질 자리**에 한 번 더 건다 — 목표만 안전해서는 소용이 없다.
+   *
+   * 마무리 연출 중에는 걸지 않는다. 얼굴에서 1.5m는 캐릭터가 이미 차지한
+   * 자리이고, 여기서 밀어내면 공들여 잡은 구도가 어긋난다.
+   */
+  if (input.finish01 <= 0) {
+    const drawn = clearedCameraPoint(state.position, input.colliders);
+    state.position.set(drawn.x, drawn.y, drawn.z);
   }
 
   /*

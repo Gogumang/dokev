@@ -82,3 +82,29 @@ export function firstStrikeDelay(slot: number, party: number): number {
   const count = Math.max(1, party);
   return (COMPANION_STRIKE.intervalSeconds * ((slot % count) + 1)) / count;
 }
+
+/**
+ * 동료가 이번 프레임에 **대장**에게 넣은 피해.
+ *
+ * 로봇과 같은 자리 목록을 쓰지만 판정은 따로다 — 대장은 적 목록에 없고
+ * (`bossSim`이 따로 들고 있다) 몸이 커서 반지름을 받아야 한다.
+ *
+ * 세기를 따로 두지 않는다. 대신 **닿는 거리가 저절로 값을 매긴다**: 동료는
+ * 주인공 뒤 2.1~2.7m를 돌므로, 동료의 5m가 대장에게 닿으려면 주인공이
+ * 대장에게서 9m 안으로 들어와야 한다 — 내려치기 반경이 6.2m다. 즉 동료의
+ * 몫을 받으려면 **예고를 볼 수 있는 자리까지 들어와야 한다.** 숫자를 새로
+ * 고르는 대신 이 관계를 쓴다.
+ */
+export function companionBossDamage(
+  spots: readonly { x: number; z: number }[],
+  bossX: number,
+  bossZ: number,
+  bossRadius: number,
+): number {
+  const reach = COMPANION_STRIKE.reachMeters + bossRadius;
+  let total = 0;
+  for (const spot of spots) {
+    if (Math.hypot(spot.x - bossX, spot.z - bossZ) <= reach) total += COMPANION_STRIKE.damage;
+  }
+  return total;
+}
