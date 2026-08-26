@@ -90,7 +90,7 @@ TRAILER 8.2의 실루엣 원칙이었는데, 걷는 동작을 가진 두 발 생
 
 지금 외부 에셋은 아홉이다 — `character.glb`(920KB), `title-street.webp`(137KB),
 배경 차량 셋(`public/models/traffic-*.glb`, 103~122KB), 동료 셋
-(`public/models/companion-*.glb`, 399~597KB), 미니 보스
+(`public/models/companion-*.glb`, 330~436KB), 미니 보스
 (`public/models/boss-scrap-foreman.glb`, 758KB). 남은 동료는 로봇 하나다.
 
 | 항목 | 지금 | 상한 |

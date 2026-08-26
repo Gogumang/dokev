@@ -108,8 +108,17 @@ describe("동작 이름이 실제 파일과 맞는가", () => {
     const model = readModel(`public${shape.url}`);
 
     it(`${shape.label}에서 동작을 실제로 읽었다`, () => {
-      // 못 읽으면 빈 목록과 대조하며 조용히 통과한다
-      expect(model.clips.length, `읽은 동작 ${model.clips.length}개`).toBeGreaterThan(2);
+      /*
+       * 못 읽으면 빈 목록과 대조하며 아래 검사들이 조용히 통과한다.
+       *
+       * 개수로 세지 않는다 — 안 쓰는 동작을 버리고 나면 버섯은 둘뿐이다
+       * (달리기·쿵후 펀치). 「셋 이상」 같은 자를 대면 정리할 때마다 걸린다.
+       */
+      expect(model.clips.length, "동작을 하나도 못 읽었다").toBeGreaterThan(0);
+      expect(
+        model.clips.every((name) => typeof name === "string" && name.length > 0),
+        `이름이 아닌 것이 섞였다: ${JSON.stringify(model.clips)}`,
+      ).toBe(true);
     });
 
     it(`${shape.label}이 쓰는 이름이 모두 파일에 있다`, () => {
@@ -120,6 +129,20 @@ describe("동작 이름이 실제 파일과 맞는가", () => {
       const used = [shape.walk, shape.run, shape.ability];
       const missing = used.filter((name) => !model.clips.includes(name));
       expect(missing, `파일에 없는 동작:\n${missing.join("\n")}`).toEqual([]);
+    });
+
+    it(`${shape.label}에 안 쓰는 동작이 없다`, () => {
+      /*
+       * 안 쓰는 동작은 받기만 하고 안 트는 용량이다 — 이 파일들은 절반 가까이가
+       * 애니메이션이라 그 값이 크다. 원본에는 일어서기·넉다운·펀치 콤보·돌진이
+       * 함께 왔는데 **대응하는 상태가 게임에 없다.** 셋을 버려 275KB를 돌려받았다.
+       *
+       * 대장에 걸어 둔 것과 같은 규칙이다(`bossClips.test.ts`). 반대 방향(코드가
+       * 쓰는 이름이 파일에 있는가)만 재면, 안 쓰는 것이 조용히 쌓인다.
+       */
+      const used = new Set([shape.walk, shape.run, shape.ability]);
+      const unused = model.clips.filter((name) => !used.has(name));
+      expect(unused, `안 쓰는 동작:\n${unused.join("\n")}`).toEqual([]);
     });
 
     it(`${shape.label}의 어느 기분에도 빈 동작이 없다`, () => {
