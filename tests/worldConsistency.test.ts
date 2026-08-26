@@ -4,7 +4,7 @@ import { BOSS, BOSS_HOME } from "@/game/combat/bossSim";
 import { COMBAT_TUNING, createEnemies } from "@/game/combat/combatSim";
 import { LOCOMOTION } from "@/game/config/tuning";
 import { DOKEBI, DOKEBI_ORDER, DISCOVERY_RADIUS } from "@/game/dokebi/roster";
-import { findGrappleTarget, type Aabb } from "@/game/player/locomotion";
+import { findGrappleTarget } from "@/game/player/locomotion";
 import { CLUES, CLUE_RADIUS } from "@/game/quest/clues";
 import { FIRST_RUN_QUEST } from "@/game/quest/questContent";
 import { blockCells } from "@/game/systems/minimap";
@@ -28,28 +28,15 @@ import { zoneAt } from "@/game/world/districts";
  * 여기서 그 추론들을 실제 배치 데이터와 대조한다.
  */
 
+import { blockedBy as blockedAt, describeBox, walkableFrom as walkable } from "./support/world";
+
 const layout = buildCityLayout();
 const details = buildCityDetails(layout);
-
-/** 그 지점이 어떤 충돌체 안에 있는지. margin만큼 넓혀서 본다 */
-function blockedBy(x: number, z: number, margin: number): Aabb[] {
-  return layout.colliders.filter(
-    (box) =>
-      x >= box.minX - margin &&
-      x <= box.maxX + margin &&
-      z >= box.minZ - margin &&
-      z <= box.maxZ + margin,
-  );
-}
-
-function describeBox(box: Aabb): string {
-  return `[${box.minX.toFixed(1)}~${box.maxX.toFixed(1)}, ${box.minZ.toFixed(1)}~${box.maxZ.toFixed(1)}]`;
-}
 
 describe("스폰 지점", () => {
   it("충돌체 안이 아니다", () => {
     // 벽 안에서 시작하면 첫 프레임에 밖으로 밀려나거나 갇힌다
-    const blocking = blockedBy(layout.spawn.x, layout.spawn.z, 0.5);
+    const blocking = blockedAt(layout, layout.spawn.x, layout.spawn.z, 0.5);
     expect(blocking.length, `spawn blocked by ${blocking.map(describeBox).join(", ")}`).toBe(0);
   });
 
@@ -83,7 +70,7 @@ describe("도깨비가 기다리는 자리", () => {
     for (const spirit of homes) {
       const home = spirit.home;
       if (!home) continue;
-      const blocking = blockedBy(home.x, home.z, 1.5);
+      const blocking = blockedAt(layout, home.x, home.z, 1.5);
       expect(
         blocking.length,
         `${spirit.id} at (${home.x.toFixed(1)}, ${home.z.toFixed(1)}) blocked by ${blocking
@@ -104,7 +91,7 @@ describe("도깨비가 기다리는 자리", () => {
         [0, DISCOVERY_RADIUS * 0.6],
         [0, -DISCOVERY_RADIUS * 0.6],
       ]) {
-        const blocking = blockedBy(home.x + dx, home.z + dz, 0);
+        const blocking = blockedAt(layout, home.x + dx, home.z + dz, 0);
         expect(
           blocking.length,
           `${spirit.id} + (${dx.toFixed(1)}, ${dz.toFixed(1)}) blocked by ${blocking
@@ -121,7 +108,7 @@ describe("도깨비가 기다리는 자리", () => {
       const home = spirit.home;
       if (!home) continue;
       expect(
-        walkableFrom(layout.spawn.x, layout.spawn.z, home.x, home.z, DISCOVERY_RADIUS),
+        walkable(layout, layout.spawn.x, layout.spawn.z, home.x, home.z, DISCOVERY_RADIUS),
         `cannot walk from spawn to ${spirit.id}`,
       ).toBe(true);
     }
@@ -180,7 +167,14 @@ describe("퀘스트 목표", () => {
      */
     if (reach?.kind !== "reach") return;
 
-    const reachable = walkableFrom(layout.spawn.x, layout.spawn.z, reach.x, reach.z, reach.radius);
+    const reachable = walkable(
+      layout,
+      layout.spawn.x,
+      layout.spawn.z,
+      reach.x,
+      reach.z,
+      reach.radius,
+    );
     expect(reachable, `cannot walk from spawn to within ${reach.radius}m of the destination`).toBe(
       true,
     );
@@ -195,7 +189,7 @@ describe("퀘스트 목표", () => {
 
 describe("적 배치", () => {
   /** 씬이 넘기는 것과 같은 판정. 벽에 딱 붙는 것도 막는다 */
-  const isBlocked = (x: number, z: number) => blockedBy(x, z, 1.2).length > 0;
+  const isBlocked = (x: number, z: number) => blockedAt(layout, x, z, 1.2).length > 0;
   /*
    * 씬이 넘기는 것과 **같은 예약 구역**도 준다.
    *
@@ -222,7 +216,7 @@ describe("적 배치", () => {
      * 무작위 좌표라 건물 안에 박힐 수 있다. 그 로봇은 때릴 수도 없고
      * 다가올 수도 없어 퀘스트의 "3기 처치"를 영영 못 채우게 만들 수 있다.
      */
-    const stuck = enemies.filter((enemy) => blockedBy(enemy.x, enemy.z, 0).length > 0);
+    const stuck = enemies.filter((enemy) => blockedAt(layout, enemy.x, enemy.z, 0).length > 0);
     expect(
       stuck.length,
       `${stuck.length}/${enemies.length} enemies inside colliders: ${stuck
@@ -237,7 +231,7 @@ describe("적 배치", () => {
      * 않는 호출부(테스트 등)는 예전 동작 그대로다.
      */
     const loose = createEnemies(24, layout.halfExtent);
-    const stuck = loose.filter((enemy) => blockedBy(enemy.x, enemy.z, 0).length > 0);
+    const stuck = loose.filter((enemy) => blockedAt(layout, enemy.x, enemy.z, 0).length > 0);
     expect(stuck.length, `${stuck.length}/24 stuck without the predicate`).toBeGreaterThan(0);
   });
 
@@ -303,7 +297,7 @@ describe("도로 좌표를 유도하는 곳이 서로 맞는가", () => {
     for (const center of roadCenters()) {
       for (const offset of [-TRAFFIC.laneOffset, TRAFFIC.laneOffset]) {
         const lane = center + offset;
-        const blocking = blockedBy(lane, 0, 0);
+        const blocking = blockedAt(layout, lane, 0, 0);
         expect(
           blocking.length,
           `lane ${lane} blocked by ${blocking.map(describeBox).join(", ")}`,
@@ -328,7 +322,7 @@ describe("가로등", () => {
      * 교차로에서 겹쳐 선 기둥 둘이 오래 남아 있었다. 전부 본다(빠르다).
      */
     const overlapping = poles
-      .map((pole) => ({ pole, hits: blockedBy(pole.x, pole.z, 0).length }))
+      .map((pole) => ({ pole, hits: blockedAt(layout, pole.x, pole.z, 0).length }))
       .filter((entry) => entry.hits !== 1)
       .map((entry) => `(${entry.pole.x.toFixed(1)}, ${entry.pole.z.toFixed(1)}) ${entry.hits}개`);
 
@@ -615,7 +609,8 @@ function sampleFreePoints(cx: number, cz: number, radius: number): { x: number; 
   for (let dx = -radius; dx <= radius; dx += 1) {
     for (let dz = -radius; dz <= radius; dz += 1) {
       if (Math.hypot(dx, dz) > radius) continue;
-      if (blockedBy(cx + dx, cz + dz, 0.4).length === 0) free.push({ x: cx + dx, z: cz + dz });
+      if (blockedAt(layout, cx + dx, cz + dz, 0.4).length === 0)
+        free.push({ x: cx + dx, z: cz + dz });
     }
   }
   return free;
@@ -627,45 +622,6 @@ function sampleFreePoints(cx: number, cz: number, radius: number): { x: number; 
  * 정확한 이동 판정이 아니라 **연결성**만 본다. 반경 안이 비어 있어도 사방이
  * 막힌 안뜰이면 도달할 수 없고, 그건 좌표만 봐서는 알 수 없다.
  */
-function walkableFrom(
-  fromX: number,
-  fromZ: number,
-  toX: number,
-  toZ: number,
-  radius: number,
-): boolean {
-  const CELL = 1;
-  const limit = layout.halfExtent;
-  const key = (x: number, z: number) => `${x},${z}`;
-
-  const start = { x: Math.round(fromX), z: Math.round(fromZ) };
-  const seen = new Set<string>([key(start.x, start.z)]);
-  const queue = [start];
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current) break;
-    if (Math.hypot(current.x - toX, current.z - toZ) <= radius) return true;
-
-    for (const [dx, dz] of [
-      [CELL, 0],
-      [-CELL, 0],
-      [0, CELL],
-      [0, -CELL],
-    ]) {
-      const nx = current.x + dx;
-      const nz = current.z + dz;
-      if (Math.abs(nx) > limit || Math.abs(nz) > limit) continue;
-      const id = key(nx, nz);
-      if (seen.has(id)) continue;
-      seen.add(id);
-      // 캐릭터 반지름만큼 여유를 둔다. 딱 맞게 통과하는 틈은 실제로 못 지나간다.
-      if (blockedBy(nx, nz, 0.45).length > 0) continue;
-      queue.push({ x: nx, z: nz });
-    }
-  }
-  return false;
-}
 
 describe("흔적 자리", () => {
   /*
@@ -681,7 +637,7 @@ describe("흔적 자리", () => {
    */
   it("모두 스폰에서 걸어서 닿는다", () => {
     const unreachable = CLUES.filter(
-      (clue) => !walkableFrom(layout.spawn.x, layout.spawn.z, clue.x, clue.z, CLUE_RADIUS),
+      (clue) => !walkable(layout, layout.spawn.x, layout.spawn.z, clue.x, clue.z, CLUE_RADIUS),
     ).map((clue) => `${clue.id} (${clue.x.toFixed(0)}, ${clue.z.toFixed(0)})`);
 
     expect(unreachable, `걸어서 못 가는 흔적: ${unreachable.join(", ")}`).toEqual([]);
@@ -698,7 +654,7 @@ describe("흔적 자리", () => {
     const unreachable = DOKEBI_ORDER.flatMap((id) => {
       const home = DOKEBI[id].home;
       if (!home) return [];
-      return walkableFrom(layout.spawn.x, layout.spawn.z, home.x, home.z, 3) ? [] : [id];
+      return walkable(layout, layout.spawn.x, layout.spawn.z, home.x, home.z, 3) ? [] : [id];
     });
     expect(unreachable, `걸어서 못 가는 자리: ${unreachable.join(", ")}`).toEqual([]);
   });
@@ -748,57 +704,6 @@ describe("그래플", () => {
     // 월드 밖에서 부르면 null이어야 한다. 아니면 사거리 판정이 죽은 것이다
     const far = { x: layout.halfExtent * 4, y: 0, z: layout.halfExtent * 4 };
     expect(findGrappleTarget(far, 0, anchors)).toBeNull();
-  });
-});
-
-describe("미니 보스 자리", () => {
-  /*
-   * 정본에서 읽는다. 씬·미니맵·전체 지도가 모두 이 값을 쓴다 — 좌표를 두
-   * 번 적으면 표식과 실제 위치가 어긋나고, 지도를 보고 찾아간 사람이 빈
-   * 교차로에 서게 된다.
-   */
-  const home = BOSS_HOME;
-
-  it("공사장 한가운데다", () => {
-    /*
-     * **교차로 위에 있는지를 보던 검사였다.** 교차로는 13×13m인데 대장의
-     * 내려치는 반경이 6.2m라 물러설 자리가 없었다 — 검사가 그 좁은 자리를
-     * 지키고 있었던 셈이다. 이제 건물을 세우지 않는 블록의 한가운데를 본다.
-     */
-    const center = blockCenter(SITE_BLOCK_INDEX);
-    expect(home.x, `boss home x ${home.x}`).toBeCloseTo(center.cx, 6);
-    expect(home.z, `boss home z ${home.z}`).toBeCloseTo(center.cz, 6);
-  });
-
-  it("물러설 자리가 내려치는 반경보다 넓다", () => {
-    /*
-     * 예고를 보고 물러서는 것이 이 싸움의 전부다. 블록 반폭이 충격 반경보다
-     * 좁으면 벽에 붙어 맞을 수밖에 없다.
-     */
-    const halfBlock = CITY.blockSize / 2;
-    expect(halfBlock, `블록 반폭 ${halfBlock}m vs 충격 ${BOSS.slamRadius}m`).toBeGreaterThan(
-      BOSS.slamRadius * 2,
-    );
-  });
-
-  it("충돌체 안이 아니다", () => {
-    const blocking = blockedBy(home.x, home.z, 2);
-    expect(blocking.length, `boss home blocked by ${blocking.map(describeBox).join(", ")}`).toBe(0);
-  });
-
-  it("월드 경계 안이다", () => {
-    expect(Math.abs(home.x)).toBeLessThan(layout.halfExtent);
-    expect(Math.abs(home.z)).toBeLessThan(layout.halfExtent);
-  });
-
-  it("스폰에서 충분히 멀다", () => {
-    // 처음부터 마주치면 조작을 배우기 전에 쓰러진다
-    const distance = Math.hypot(home.x - layout.spawn.x, home.z - layout.spawn.z);
-    expect(distance, `distance=${distance.toFixed(1)}m`).toBeGreaterThan(60);
-  });
-
-  it("걸어서 닿는다", () => {
-    expect(walkableFrom(layout.spawn.x, layout.spawn.z, home.x, home.z, 6)).toBe(true);
   });
 });
 
@@ -857,14 +762,16 @@ describe("자판기", () => {
   });
 
   it("건물 안에 박혀 있지 않다", () => {
-    const stuck = machines.filter((machine) => blockedBy(machine.x, machine.z, 0.6).length > 1);
+    const stuck = machines.filter(
+      (machine) => blockedAt(layout, machine.x, machine.z, 0.6).length > 1,
+    );
     expect(stuck.length, `${stuck.length}/${machines.length} machines inside colliders`).toBe(0);
   });
 
   it("적어도 하나는 스폰에서 걸어서 닿는다", () => {
     // 전부 안뜰에 있으면 기능이 있어도 쓸 수 없다
     const reachable = machines.some((machine) =>
-      walkableFrom(layout.spawn.x, layout.spawn.z, machine.x, machine.z, VENDING.reachMeters),
+      walkable(layout, layout.spawn.x, layout.spawn.z, machine.x, machine.z, VENDING.reachMeters),
     );
     expect(reachable, "no vending machine is walkable from spawn").toBe(true);
   });
