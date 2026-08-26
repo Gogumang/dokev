@@ -5,8 +5,8 @@ import {
   COMBAT_TUNING,
   createAttackState,
   createEnemies,
+  strikeEnemy,
   isAttackActive,
-  resolveHits,
   stepAttack,
   stepEnemy,
   stepEnemyStrike,
@@ -18,7 +18,14 @@ import {
   stepPlayerCombat,
   type PlayerCombatState,
 } from "@/game/combat/playerCombat";
-import { swingSeconds, WEAPONS } from "@/game/combat/weapons";
+import {
+  fireWeaponBolt,
+  stepPlayerBolts,
+  type BoltTarget,
+  type PlayerBolt,
+} from "@/game/combat/projectiles";
+import { swingSeconds, WEAPON_ORDER, WEAPONS, weaponRange } from "@/game/combat/weapons";
+import { ENEMY_BODY } from "@/game/combat/enemyBody";
 import { LOCOMOTION } from "@/game/config/tuning";
 
 /*
@@ -35,39 +42,89 @@ function enemyAt(x: number, z: number): EnemyState {
   return { ...createEnemies(1, 100)[0], x, z, homeX: x, homeZ: z, kind: "chaser", mood: "chase" };
 }
 
-/** 방망이 한 번의 휘두르기 길이(초). 무기마다 다르므로 어느 것인지 밝혀 둔다 */
-const BAT_SWING = swingSeconds(WEAPONS.bat);
+/** 활 한 발의 주기(초). 무기마다 다르므로 어느 것인지 밝혀 둔다 */
+const BOW_SWING = swingSeconds(WEAPONS.bow);
+
+/**
+ * 한 프레임 쏘고 굴린다 — 화면이 하는 일(`Enemies.tsx`)을 검사용으로 줄인 것.
+ *
+ * 드는 무기가 활·광선총 둘 다 원거리가 되면서 **한 판이 성립하는가**를 재는
+ * 유일한 길이 탄이 됐다. 부채꼴 판정으로 재던 옛 대본을 그대로 두면 검사는
+ * 통과하는데 게임에서는 아무도 그렇게 못 싸운다.
+ */
+function volley(
+  bolts: PlayerBolt[],
+  enemies: EnemyState[],
+  targets: readonly BoltTarget[],
+  weapon: (typeof WEAPONS)[keyof typeof WEAPONS],
+  fire: { at: boolean; x: number; z: number; facing: number },
+): { bolts: PlayerBolt[]; enemies: EnemyState[]; struck: number } {
+  let next = bolts;
+  if (fire.at) {
+    next = fireWeaponBolt(next, fire.x, fire.z, fire.facing, weapon.bolt, weapon.damage);
+  }
+  const step = stepPlayerBolts(next, FRAME, targets);
+  const hurt = [...enemies];
+  for (const hit of step.hits) {
+    const enemy = hurt[hit.target];
+    if (enemy)
+      hurt[hit.target] = strikeEnemy(enemy, hit.damage, hit.x, hit.z, weapon.knockbackScale);
+  }
+  return { bolts: step.bolts, enemies: hurt, struck: step.hits.length };
+}
 
 describe("잡몹 한 마리", () => {
-  it("두 번 때리면 쓰러진다", () => {
-    let enemies = [enemyAt(0, 1.5)];
-    let attack = createAttackState();
-    let swings = 0;
+  it("드는 무기 어느 쪽으로도 몇 발 안에 눕는다", () => {
+    /*
+     * 무기를 하나만 재면 다른 하나가 「쏘는데 안 죽는」 상태로 남는다 —
+     * 드는 것이 둘뿐이므로 둘 다 돌린다.
+     */
+    for (const id of WEAPON_ORDER) {
+      const weapon = WEAPONS[id];
+      let enemies = [enemyAt(0, 8)];
+      let bolts: PlayerBolt[] = [];
+      let attack = createAttackState();
+      let shots = 0;
 
-    for (let i = 0; i < 60 * 10; i += 1) {
-      // 쉬는 중이면 다시 휘두른다
-      const request = attack.phase === "ready";
-      if (request) swings += 1;
-      attack = stepAttack(attack, request, FRAME);
+      for (let i = 0; i < 60 * 20; i += 1) {
+        const request = attack.phase === "ready";
+        attack = stepAttack(attack, request, FRAME, weapon);
+        // 판정이 켜지는 프레임에 한 발 — 화면이 쏘는 조건과 같다
+        const firing = isAttackActive(attack) && attack.timer > weapon.timing.activeSeconds - FRAME;
+        if (firing) shots += 1;
 
-      const result = resolveHits(enemies, attack, 0, 0, 0);
-      enemies = result.enemies.map((enemy) => stepEnemy(enemy, 0, 0, FRAME));
-      if (enemies[0].mood === "down") break;
+        const targets = [{ x: enemies[0].x, z: enemies[0].z, radius: ENEMY_BODY.bodyWidth }];
+        const round = volley(bolts, enemies, targets, weapon, {
+          at: firing,
+          x: 0,
+          z: 0,
+          facing: 0,
+        });
+        bolts = round.bolts;
+        enemies = round.enemies.map((enemy) => stepEnemy(enemy, 0, 0, FRAME));
+        if (enemies[0].mood === "down") break;
+      }
+
+      expect(enemies[0].mood, `${id}: ${shots}발 쐈다`).toBe("down");
+      expect(shots, `${id}: ${shots}발 걸렸다`).toBeLessThanOrEqual(4);
     }
-
-    expect(enemies[0].mood, `${swings}번 휘둘렀다`).toBe("down");
-    expect(swings, `${swings}번 휘둘러 쓰러뜨렸다`).toBeLessThanOrEqual(4);
   });
 
   it("등 뒤의 적은 맞지 않는다", () => {
-    // 부채꼴 판정이 실제로 방향을 가리는지 — 한 판을 돌려서 본다
-    let enemies = [enemyAt(0, -1.5)];
-    let attack = createAttackState();
+    // 탄은 바라보는 쪽으로만 간다 — 한 판을 돌려서 본다
+    let enemies = [enemyAt(0, -8)];
+    let bolts: PlayerBolt[] = [];
 
     for (let i = 0; i < 60 * 5; i += 1) {
-      attack = stepAttack(attack, attack.phase === "ready", FRAME);
-      const result = resolveHits(enemies, attack, 0, 0, 0);
-      enemies = result.enemies;
+      const targets = [{ x: enemies[0].x, z: enemies[0].z, radius: ENEMY_BODY.bodyWidth }];
+      const round = volley(bolts, enemies, targets, WEAPONS.bow, {
+        at: i % 60 === 0,
+        x: 0,
+        z: 0,
+        facing: 0,
+      });
+      bolts = round.bolts;
+      enemies = round.enemies;
     }
 
     expect(enemies[0].hp, `hp=${enemies[0].hp}`).toBe(COMBAT_TUNING.maxHp);
@@ -157,13 +214,19 @@ describe("둘러싸였을 때", () => {
 describe("미니 보스", () => {
   it("규칙대로 싸우면 이긴다", () => {
     /*
-     * 대본: 예고가 뜨면 물러서고, 빈틈·비틀거림에 붙어서 때린다.
+     * 대본: 활 사거리 안에 서서 쏘고, 예고가 뜨면 충격 밖으로 물러선다.
      *
      * **이길 수 없는 보스**는 규칙이 옳아도 게임을 망친다. 값들이 시간 위에서
      * 만나야만 드러나는 문제라 여기서 한 판을 끝까지 돌린다.
+     *
+     * 예전에는 붙어서 휘둘렀다. 드는 무기가 둘 다 원거리가 된 지금 그 대본은
+     * **아무도 못 하는 싸움**이라, 검사가 통과해도 뜻이 없다.
      */
+    const weapon = WEAPONS.bow;
+    const range = weaponRange(weapon);
     let boss = createBoss(0, 0);
     let attack = createAttackState();
+    let bolts: PlayerBolt[] = [];
     let playerZ = -12;
     let hitsTaken = 0;
     let seconds = 0;
@@ -171,25 +234,25 @@ describe("미니 보스", () => {
     for (let i = 0; i < 60 * 120 && boss.phase !== "down"; i += 1) {
       seconds += FRAME;
 
-      // 예고·충격 중에는 물러서고, 아니면 붙는다
+      // 예고·충격 중에는 물러서고, 아니면 사거리 안에 자리를 잡는다
       const dangerous = boss.phase === "windup" || boss.phase === "slam";
-      const want = dangerous ? -(BOSS.slamRadius + 1.5) : -(WEAPONS.bat.reachMeters - 0.6);
+      const want = dangerous ? -(BOSS.slamRadius + 1.5) : -(range * 0.5);
       const speed = LOCOMOTION.run.maxSpeed * FRAME;
       playerZ += Math.max(-speed, Math.min(speed, want - playerZ));
 
       boss = stepBoss(boss, 0, playerZ, FRAME);
       if (slamHits(boss, 0, playerZ)) hitsTaken += 1;
 
-      // 사거리 안이고 쉬고 있으면 휘두른다
-      const inReach = Math.abs(playerZ - boss.z) <= WEAPONS.bat.reachMeters;
-      attack = stepAttack(attack, attack.phase === "ready" && inReach, FRAME);
-      if (
-        isAttackActive(attack) &&
-        inReach &&
-        attack.timer > WEAPONS.bat.timing.activeSeconds - FRAME
-      ) {
-        boss = damageBoss(boss).state;
+      // 사거리 안이고 쉬고 있으면 쏜다
+      const inRange = Math.abs(playerZ - boss.z) <= range;
+      attack = stepAttack(attack, attack.phase === "ready" && inRange, FRAME, weapon);
+      const firing = isAttackActive(attack) && attack.timer > weapon.timing.activeSeconds - FRAME;
+      if (firing && inRange) {
+        bolts = fireWeaponBolt(bolts, 0, playerZ, 0, weapon.bolt, weapon.damage);
       }
+      const step = stepPlayerBolts(bolts, FRAME, [{ x: boss.x, z: boss.z, radius: 1.6 }]);
+      bolts = step.bolts;
+      for (const hit of step.hits) boss = damageBoss(boss, hit.damage).state;
     }
 
     expect(boss.phase, `${seconds.toFixed(0)}초 싸웠고 체력 ${boss.hp}이 남았다`).toBe("down");
@@ -203,10 +266,10 @@ describe("미니 보스", () => {
 
   it("한 판이 지루하지 않을 만큼은 걸린다", () => {
     /*
-     * 반대로 너무 빨리 끝나도 곤란하다. 최소 체력만큼은 때려야 하므로
-     * 휘두르기 횟수 × 주기가 하한이 된다.
+     * 반대로 너무 빨리 끝나도 곤란하다. 최소 체력만큼은 맞혀야 하므로
+     * 쏘는 횟수 × 주기가 하한이 된다.
      */
-    const minimumSeconds = BOSS.maxHp * BAT_SWING;
+    const minimumSeconds = BOSS.maxHp * BOW_SWING;
     expect(minimumSeconds, `${minimumSeconds.toFixed(1)}초`).toBeGreaterThan(4);
   });
 
@@ -300,17 +363,29 @@ describe("무작위 전투 60초", () => {
       let px = BOSS_HOME.x;
       let pz = BOSS_HOME.z + 10;
 
+      let bolts: PlayerBolt[] = [];
+
       for (let frame = 0; frame < 60 * 60; frame += 1) {
-        // 플레이어가 무작위로 돌아다니며 아무 때나 휘두른다
+        // 플레이어가 무작위로 돌아다니며 아무 방향으로나 쏜다
         px += (random() - 0.5) * 0.4;
         pz += (random() - 0.5) * 0.4;
         attack = stepAttack(attack, random() < 0.08, FRAME);
 
         enemies = enemies.map((enemy) => stepEnemy(enemy, px, pz, FRAME));
-        const hit = resolveHits(enemies, attack, px, pz, random() * Math.PI * 2);
-        enemies = hit.enemies;
-        attack = hit.attack;
-        defeated += hit.struck.length;
+        const targets = enemies.map((enemy) => ({
+          x: enemy.x,
+          z: enemy.z,
+          radius: ENEMY_BODY.bodyWidth,
+        }));
+        const round = volley(bolts, enemies, targets, WEAPONS.bow, {
+          at: random() < 0.08,
+          x: px,
+          z: pz,
+          facing: random() * Math.PI * 2,
+        });
+        bolts = round.bolts;
+        enemies = round.enemies;
+        defeated += round.struck;
 
         boss = stepBoss(boss, px, pz, FRAME);
         if (random() < 0.05) boss = damageBoss(boss).state;

@@ -266,18 +266,22 @@ describe("사수의 시야", () => {
 });
 
 /*
- * 플레이어의 탄 — 딱총.
+ * 플레이어의 탄 — 광선총.
  *
- * 근접만 있던 전투에 거리를 두는 선택지를 넣었다. 「멀리서 맞는다」만 보면
- * 원거리가 늘 이득이므로, 이 검사들은 **맞지 않아야 할 때 안 맞는지**를
- * 함께 본다(벽 뒤, 사거리 밖, 한 발에 둘).
+ * 「멀리서 맞는다」만 보면 원거리가 늘 이득이므로, 이 검사들은 **맞지 않아야
+ * 할 때 안 맞는지**를 함께 본다(벽 뒤, 사거리 밖, 한 발에 둘).
+ *
+ * 예전에는 딱총으로 쟀다. 딱총이 은퇴하면서(드는 것은 활·광선총 둘뿐이다)
+ * 표에서 사라졌고, 검사가 **없는 무기를 재고 있을 수는 없다.** 자리는 탄이
+ * 12m/s로 날던 시절에 맞춰져 있었으므로, 광선총(30m/s)에서 **같은 자리에
+ * 오도록 dt를 0.4배** 했다 — 재는 것은 속도가 아니라 판정 규칙이라 자리가
+ * 같으면 뜻이 같다.
  */
 describe("플레이어의 탄", () => {
-  const SPEC = WEAPONS.popgun.bolt;
-  const DAMAGE = WEAPONS.popgun.damage;
+  const SPEC = WEAPONS.beam.bolt;
+  const DAMAGE = WEAPONS.beam.damage;
 
   function fire(facing: number, fromX = 0, fromZ = 0): PlayerBolt[] {
-    if (SPEC === null) throw new Error("딱총에 탄 설정이 없다");
     return fireWeaponBolt([], fromX, fromZ, facing, SPEC, DAMAGE);
   }
 
@@ -295,7 +299,7 @@ describe("플레이어의 탄", () => {
      */
     const bolts = fire(0);
     const behind = [{ x: 0, z: -6, radius: 0.9 }];
-    const step = stepPlayerBolts(bolts, 0.2, behind);
+    const step = stepPlayerBolts(bolts, 0.08, behind);
     expect(step.hits, "뒤에 있는 적이 맞았다").toEqual([]);
   });
 
@@ -305,7 +309,7 @@ describe("플레이어의 탄", () => {
       { x: 0, z: 2, radius: 0.9 },
       { x: 0, z: 3, radius: 0.9 },
     ];
-    const step = stepPlayerBolts(bolts, 0.25, targets);
+    const step = stepPlayerBolts(bolts, 0.1, targets);
 
     expect(step.hits.length, `맞은 수 ${step.hits.length}`).toBe(1);
     expect(step.bolts, "맞고도 계속 날아간다").toEqual([]);
@@ -321,8 +325,8 @@ describe("플레이어의 탄", () => {
       { x: 0, z: 3.4, radius: 1.2 },
       { x: 0, z: 2.5, radius: 1.2 },
     ];
-    // 0.2초 뒤 탄은 z=2.4다 — 둘째(2.5)가 0.1m, 첫째(3.4)가 1.0m 떨어져 있다
-    const step = stepPlayerBolts(bolts, 0.2, targets);
+    // 0.08초 뒤 탄은 z=2.4다 — 둘째(2.5)가 0.1m, 첫째(3.4)가 1.0m 떨어져 있다
+    const step = stepPlayerBolts(bolts, 0.08, targets);
     expect(step.hits[0]?.target, "탄에서 먼 쪽이 맞았다").toBe(1);
   });
 
@@ -330,14 +334,13 @@ describe("플레이어의 탄", () => {
     // 벽 뒤에 숨는 것이 통하지 않으면 은신도 이동도 의미가 없어진다
     const bolts = fire(0);
     const wall = (_x: number, z: number) => z > 1;
-    const step = stepPlayerBolts(bolts, 0.25, [{ x: 0, z: 3, radius: 0.9 }], wall);
+    const step = stepPlayerBolts(bolts, 0.1, [{ x: 0, z: 3, radius: 0.9 }], wall);
 
     expect(step.hits, "벽을 통과해 맞혔다").toEqual([]);
     expect(step.bolts, "벽에 닿고도 남아 있다").toEqual([]);
   });
 
   it("사거리를 넘기면 사라진다", () => {
-    if (SPEC === null) throw new Error("딱총에 탄 설정이 없다");
     let bolts = fire(0);
     // 수명보다 조금 더 오래 굴린다. 표적은 두지 않는다
     for (let t = 0; t < SPEC.lifeSeconds + 0.2; t += 0.1) {
@@ -348,16 +351,15 @@ describe("플레이어의 탄", () => {
 
   it("탄이 자기 피해를 들고 다닌다 — 쏜 뒤 무기를 바꿔도 그대로다", () => {
     /*
-     * 피해를 표(`WEAPONS`)에서 그때그때 읽으면, 쏘고 나서 망치로 바꾸는
-     * 것만으로 날아가던 딱총 탄이 두 배로 아프다.
+     * 피해를 표(`WEAPONS`)에서 그때그때 읽으면, 쏘고 나서 활로 바꾸는
+     * 것만으로 날아가던 광선총 탄이 두 배로 아프다.
      */
     const bolts = fire(0);
-    const step = stepPlayerBolts(bolts, 0.25, [{ x: 0, z: 2.5, radius: 0.9 }]);
-    expect(step.hits[0]?.damage, "탄의 피해가 딱총 값이 아니다").toBe(DAMAGE);
+    const step = stepPlayerBolts(bolts, 0.1, [{ x: 0, z: 2.5, radius: 0.9 }]);
+    expect(step.hits[0]?.damage, "탄의 피해가 광선총 값이 아니다").toBe(DAMAGE);
   });
 
   it("상한을 넘게 쏘면 오래된 것부터 버린다", () => {
-    if (SPEC === null) throw new Error("딱총에 탄 설정이 없다");
     let bolts: PlayerBolt[] = [];
     for (let i = 0; i < PLAYER_BOLT_MAX + 5; i += 1) {
       bolts = fireWeaponBolt(bolts, 0, 0, 0, SPEC, DAMAGE);

@@ -4,15 +4,12 @@ import { readCode } from "./support/source";
 import { describe, expect, it } from "vitest";
 
 import {
-  type AttackState,
   COMBAT_TUNING,
   createAttackState,
   createEnemies,
   ENEMY_STRIKE,
   type EnemyState,
   isAttackActive,
-  isInAttackArc,
-  resolveHits,
   stepAttack,
   stepEnemy,
 } from "@/game/combat/combatSim";
@@ -55,17 +52,6 @@ function makeEnemy(overrides: Partial<EnemyState> = {}): EnemyState {
     homeZ: 2,
     ...overrides,
   };
-}
-
-/** 공격을 눌러 판정이 살아 있는 상태까지 진행시킨다. */
-function swingToActive(): AttackState {
-  let attack = stepAttack(createAttackState(), true, FRAME);
-  let guard = 0;
-  while (!isAttackActive(attack) && guard < 100) {
-    attack = stepAttack(attack, false, FRAME);
-    guard += 1;
-  }
-  return attack;
 }
 
 describe("createEnemies", () => {
@@ -122,107 +108,6 @@ describe("stepAttack", () => {
 
     // Assert — 연타로 무한히 때릴 수 있으면 안 된다
     expect(spammed.phase, `phase was: ${spammed.phase}`).toBe("recovery");
-  });
-});
-
-describe("isInAttackArc", () => {
-  it("정면 사거리 안이면 맞는다", () => {
-    const enemy = makeEnemy({ x: 0, z: 1.5 });
-    expect(isInAttackArc(enemy, 0, 0, 0)).toBe(true);
-  });
-
-  it("사거리 밖이면 빗나간다", () => {
-    const enemy = makeEnemy({ x: 0, z: WEAPONS.bat.reachMeters + 1 });
-    expect(isInAttackArc(enemy, 0, 0, 0)).toBe(false);
-  });
-
-  it("등 뒤는 빗나간다", () => {
-    // 부채꼴 판정이 없으면 뒤에 있는 적까지 맞아 타격감이 사라진다
-    const enemy = makeEnemy({ x: 0, z: -1.5 });
-    expect(isInAttackArc(enemy, 0, 0, 0)).toBe(false);
-  });
-});
-
-describe("원거리 무기의 근접 판정", () => {
-  it("딱총은 코앞의 적도 부채꼴로 때리지 않는다", () => {
-    /*
-     * 원거리는 **탄으로만** 맞힌다. 걸러 두지 않으면 사거리 0이라 안전할
-     * 것 같지만, 겹쳐 선 적(거리 0)은 각도를 못 정해 「맞은 것으로 본다」로
-     * 빠진다 — 딱총을 들고 적에게 붙기만 해도 탄 없이 체력이 깎인다.
-     */
-    const enemies = [makeEnemy({ x: 0, z: 0.05 })];
-    let attack = stepAttack(createAttackState(), true, FRAME, WEAPONS.popgun);
-    // 판정이 살아 있는 구간까지 진행한다
-    attack = stepAttack(attack, false, WEAPONS.popgun.timing.windupSeconds, WEAPONS.popgun);
-
-    const resolution = resolveHits(enemies, attack, 0, 0, 0, WEAPONS.popgun);
-
-    expect(resolution.struck, "탄 없이 맞았다").toEqual([]);
-    expect(resolution.enemies[0].hp, "체력이 깎였다").toBe(enemies[0].hp);
-  });
-
-  it("같은 자리에서 방망이는 맞힌다 — 위 검사가 늘 통과하는 것이 아니다", () => {
-    // 판정 자체가 죽어 있으면 위 검사는 아무것도 증명하지 않는다
-    const enemies = [makeEnemy({ x: 0, z: 0.05 })];
-    let attack = stepAttack(createAttackState(), true, FRAME, WEAPONS.bat);
-    attack = stepAttack(attack, false, WEAPONS.bat.timing.windupSeconds, WEAPONS.bat);
-
-    const resolution = resolveHits(enemies, attack, 0, 0, 0, WEAPONS.bat);
-    expect(resolution.struck, "근접인데도 안 맞았다").toEqual([0]);
-  });
-});
-
-describe("resolveHits", () => {
-  it("판정이 살아 있지 않으면 아무도 맞지 않는다", () => {
-    const enemies = [makeEnemy({ z: 1 })];
-    const result = resolveHits(enemies, createAttackState(), 0, 0, 0);
-    expect(result.struck, `struck was: ${JSON.stringify(result.struck)}`).toEqual([]);
-  });
-
-  it("한 번 휘두르면 같은 적을 한 번만 때린다", () => {
-    // Arrange — 판정이 여러 프레임 살아 있다
-    let attack = swingToActive();
-    let enemies = [makeEnemy({ z: 1 })];
-    let totalStruck = 0;
-
-    // Act — 판정이 끝날 때까지 매 프레임 적용
-    let guard = 0;
-    while (isAttackActive(attack) && guard < 100) {
-      const result = resolveHits(enemies, attack, 0, 0, 0);
-      enemies = result.enemies;
-      attack = stepAttack(result.attack, false, FRAME);
-      totalStruck += result.struck.length;
-      guard += 1;
-    }
-
-    // Assert — 기록이 없으면 한 번 휘둘러 서너 번 맞는다
-    expect(totalStruck, `totalStruck was: ${totalStruck}`).toBe(1);
-  });
-
-  it("맞으면 체력이 줄고 뒤로 밀려난다", () => {
-    // Arrange
-    const enemies = [makeEnemy({ x: 0, z: 1.5 })];
-
-    // Act
-    const result = resolveHits(enemies, swingToActive(), 0, 0, 0);
-    const hit = result.enemies[0];
-
-    // Assert — 넉백은 플레이어 반대 방향(+z)이어야 한다
-    expect(hit.hp, `hp was: ${hit.hp}`).toBe(COMBAT_TUNING.maxHp - 1);
-    expect(hit.mood, `mood was: ${hit.mood}`).toBe("hit");
-    expect(hit.velocityZ, `velocityZ was: ${hit.velocityZ}`).toBeGreaterThan(0);
-  });
-
-  it("체력이 다하면 쓰러진다", () => {
-    const enemies = [makeEnemy({ x: 0, z: 1.5, hp: 1 })];
-    const result = resolveHits(enemies, swingToActive(), 0, 0, 0);
-    expect(result.enemies[0].mood, `mood was: ${result.enemies[0].mood}`).toBe("down");
-  });
-
-  it("이미 쓰러진 적은 다시 맞지 않는다", () => {
-    const enemies = [makeEnemy({ x: 0, z: 1.5, mood: "down", hp: 0 })];
-    const result = resolveHits(enemies, swingToActive(), 0, 0, 0);
-    expect(result.struck, `struck was: ${JSON.stringify(result.struck)}`).toEqual([]);
   });
 });
 
@@ -853,7 +738,7 @@ describe("휘두르기 진행 시간이 캐릭터로 가는가", () => {
    */
   it("안 휘두를 때는 없음이다 — 0이면 늘 시작 자세다", () => {
     const link = { attackElapsed: 1 as number | null };
-    projectAttackTiming(link, createAttackState(), WEAPONS.bat);
+    projectAttackTiming(link, createAttackState(), WEAPONS.bow);
     expect(link.attackElapsed, "가만히 있는데 자세가 잡혔다").toBeNull();
   });
 
@@ -861,12 +746,12 @@ describe("휘두르기 진행 시간이 캐릭터로 가는가", () => {
     const link = { attackElapsed: null as number | null };
     let attack = stepAttack(createAttackState(), true, FRAME);
 
-    projectAttackTiming(link, attack, WEAPONS.bat);
+    projectAttackTiming(link, attack, WEAPONS.bow);
     const first = link.attackElapsed;
     expect(first, "휘두르는데 자세가 없다").not.toBeNull();
 
     attack = stepAttack(attack, false, FRAME * 4);
-    projectAttackTiming(link, attack, WEAPONS.bat);
+    projectAttackTiming(link, attack, WEAPONS.bow);
 
     expect(link.attackElapsed, `${first} → ${link.attackElapsed}`).toBeGreaterThan(first ?? 0);
   });
@@ -876,7 +761,7 @@ describe("휘두르기 진행 시간이 캐릭터로 가는가", () => {
     let attack = stepAttack(createAttackState(), true, FRAME);
     for (let i = 0; i < 240; i += 1) attack = stepAttack(attack, false, FRAME);
 
-    projectAttackTiming(link, attack, WEAPONS.bat);
+    projectAttackTiming(link, attack, WEAPONS.bow);
     expect(link.attackElapsed, `자세가 ${link.attackElapsed}에서 굳었다`).toBeNull();
   });
 });
@@ -968,25 +853,6 @@ describe("벽을 따라 미끄러지는가", () => {
 
     expect(after.x, `모서리를 뚫었다: x=${after.x}`).toBeLessThanOrEqual(4);
     expect(after.z, `모서리를 뚫었다: z=${after.z}`).toBeLessThanOrEqual(4);
-  });
-});
-
-describe("겹쳐 선 적을 때릴 수 있는가", () => {
-  /*
-   * 거리가 0이면 방향을 정할 수 없다 — `atan2(0, 0)`은 0이라 **바로 위에 겹친
-   * 적이 등 뒤에 있는 것으로 잡힌다.** 그러면 껴안은 채로 휘둘러도 안 맞는다.
-   *
-   * 조건문 훑기에서 나왔고, 이건 실제로 밟는 길이다: 적이 플레이어에게
-   * 달라붙는 것이 이 게임의 기본 동작이다.
-   */
-  it("바로 위에 겹친 적은 어느 쪽을 보든 맞는다", () => {
-    for (const facing of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
-      expect(isInAttackArc({ x: 0, z: 0 }, 0, 0, facing), `facing ${facing}`).toBe(true);
-    }
-  });
-
-  it("등 뒤의 적은 안 맞는다 — 겹침 예외가 전부를 삼키지 않게", () => {
-    expect(isInAttackArc({ x: 0, z: -1.5 }, 0, 0, 0), "등 뒤가 맞았다").toBe(false);
   });
 });
 

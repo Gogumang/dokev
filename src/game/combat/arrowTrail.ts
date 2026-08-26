@@ -12,6 +12,8 @@
  * 그래야 「무지개가 화살 뒤에 있는가」를 화면 없이 잴 수 있다.
  */
 
+import { rainbowFlow, rainbowIndex } from "@/game/core/rainbow";
+
 export const ARROW_TRAIL = {
   /**
    * 마디 수.
@@ -38,16 +40,6 @@ export const ARROW_TRAIL = {
   flowPerSecond: 2.4,
 } as const;
 
-/** 색상환을 도는 여섯 색. 채도를 낮춰 도시 팔레트 위에서 튀지 않게 한다 */
-export const RAINBOW: readonly string[] = [
-  "#ff6b6b",
-  "#ffa94d",
-  "#ffe066",
-  "#69db7c",
-  "#4dabf7",
-  "#b197fc",
-];
-
 /** 마디 하나가 그려질 자리와 모습 */
 export interface TrailSegment {
   /** 화살 기준 뒤쪽으로 물러난 거리(m). 그리는 쪽이 진행 방향에 곱해 쓴다 */
@@ -72,8 +64,9 @@ export function trailSegment(index: number, life: number, reducedMotion: boolean
    * 색은 **뒤로 갈수록** 다음 색이고, 시간이 지나면 전체가 한 칸씩 민다.
    * 저감 모션에서는 시간 항을 뺀다 — 자리는 그대로라 리본은 여전히 무지개다.
    */
-  const flow = reducedMotion ? 0 : Math.floor(life * ARROW_TRAIL.flowPerSecond * RAINBOW.length);
-  const colorIndex = (((index + flow) % RAINBOW.length) + RAINBOW.length) % RAINBOW.length;
+  const colorIndex = reducedMotion
+    ? rainbowIndex(index)
+    : rainbowFlow(life, ARROW_TRAIL.flowPerSecond, index);
 
   return {
     back: ARROW_TRAIL.spacingMeters * (index + 1),

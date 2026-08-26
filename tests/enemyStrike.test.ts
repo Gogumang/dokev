@@ -9,7 +9,7 @@ import {
   type EnemyState,
 } from "@/game/combat/combatSim";
 import { createPlayerCombat, PLAYER_COMBAT, stepPlayerCombat } from "@/game/combat/playerCombat";
-import { WEAPONS } from "@/game/combat/weapons";
+import { WEAPON_ORDER, WEAPONS } from "@/game/combat/weapons";
 
 /*
  * 안 싸웠는데 죽는 문제.
@@ -114,8 +114,9 @@ describe("적 공격 단계", () => {
   });
 
   it("준비 시간이 사람이 반응할 만큼 길다", () => {
-    // 플레이어 준비 시간(0.08초)을 그대로 쓰면 예고가 있으나 마나다
-    expect(ENEMY_STRIKE.windupSeconds).toBeGreaterThan(WEAPONS.bat.timing.windupSeconds * 3);
+    // 플레이어의 가장 짧은 준비 시간을 그대로 쓰면 예고가 있으나 마나다
+    const quickest = Math.min(...WEAPON_ORDER.map((id) => WEAPONS[id].timing.windupSeconds));
+    expect(ENEMY_STRIKE.windupSeconds).toBeGreaterThan(quickest * 3);
     expect(ENEMY_STRIKE.windupSeconds).toBeGreaterThan(0.3);
   });
 });

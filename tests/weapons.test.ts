@@ -4,7 +4,6 @@ import { COMBAT_TUNING } from "@/game/combat/combatSim";
 import { LOCOMOTION } from "@/game/config/tuning";
 import {
   nextWeapon,
-  RETIRED_WEAPONS,
   swingSeconds,
   weaponRange,
   WEAPON_ORDER,
@@ -21,24 +20,17 @@ import {
  * 갈라 둔 것과 같은 문제다. 그래서 「다르다」를 검사로 고정한다.
  */
 describe("무기 정의", () => {
-  it("정의된 무기는 드는 것이거나 은퇴한 것이다", () => {
+  it("정의된 무기는 전부 손에 잡힌다", () => {
     /*
-     * 원래는 「순서 목록이 정의를 모두 담는다」였다 — 정의만 있고 손에 잡히지
-     * 않는 무기를 막는 규칙이다.
+     * 한동안 「드는 것이거나 **은퇴한 것**이거나」로 느슨하게 두었다. 은퇴
+     * 목록에 넷을 적어 두고 정의를 남겨 뒀는데, 그 넷이 전부 근접이라
+     * **부채꼴 판정·휘두른 자국·중복 타격 방지가 통째로 살아 있으면서 한 번도
+     * 안 돌았다.** 화면에 안 나오는 코드를 검사가 지켜 주고 있었던 셈이다.
      *
-     * 주인공이 드는 것을 둘로 좁히면서 규칙을 넓혔다: 빠진 것은 **은퇴 목록에
-     * 적혀 있어야** 한다. 어느 쪽에도 없는 정의는 여전히 실수다.
+     * 규칙을 원래대로 되돌린다: **정의만 있고 손에 잡히지 않는 무기는 없다.**
      */
     const defined = Object.keys(WEAPONS).sort();
-    const accounted = [...WEAPON_ORDER, ...RETIRED_WEAPONS].sort();
-    expect(accounted, `드는 것=${WEAPON_ORDER.join(",")}`).toEqual(defined);
-  });
-
-  it("드는 것과 은퇴한 것이 겹치지 않는다", () => {
-    // 겹치면 「은퇴했는데 손에 잡힌다」가 되어 목록이 거짓말을 한다
-    const carried = new Set<string>(WEAPON_ORDER);
-    const both = RETIRED_WEAPONS.filter((id) => carried.has(id));
-    expect(both, `양쪽에 있다: ${both.join(", ")}`).toEqual([]);
+    expect([...WEAPON_ORDER].sort(), `드는 것=${WEAPON_ORDER.join(",")}`).toEqual(defined);
   });
 
   it("주인공은 활과 광선총을 든다", () => {
@@ -72,12 +64,7 @@ describe("무기 사이의 관계", () => {
       for (let j = i + 1; j < WEAPON_ORDER.length; j += 1) {
         const a = WEAPONS[WEAPON_ORDER[i]];
         const b = WEAPONS[WEAPON_ORDER[j]];
-        /*
-         * 사거리는 `weaponRange`로 잰다. `reachMeters`는 원거리 무기에서 0이라,
-         * 그것으로 비교하면 **원거리끼리는 언제나 같은 축**이 되어 검사가
-         * 조용히 헐거워진다 — 광선총과 딱총이 사거리 21m와 16.8m로 실제로는
-         * 다른데도 "같다"고 읽혔다.
-         */
+        // 사거리는 `weaponRange`로 잰다 — 탄 속도 × 수명이 실제 사거리다
         const differences = [
           swingSeconds(a) !== swingSeconds(b),
           weaponRange(a) !== weaponRange(b),
@@ -119,46 +106,16 @@ describe("무기 사이의 관계", () => {
     ).toBeLessThan(1.6);
   });
 
-  it("망치는 로봇을 한 방에 눕힌다", () => {
+  it("모든 무기가 탄을 가진다", () => {
     /*
-     * 느린 무기의 값은 여기에 있다. 로봇 체력(2)보다 피해가 작으면 「느리기만
-     * 한 무기」가 되고, 위의 dps 검사만으로는 그것을 잡지 못한다.
-     */
-    expect(WEAPONS.hammer.damage, "망치 피해가 로봇 체력보다 작다").toBeGreaterThanOrEqual(
-      COMBAT_TUNING.maxHp,
-    );
-  });
-
-  it("근접 사거리가 사람 손이 닿을 범위 안에 있다", () => {
-    // 인지 반경(16m)에 가까워지면 다가갈 이유가 없어져 근접이 원거리가 된다
-    for (const id of WEAPON_ORDER) {
-      const weapon = WEAPONS[id];
-      if (weapon.kind !== "melee") continue;
-      expect(weapon.reachMeters, `${id} 사거리 ${weapon.reachMeters}m`).toBeLessThan(
-        COMBAT_TUNING.aggroRadius / 3,
-      );
-    }
-  });
-
-  it("근접이 하나뿐인 전투가 아니다 — 원거리가 적어도 하나 있다", () => {
-    /*
-     * 전부 근접이면 「달려가서 휘두르기」 한 가지로 돌아간다. 사수 로봇은
-     * 멀리서 쏘는데 이쪽에 거리를 두는 수단이 없으면 그건 선택이 아니다.
-     */
-    const ranged = WEAPON_ORDER.filter((id) => WEAPONS[id].kind === "ranged");
-    expect(ranged.length, `원거리 ${ranged.length}자루`).toBeGreaterThan(0);
-  });
-
-  it("원거리 무기만 탄을 가진다", () => {
-    /*
-     * 종류와 탄이 어긋나면 조용히 아무 일도 안 한다 — 원거리인데 탄이
-     * 없으면 쏠 것이 없고, 근접인데 탄이 있으면 아무도 그것을 읽지 않는다.
+     * 근접이 사라지면서 이 규칙이 타입으로 옮겨 갔다(`bolt: BoltSpec`).
+     * 그래도 값으로 한 번 더 본다 — 타입은 표를 손으로 고칠 때 지켜 주지만,
+     * 「탄이 실제로 쏠 만한 값인가」는 못 본다.
      */
     for (const id of WEAPON_ORDER) {
-      const weapon = WEAPONS[id];
-      expect(weapon.bolt !== null, `${id}: kind=${weapon.kind}, bolt=${weapon.bolt}`).toBe(
-        weapon.kind === "ranged",
-      );
+      const bolt = WEAPONS[id].bolt;
+      expect(bolt.speed, `${id} 탄속이 0이다`).toBeGreaterThan(0);
+      expect(bolt.lifeSeconds, `${id} 탄 수명이 0이다`).toBeGreaterThan(0);
     }
   });
 
@@ -169,26 +126,8 @@ describe("무기 사이의 관계", () => {
      */
     for (const id of WEAPON_ORDER) {
       const weapon = WEAPONS[id];
-      if (weapon.kind !== "ranged") continue;
       expect(weaponRange(weapon), `${id} 사거리 ${weaponRange(weapon)}m`).toBeGreaterThan(
         COMBAT_TUNING.aggroRadius,
-      );
-    }
-  });
-
-  it("원거리는 붙은 적을 떼어내지 못한다", () => {
-    /*
-     * 멀리서도 때리는데 밀어내기까지 세면 근접을 들 이유가 없다. 원거리의
-     * 넉백은 근접 중 가장 약한 것보다도 약해야 한다.
-     */
-    const meleeKnockback = WEAPON_ORDER.filter((id) => WEAPONS[id].kind === "melee").map(
-      (id) => WEAPONS[id].knockbackScale,
-    );
-    for (const id of WEAPON_ORDER) {
-      const weapon = WEAPONS[id];
-      if (weapon.kind !== "ranged") continue;
-      expect(weapon.knockbackScale, `${id} 넉백 ${weapon.knockbackScale}`).toBeLessThan(
-        Math.min(...meleeKnockback),
       );
     }
   });
@@ -219,46 +158,36 @@ describe("무기 사이의 관계", () => {
     expect(pullers[0]).toBe("beam");
   });
 
-  it("끌어당기는 세기가 지나치지 않다", () => {
+  it("끌어당겨도 적이 등 뒤로 지나가지 않는다", () => {
     /*
-     * 세게 당기면 적이 **등 뒤로 지나가** 조준이 의미를 잃는다. 제일 가벼운
-     * 근접(방망이)보다 약하게 둔다.
+     * 세게 당기면 적이 **등 뒤로 지나가** 조준이 의미를 잃는다.
+     *
+     * 예전에는 「방망이보다 약한가」로 쟀다. 그 무기가 은퇴하면서 기준이
+     * 사라졌고, 남은 무기(활 0.35)와 견주면 **광선총이 더 세게 당긴다**고
+     * 나온다 — 그런데 그건 고장이 아니다. 재던 것이 애초에 다른 무기가
+     * 아니라 **끌려오는 거리**였기 때문이다.
+     *
+     * 거리로 잰다. 속도가 `knockbackSpeed × 배율`이고 감쇠가 지수라,
+     * 끌려오는 총 거리는 `속도 / 감쇠`다. 그것이 접근 정지 거리보다 짧으면
+     * 적은 내 앞에서 멈춘다.
      */
-    expect(Math.abs(WEAPONS.beam.knockbackScale)).toBeLessThan(WEAPONS.bat.knockbackScale);
+    const speed = COMBAT_TUNING.knockbackSpeed * Math.abs(WEAPONS.beam.knockbackScale);
+    const pulled = speed / COMBAT_TUNING.knockbackDamping;
+    expect(pulled, `${pulled.toFixed(2)}m 끌려온다`).toBeLessThan(COMBAT_TUNING.standoffRadius);
   });
 
-  it("원거리 셋이 서로 다른 거리를 맡는다", () => {
+  it("두 무기가 서로 다른 거리를 맡는다", () => {
     /*
-     * 사거리가 비슷하면 셋 중 제일 센 것만 남는다. 「가까이·중간·멀리」로
-     * 갈라져 있어야 무엇을 들지가 상황으로 정해진다.
+     * 사거리가 비슷하면 둘 중 제일 센 것만 남는다. 「중간·멀리」로 갈라져
+     * 있어야 무엇을 들지가 상황으로 정해진다.
      */
-    const ranges = WEAPON_ORDER.filter((id) => WEAPONS[id].kind === "ranged")
-      .map((id) => weaponRange(WEAPONS[id]))
-      .sort((a, b) => a - b);
+    const ranges = WEAPON_ORDER.map((id) => weaponRange(WEAPONS[id])).sort((a, b) => a - b);
     for (let i = 1; i < ranges.length; i += 1) {
       expect(
         ranges[i] / ranges[i - 1],
         `사거리 ${ranges[i - 1].toFixed(1)}m와 ${ranges[i].toFixed(1)}m가 너무 가깝다`,
       ).toBeGreaterThan(1.2);
     }
-  });
-
-  it("근접 셋이 서로 다른 부채꼴을 맡는다", () => {
-    // 넓게 베는 것과 좁게 찌르는 것이 갈려야 둘러싸였을 때의 선택이 생긴다
-    const angles = WEAPON_ORDER.filter((id) => WEAPONS[id].kind === "melee").map(
-      (id) => WEAPONS[id].halfAngle,
-    );
-    expect(new Set(angles).size, `반각 ${angles.join(", ")}`).toBe(angles.length);
-  });
-
-  it("넉백이 무기 무게를 따라간다", () => {
-    // 큰 것에 맞았는데 살짝 밀리면 눈과 수치가 따로 논다
-    const light = WEAPONS.bat;
-    const heavy = WEAPONS.hammer;
-    expect(
-      heavy.knockbackScale,
-      `망치 ${heavy.knockbackScale} vs 방망이 ${light.knockbackScale}`,
-    ).toBeGreaterThan(light.knockbackScale);
   });
 });
 

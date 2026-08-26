@@ -224,30 +224,30 @@ describe("캐릭터 자세 신호를 옮기는가", () => {
       attackElapsed: -1,
       companionPresent: true,
       downed: true,
-      weapon: "hammer",
+      weapon: "beam",
     };
   }
 
   it("다섯이 모두 옮겨진다", () => {
     const view = stale();
-    projectCharacterCues(view, DANCING, 0.2, false, false, "bat");
+    projectCharacterCues(view, DANCING, 0.2, false, false, "bow");
 
     expect(view.emote, "춤을 춰도 가만히 서 있다").toBe(DANCING);
     expect(view.attackElapsed, "휘둘러도 팔이 안 나간다").toBe(0.2);
     expect(view.companionPresent, "동료를 불렀는지 캐릭터가 모른다").toBe(false);
     expect(view.downed, "쓰러졌는지 캐릭터가 모른다 — 서서 미끄러진다").toBe(false);
-    expect(view.weapon, "무기를 바꿔도 자세가 예전 길이로 그려진다").toBe("bat");
+    expect(view.weapon, "무기를 바꿔도 자세가 예전 길이로 그려진다").toBe("bow");
   });
 
   it("감정 객체를 복사하지 않는다 — 복사하면 한 프레임 낡은 자세를 그린다", () => {
     const view = stale();
-    projectCharacterCues(view, DANCING, null, true, false, "bat");
+    projectCharacterCues(view, DANCING, null, true, false, "bow");
     expect(view.emote, "감정 상태가 복사됐다").toBe(DANCING);
   });
 
   it("안 휘두르면 없음이 그대로 간다 — 0으로 바꾸면 늘 시작 자세다", () => {
     const view = stale();
-    projectCharacterCues(view, DANCING, null, true, false, "bat");
+    projectCharacterCues(view, DANCING, null, true, false, "bow");
     expect(view.attackElapsed).toBeNull();
   });
 });

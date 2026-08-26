@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { colorDistance, contrastRatio } from "@/game/core/color";
+import { RAINBOW } from "@/game/core/rainbow";
 import { DOKEBI, DOKEBI_ORDER } from "@/game/dokebi/roster";
 import { APPEARANCE_ORDER, APPEARANCES } from "@/game/player/appearance";
 import { TIME_OF_DAY, TIME_OF_DAY_ORDER } from "@/game/world/timeOfDay";
@@ -178,11 +179,20 @@ describe("날아오는 탄이 보이는가", () => {
     /*
      * 처치 색종이는 위로 튀어 오르므로 하늘이 배경이 된다. 탄과 같은 기준으로
      * 본다 — 다만 위험 신호가 아니라 보상이라 조금 더 느슨해도 된다.
+     *
+     * 예전에는 금색 하나(`#ffd23f`)를 여기 적어 두고 그것만 쟀다. 색종이가
+     * 색상환을 타게 된 뒤로 그 값은 **화면에 없는 색**이었고, 검사는 아무도
+     * 안 쓰는 색이 하늘에서 보인다는 것만 확인하고 있었다. 여섯 색을 전부
+     * 잰다 — 하나만 묻혀도 그 색이 나온 조각은 안 보인다.
      */
-    const confetti = "#ffd23f";
-    for (const id of TIME_OF_DAY_ORDER) {
-      const distance = colorDistance(confetti, TIME_OF_DAY[id].sky);
-      expect(distance, `${TIME_OF_DAY[id].name} 하늘과 ${distance.toFixed(0)}`).toBeGreaterThan(60);
+    for (const color of RAINBOW) {
+      for (const id of TIME_OF_DAY_ORDER) {
+        const distance = colorDistance(color, TIME_OF_DAY[id].sky);
+        expect(
+          distance,
+          `${color}가 ${TIME_OF_DAY[id].name} 하늘과 ${distance.toFixed(0)}`,
+        ).toBeGreaterThan(60);
+      }
     }
   });
 

@@ -11,8 +11,18 @@
 
 import type * as THREE from "three";
 
-import { ARROW_TRAIL, RAINBOW, trailSegment } from "@/game/combat/arrowTrail";
+import { ARROW_TRAIL, trailSegment } from "@/game/combat/arrowTrail";
+import { RAINBOW, rainbowAt, rainbowFlow } from "@/game/core/rainbow";
 import { PLAYER_BOLT_MAX, type PlayerBolt } from "@/game/combat/projectiles";
+
+/**
+ * 무지개를 안 남기는 탄의 색.
+ *
+ * 원작의 원거리 사격이 이 색이다 — frame-notes 066·067이 「굵은 청백색 빔」을
+ * 적고, 두 프레임 모두 **가장 밝은 곳이 그 빔의 코어(순백)**다. 적 탄(붉은색)과
+ * 반대편이기도 해서, 날아다니는 둘 중 무엇을 피해야 하는지가 순간에 갈린다.
+ */
+const PLAIN_BOLT_COLOR = "#5ce1ff";
 
 /** 부르는 쪽이 돌려쓰는 임시 객체들 */
 export interface TrailScratch {
@@ -29,11 +39,20 @@ export interface TrailScratch {
  *
  * 자국과 같은 파일에 둔다 — 하나는 화살이고 하나는 그 뒤에 남는 것이라,
  * 자리를 정하는 규칙(진행 방향·수명)을 나눠 두면 둘이 어긋난다.
+ *
+ * 촉도 색상환을 탄다 — **자국을 남기는 탄만.** 자국만 무지개고 촉이 하늘색이면
+ * **머리와 몸이 다른 것**으로 보인다.
+ *
+ * 한때 광선총 탄까지 무지개로 칠했다가 되돌렸다. 원작 프레임에서 원거리
+ * 사격은 **청백색 빔**이고(frame-notes 066·067: 「굵은 청백색 빔」, 가장 밝은
+ * 곳이 그 코어), 무지개는 자국·색종이·하늘에 붙지 빔 자체에 붙지 않는다.
+ * 둘을 다 무지개로 만들면 **무기가 하나로 보이기까지** 한다.
  */
 export function paintPlayerBolts(
   mesh: THREE.InstancedMesh | null,
   bolts: readonly PlayerBolt[],
   scratch: TrailScratch,
+  reducedMotion: boolean,
 ): void {
   if (!mesh) return;
 
@@ -52,9 +71,23 @@ export function paintPlayerBolts(
     }
     scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
     mesh.setMatrixAt(i, scratch.matrix);
+
+    /*
+     * 촉은 **자국의 첫 마디와 같은 색**이다(둘 다 `offset` 0). 한 칸이라도
+     * 어긋나면 촉만 딴 색으로 튀어 화살이 두 동강 나 보인다.
+     *
+     * 저감 모션에서는 흐름을 멈춘다 — 자국과 같은 규칙이다.
+     */
+    scratch.color.set(
+      bolt?.rainbow
+        ? rainbowAt(reducedMotion ? 0 : rainbowFlow(bolt.life, ARROW_TRAIL.flowPerSecond))
+        : PLAIN_BOLT_COLOR,
+    );
+    mesh.setColorAt(i, scratch.color);
   }
 
   mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   mesh.computeBoundingSphere();
 }
 
@@ -62,8 +95,8 @@ export function paintPlayerBolts(
  * 화살 뒤에 무지개 마디를 세운다.
  *
  * 자리와 색은 `arrowTrail`이 정한다 — 여기서는 진행 방향의 **반대**로 물러난
- * 자리에 인스턴스를 놓기만 한다. 무기가 무지개를 안 남기면(광선총) 그 탄의
- * 칸은 통째로 비운다.
+ * 자리에 인스턴스를 놓기만 한다. 무기가 자국을 안 남기면(광선총) 그 탄의
+ * 칸은 통째로 비운다 — 21m를 0.7초에 가는 탄이라 자국이 붙을 자리가 없다.
  */
 export function paintArrowTrails(
   mesh: THREE.InstancedMesh | null,
@@ -83,7 +116,7 @@ export function paintArrowTrails(
     for (let s = 0; s < ARROW_TRAIL.segments; s += 1) {
       const at = slot * ARROW_TRAIL.segments + s;
 
-      if (!bolt || !bolt.rainbow || speed === 0) {
+      if (!bolt?.rainbow || speed === 0) {
         scratch.position.set(0, -999, 0);
         scratch.scale.set(0, 0, 0);
         scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);

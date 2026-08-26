@@ -15,18 +15,16 @@
 
 import type { AttackTiming } from "@/game/combat/attackPhase";
 
-export type WeaponId = "sword" | "bat" | "hammer" | "popgun" | "beam" | "bow";
+export type WeaponId = "beam" | "bow";
 
 /**
- * 어떻게 닿는가.
+ * 탄이 어떻게 나는가.
  *
- * 「근접」은 부채꼴 판정이 몸에서 바로 나가고, 「원거리」는 탄을 하나 쏜다.
- * 판정 방식이 다르면 전투 코드가 갈라지므로 **수치가 아니라 종류로** 적는다 —
- * 사거리만 길게 준 근접 무기로 원거리를 흉내 내면 벽 너머의 적이 맞는다.
+ * **모든 무기가 탄을 쏜다.** 한때 근접 무기가 넷 있어서 이 값이 null일 수
+ * 있었고, 부채꼴 판정이 그 갈래를 맡았다. 드는 것이 활·광선총 둘로 좁혀지면서
+ * 근접 갈래가 통째로 사라졌다 — 「정의만 있고 손에 잡히지 않는 것」을 남기지
+ * 않는다는 이 파일의 규칙 그대로다.
  */
-export type WeaponKind = "melee" | "ranged";
-
-/** 탄이 어떻게 나는가. 근접 무기는 null이다 */
 export interface BoltSpec {
   /** 날아가는 속도(m/s). 사거리는 speed × lifeSeconds다 */
   speed: number;
@@ -41,28 +39,18 @@ export interface BoltSpec {
 
 export interface Weapon {
   id: WeaponId;
-  kind: WeaponKind;
   /** 화면에 뜨는 이름 */
   name: string;
   /** 한 줄 소개 — 무기를 바꿀 때 이 문구가 뜬다 */
   tagline: string;
   /** 준비·판정·후딜 길이(초) */
   timing: AttackTiming;
-  /** 판정이 닿는 거리(m) */
-  reachMeters: number;
-  /** 판정 부채꼴의 반각(rad) */
-  halfAngle: number;
   /** 한 대에 깎는 체력. 로봇 체력은 2다 */
   damage: number;
   /** 밀어내는 세기 배율. 1이 기준(`COMBAT_TUNING.knockbackSpeed`) */
   knockbackScale: number;
-  /**
-   * 탄 설정. **근접이면 반드시 null이다.**
-   *
-   * 선택 필드(`bolt?`)로 두지 않는다 — 빠뜨린 것과 「없음」이 구분되지
-   * 않으면 원거리 무기를 추가하고 탄을 안 적어도 조용히 근접이 된다.
-   */
-  bolt: BoltSpec | null;
+  /** 탄 설정. 빠뜨리면 컴파일이 막는다 — 안 쏘는 무기는 이제 없다 */
+  bolt: BoltSpec;
 }
 
 /**
@@ -73,96 +61,6 @@ export interface Weapon {
  * 둘 이상」과 dps 균형을 지킨다.
  */
 export const WEAPONS: Record<WeaponId, Weapon> = {
-  /**
-   * 장난감 방망이 — 지금까지 쓰던 그 공격이다.
-   *
-   * 수치를 바꾸지 않았다. 무기를 나누면서 기본 손맛까지 흔들면 「무기가
-   * 늘었다」와 「전투가 달라졌다」를 구분할 수 없다.
-   */
-  /**
-   * 장난감 칼 — 제일 빠르고 제일 짧다.
-   *
-   * 방망이가 이미 「가벼운 근접」인데 하나 더 두는 이유는 **간격**이다.
-   * 방망이는 2.4m를 좁게 훑고, 칼은 1.9m를 **넓게** 벤다(반각 1.5rad ≈ 172도
-   * 부채꼴) — 둘러싸였을 때 값을 하는 것이 이쪽이다. 대신 한 발짝만 물러나면
-   * 아예 닿지 않는다.
-   *
-   * 피해는 방망이와 같은 1이다. 「빠르고 세다」가 되면 방망이가 사라진다.
-   */
-  sword: {
-    id: "sword",
-    kind: "melee",
-    name: "장난감 칼",
-    tagline: "제일 빠르다. 넓게 베지만 한 발짝만 물러나도 안 닿는다",
-    timing: { windupSeconds: 0.05, activeSeconds: 0.11, recoverySeconds: 0.2 },
-    reachMeters: 1.9,
-    halfAngle: 1.5,
-    damage: 1,
-    knockbackScale: 0.7,
-    bolt: null,
-  },
-  bat: {
-    id: "bat",
-    kind: "melee",
-    name: "장난감 방망이",
-    tagline: "가볍다. 빠르게 두 번 두들기는 쪽이 맞다",
-    timing: { windupSeconds: 0.08, activeSeconds: 0.14, recoverySeconds: 0.26 },
-    reachMeters: 2.4,
-    halfAngle: 0.9,
-    damage: 1,
-    knockbackScale: 1,
-    bolt: null,
-  },
-  /**
-   * 고무 망치 — 느리고, 넓고, 한 방이다.
-   *
-   * 피해를 로봇 체력(2)과 같게 잡은 것이 이 무기의 존재 이유다. 1이면
-   * 「느리기만 한 방망이」가 되고, 3이면 방망이를 들 이유가 사라진다.
-   *
-   * 대신 후딜이 방망이의 두 배다 — 헛치면 그동안 맞는다. 여러 기에
-   * 둘러싸였을 때 무엇을 들지가 실제로 갈린다.
-   */
-  hammer: {
-    id: "hammer",
-    kind: "melee",
-    name: "고무 망치",
-    tagline: "느리다. 대신 한 번 맞으면 로봇이 눕는다",
-    timing: { windupSeconds: 0.3, activeSeconds: 0.18, recoverySeconds: 0.55 },
-    reachMeters: 3.2,
-    halfAngle: 1.3,
-    damage: 2,
-    knockbackScale: 1.8,
-    bolt: null,
-  },
-  /**
-   * 딱총 — 멀리서 한 발.
-   *
-   * TRAILER_FEATURE_ANALYSIS 「3.4 실시간 액션 전투」의 「장난감 같은 원거리
-   * 무기」다. 사수 로봇이 멀리서 쏘는데 이쪽은 붙어야만 때릴 수 있었다 —
-   * 거리를 두는 선택지가 없으니 전투가 늘 「달려가서 휘두르기」였다.
-   *
-   * 세다고 느껴지면 안 되는 무기다. 그래서:
-   *
-   * - **넉백이 가장 약하다.** 붙은 적을 떼어내지 못하므로 둘러싸이면 곤란하다.
-   * - **탄이 날아가는 시간이 있다.** 움직이는 적은 조준한 자리에 없다.
-   * - **후딜이 길다.** 한 발 쏘고 다시 쏘기까지 방망이 두 번보다 느리다.
-   *
-   * 사거리(12 × 1.4 = 16.8m)는 적 인지 반경(16m)보다 조금 길다. 짧으면
-   * **나를 이미 본 적에게만 쏠 수 있어** 먼저 거는 재미가 없다.
-   */
-  popgun: {
-    id: "popgun",
-    kind: "ranged",
-    name: "딱총",
-    tagline: "멀리 닿는다. 대신 붙은 적을 떼어내지 못한다",
-    timing: { windupSeconds: 0.06, activeSeconds: 0.05, recoverySeconds: 0.42 },
-    // 원거리의 사거리는 탄이 정한다. 이 값은 부채꼴 판정에 쓰이지 않는다.
-    reachMeters: 0,
-    halfAngle: 0,
-    damage: 1,
-    knockbackScale: 0.6,
-    bolt: { speed: 12, lifeSeconds: 1.4, spawnHeight: 1.05, hitRadius: 0.75 },
-  },
   /**
    * 유령 잡는 광선총 — **밀지 않고 끌어당긴다.**
    *
@@ -181,12 +79,9 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
    */
   beam: {
     id: "beam",
-    kind: "ranged",
     name: "유령 잡는 광선총",
     tagline: "맞으면 끌려온다. 여러 기를 당기면 내 발밑에 다 모인다",
     timing: { windupSeconds: 0.12, activeSeconds: 0.08, recoverySeconds: 0.32 },
-    reachMeters: 0,
-    halfAngle: 0,
     damage: 1,
     /*
      * 음수 — 이것이 이 무기의 전부다. 크기는 방망이보다 작게 둔다. 세게
@@ -209,12 +104,9 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
    */
   bow: {
     id: "bow",
-    kind: "ranged",
     name: "장난감 활",
     tagline: "제일 멀리 닿고 한 발에 눕힌다. 대신 쏘고 나서 한참 굳는다",
     timing: { windupSeconds: 0.34, activeSeconds: 0.06, recoverySeconds: 0.46 },
-    reachMeters: 0,
-    halfAngle: 0,
     damage: 2,
     knockbackScale: 0.35,
     /** 사거리 35.2m — 도시 한 블록 건너까지 닿는다 */
@@ -230,16 +122,6 @@ export const WEAPONS: Record<WeaponId, Weapon> = {
  * 정의를 위아래로 옮기는 것만으로 손에 잡히는 무기가 바뀐다.
  */
 export const WEAPON_ORDER: readonly WeaponId[] = ["bow", "beam"];
-
-/**
- * 정의는 남기되 **들지 않는** 것들.
- *
- * 「정의만 있고 손에 잡히지 않는 무기는 없다」가 이 파일의 규칙이었다. 조용히
- * 두면 빠뜨린 것으로 읽으므로 적는다 — 검사가 이 목록과 `WEAPON_ORDER`를
- * 합쳐 정의 전체와 대조한다. 지우지 않는 이유: 부채꼴 판정과 휘두르는 자세가 아직 살아 있는데, 드는
- * 둘이 모두 원거리라 **근접을 잴 자가 없어진다.**
- */
-export const RETIRED_WEAPONS: readonly WeaponId[] = ["bat", "sword", "hammer", "popgun"];
 
 /** 시작 무기 */
 export const DEFAULT_WEAPON: WeaponId = WEAPON_ORDER[0];
@@ -268,14 +150,8 @@ export function weaponAtSlot(slot: number): WeaponId | null {
   return WEAPON_ORDER[slot - 1];
 }
 
-/**
- * 탄이 닿는 거리(m). 근접 무기는 부채꼴 사거리를 돌려준다.
- *
- * 두 종류의 「사거리」를 한 이름으로 묻을 수 있어야 지도·HUD·검사가 무기
- * 종류를 따로 알 필요가 없다.
- */
+/** 탄이 닿는 거리(m). 지도·HUD·검사가 무기 종류를 몰라도 사거리를 묻는 자리다 */
 export function weaponRange(weapon: Weapon): number {
-  if (weapon.bolt === null) return weapon.reachMeters;
   return weapon.bolt.speed * weapon.bolt.lifeSeconds;
 }
 

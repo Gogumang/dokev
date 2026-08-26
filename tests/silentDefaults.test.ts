@@ -33,8 +33,7 @@ const REQUIRED: Required[] = [
   { fn: "stepEnemy", argument: "abilityAggroScale", breaks: "동료의 인지 낮추기 능력" },
   { fn: "stepPlayerCombat", argument: "abilityRegenScale", breaks: "동료의 회복 능력" },
   { fn: "stepLocomotion", argument: "grappleAnchors", breaks: "그래플이 걸 곳을 못 찾는다" },
-  { fn: "stepAttack", argument: "weapon", breaks: "무기를 바꿔도 방망이 길이로 휘두른다" },
-  { fn: "resolveHits", argument: "weapon", breaks: "무기를 바꿔도 방망이 사거리·피해로 때린다" },
+  { fn: "stepAttack", argument: "weapon", breaks: "무기를 바꿔도 활 길이로 준비한다" },
   { fn: "followDistance", argument: "combatEase", breaks: "전투에서 카메라가 물러나지 않는다" },
 ];
 

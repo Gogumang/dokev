@@ -164,11 +164,11 @@ describe("자판기 안내", () => {
 describe("무기 알림", () => {
   it("한 번도 안 바꿨으면 뜨지 않는다", () => {
     // 흐른 시간이 무한대다 — 시작하자마자 무기 이름이 뜨면 「지금 바꿨다」가 흐려진다
-    expect(weaponNoticeView("bat", Number.POSITIVE_INFINITY).visible).toBe(false);
+    expect(weaponNoticeView("bow", Number.POSITIVE_INFINITY).visible).toBe(false);
   });
 
   it("바꾼 직후에는 이름과 사거리를 함께 준다", () => {
-    const view = weaponNoticeView("bat", 0);
+    const view = weaponNoticeView("bow", 0);
 
     expect(view.visible).toBe(true);
     expect(view.label).toContain("m");

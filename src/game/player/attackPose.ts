@@ -21,7 +21,7 @@ import type { PhotoPose } from "@/game/player/photoPose";
  * 무기를 받는다. 망치는 방망이보다 준비가 네 배 길어서, 한 벌의 길이로
  * 둘을 그리면 **느린 무기가 이미 다 휘두른 자세로 서서 기다린다.**
  */
-export function attackPose(elapsedSeconds: number, weapon: Weapon = WEAPONS.bat): PhotoPose {
+export function attackPose(elapsedSeconds: number, weapon: Weapon = WEAPONS.bow): PhotoPose {
   const t = Math.max(0, Math.min(swingSeconds(weapon), elapsedSeconds));
   const windupEnd = weapon.timing.windupSeconds;
   const activeEnd = windupEnd + weapon.timing.activeSeconds;

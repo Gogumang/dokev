@@ -300,7 +300,7 @@ describe("입력이 전투·동료로 건너가는가", () => {
       summoned: false,
       summonLinger: 0,
       abilityRequests: 0,
-      weapon: "bat",
+      weapon: "bow",
     };
   }
 

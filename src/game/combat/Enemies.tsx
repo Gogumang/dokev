@@ -25,10 +25,10 @@ import * as THREE from "three";
 import {
   COMBAT_TUNING,
   createAttackState,
+  isAttackActive,
   createEnemies,
   markFired,
   readyToFire,
-  resolveHits,
   stepAttack,
   stepEnemy,
   stepEnemyStrike,
@@ -67,11 +67,18 @@ import { paintArrowTrails, paintPlayerBolts } from "@/game/combat/arrowTrailPain
 import {
   createEmbers,
   EMBER,
-  emberFade,
   releaseEmber,
   stepEmbers,
   type Ember,
 } from "@/game/combat/emberRelease";
+import {
+  burstConfetti,
+  CONFETTI,
+  createConfetti,
+  paintConfetti,
+  paintEmbers,
+  type Particle,
+} from "@/game/combat/vfxPaint";
 import { WEAPONS, type WeaponId } from "@/game/combat/weapons";
 import { createSeededRandom } from "@/game/core/mathx";
 import type { CombatCues } from "@/game/systems/audio/combat";
@@ -208,11 +215,6 @@ const ENEMY_COUNT_BY_QUALITY = { low: 8, medium: 16, high: 24 } as const;
  */
 const CALM_AGGRO_SCALE = 0.3;
 
-const PARTICLE_POOL = 96;
-const PARTICLES_PER_HIT = 14;
-const PARTICLE_LIFE_SECONDS = 0.9;
-const PARTICLE_GRAVITY = 14;
-
 const DOWN_COLOR = "#6f6a7d";
 const ALIVE_COLOR = "#b9c0c8";
 
@@ -227,13 +229,6 @@ const ALIVE_COLOR = "#b9c0c8";
  * 어느 색과도 겹치지 않으면서 위험 신호로 읽힌다.
  */
 const BOLT_COLOR = "#ff2f6a";
-/**
- * 내가 쏜 탄의 색.
- *
- * 적 탄(붉은색)과 **반대편 색**으로 잡는다. 날아다니는 것이 둘인데
- * 색이 비슷하면 무엇을 피해야 하는지 순간적으로 판단할 수 없다.
- */
-const PLAYER_BOLT_COLOR = "#5ce1ff";
 /**
  * 로봇 가슴에 박힌 점의 색.
  *
@@ -251,17 +246,6 @@ const GUNNER_COLOR = "#c98a3a";
  */
 const TELEGRAPH_COLOR = "#ff8a3d";
 const FLASH_COLOR = "#ff4d5a";
-
-interface Particle {
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
-  life: number;
-  spin: number;
-}
 
 export function Enemies({
   link,
@@ -307,7 +291,8 @@ export function Enemies({
    * 원거리는 **판정이 켜지는 순간 한 발**만 나가야 한다. 「판정이 살아 있으면
    * 쏜다」로 두면 0.05초 동안 프레임 수만큼 쏟아진다.
    */
-  const lastPhase = useRef<AttackState["phase"]>("ready");
+  /** 지난 프레임에 판정이 살아 있었는지. 켜지는 **그 프레임**에만 한 발 나간다 */
+  const wasActive = useRef(false);
   /** 표적 목록을 매 프레임 새로 만들지 않는다 — 초당 60번 배열을 버리게 된다 */
   const boltTargets = useRef<BoltTarget[]>([]);
 
@@ -326,18 +311,7 @@ export function Enemies({
     playerBolts.current = [];
   }, [count, halfExtent, isBlocked, reserved]);
 
-  const particles = useRef<Particle[]>(
-    Array.from({ length: PARTICLE_POOL }, () => ({
-      x: 0,
-      y: -999,
-      z: 0,
-      vx: 0,
-      vy: 0,
-      vz: 0,
-      life: 0,
-      spin: 0,
-    })),
-  );
+  const particles = useRef<Particle[]>(createConfetti());
   const particleCursor = useRef(0);
   const particleRandom = useMemo(() => createSeededRandom(0x9e37), []);
 
@@ -395,21 +369,14 @@ export function Enemies({
   }, [geometry]);
 
   const burst = (x: number, y: number, z: number) => {
-    for (let i = 0; i < PARTICLES_PER_HIT; i += 1) {
-      const particle = particles.current[particleCursor.current];
-      particleCursor.current = (particleCursor.current + 1) % PARTICLE_POOL;
-
-      const angle = particleRandom() * Math.PI * 2;
-      const speed = 2.5 + particleRandom() * 4;
-      particle.x = x;
-      particle.y = y;
-      particle.z = z;
-      particle.vx = Math.sin(angle) * speed;
-      particle.vy = 3 + particleRandom() * 4.5;
-      particle.vz = Math.cos(angle) * speed;
-      particle.life = PARTICLE_LIFE_SECONDS;
-      particle.spin = (particleRandom() - 0.5) * 12;
-    }
+    particleCursor.current = burstConfetti(
+      particles.current,
+      particleCursor.current,
+      x,
+      y,
+      z,
+      particleRandom,
+    );
   };
 
   useFrame((_, rawDelta) => {
@@ -430,27 +397,13 @@ export function Enemies({
     attack.current = stepAttack(attack.current, requested, dt, weapon);
     projectAttackTiming(link, attack.current, weapon);
 
-    const resolution = resolveHits(enemies.current, attack.current, px, pz, link.facing, weapon);
-    attack.current = resolution.attack;
-
-    const struck = resolution.struck.map((index) => resolution.enemies[index]);
-    for (const enemy of struck) {
-      if (!reducedMotion) burst(enemy.x, 0.9, enemy.z);
-      // 눕는 순간 안에 있던 것이 빠져나간다. 색종이와 달리 **곧게 떠오른다**
-      if (enemy.mood === "down") releaseEmber(embers.current, enemy.x, enemy.z);
-    }
-    recordEnemyHits(link, struck);
-
     /* ---------------- 플레이어의 탄 ---------------- */
     /*
      * 판정이 **켜지는 프레임에** 한 발 나간다. 「판정이 살아 있으면 쏜다」로
      * 두면 0.05초 동안 프레임 수만큼 쏟아져 딱총이 기관총이 된다.
      */
-    if (
-      weapon.bolt !== null &&
-      attack.current.phase === "active" &&
-      lastPhase.current !== "active"
-    ) {
+    const nowActive = isAttackActive(attack.current);
+    if (nowActive && !wasActive.current) {
       playerBolts.current = fireWeaponBolt(
         playerBolts.current,
         px,
@@ -462,10 +415,10 @@ export function Enemies({
       // 쏘는 소리도 때린 것으로 센다 — 아무 소리 없이 나가면 눌렸는지 알 수 없다
       link.cues.hits += 1;
     }
-    lastPhase.current = attack.current.phase;
+    wasActive.current = nowActive;
 
     /* ---------------- 적 ---------------- */
-    enemies.current = resolution.enemies.map((enemy) =>
+    enemies.current = enemies.current.map((enemy) =>
       // 이동을 먼저 끝낸 뒤 그 자리에서 공격 단계를 진행한다 — 순서가 반대면
       // 한 프레임 전 위치로 사거리를 재게 된다.
       stepEnemyStrike(
@@ -662,64 +615,14 @@ export function Enemies({
 
     paintArrowTrails(trailRef.current, playerBolts.current, scratch, reducedMotion);
 
-    paintPlayerBolts(playerBoltRef.current, playerBolts.current, scratch);
+    paintPlayerBolts(playerBoltRef.current, playerBolts.current, scratch, reducedMotion);
 
     /* ---------------- 빠져나간 빛 ---------------- */
     stepEmbers(embers.current, dt);
+    paintEmbers(emberRef.current, embers.current, scratch);
 
-    const emberMesh = emberRef.current;
-    if (emberMesh) {
-      for (let i = 0; i < EMBER.poolSize; i += 1) {
-        const ember = embers.current[i];
-        const fade = emberFade(ember);
-        if (fade > 0) {
-          scratch.position.set(ember.x, ember.y, ember.z);
-          scratch.quaternion.identity();
-          // 잦아들수록 작아진다. 크기와 밝기가 함께 줄어야 「사라진다」로 읽힌다
-          scratch.scale.setScalar(fade);
-        } else {
-          scratch.position.set(0, -999, 0);
-          scratch.quaternion.identity();
-          scratch.scale.set(0, 0, 0);
-        }
-        scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
-        emberMesh.setMatrixAt(i, scratch.matrix);
-      }
-      emberMesh.instanceMatrix.needsUpdate = true;
-      emberMesh.computeBoundingSphere();
-    }
-
-    /* ---------------- 파티클 ---------------- */
-    const confetti = confettiRef.current;
-    if (confetti) {
-      particles.current.forEach((particle, index) => {
-        if (particle.life > 0) {
-          particle.life -= dt;
-          particle.vy -= PARTICLE_GRAVITY * dt;
-          particle.x += particle.vx * dt;
-          particle.y += particle.vy * dt;
-          particle.z += particle.vz * dt;
-          // 바닥에 닿으면 멈춘다. 지면 아래로 빠지면 남은 수명 동안 안 보인다.
-          if (particle.y < 0.05) {
-            particle.y = 0.05;
-            particle.vx *= 0.6;
-            particle.vz *= 0.6;
-            particle.vy = 0;
-          }
-        }
-
-        const alive = particle.life > 0;
-        scratch.position.set(particle.x, alive ? particle.y : -999, particle.z);
-        scratch.euler.set(particle.life * particle.spin, particle.life * particle.spin * 0.7, 0);
-        scratch.quaternion.setFromEuler(scratch.euler);
-        // 수명이 끝나갈수록 작아진다. 인스턴스별 알파를 주는 것보다 싸다.
-        const shrink = alive ? Math.min(1, particle.life / 0.3) : 0;
-        scratch.scale.set(shrink, shrink, shrink);
-        scratch.matrix.compose(scratch.position, scratch.quaternion, scratch.scale);
-        confetti.setMatrixAt(index, scratch.matrix);
-      });
-      confetti.instanceMatrix.needsUpdate = true;
-    }
+    /* ---------------- 색종이 ---------------- */
+    paintConfetti(confettiRef.current, particles.current, scratch, dt);
   });
 
   return (
@@ -737,11 +640,12 @@ export function Enemies({
         <meshBasicMaterial color={BOLT_COLOR} toneMapped={false} />
       </instancedMesh>
       {/*
-        내 탄. 적 탄과 **색이 달라야 한다** — 같은 색이면 화면에 날아다니는
-        것 중 무엇을 피해야 하는지 순간적으로 판단할 수 없다.
+        내 탄. 색은 인스턴스마다 다르다(`paintPlayerBolts`) — 화살은 무지개를
+        타고, 그 밖의 탄만 제 색을 쓴다. 재질 색을 두면 그 위에 곱해져
+        무지개가 물드므로 **흰색으로 비워 둔다.**
       */}
       <instancedMesh ref={playerBoltRef} args={[geometry.bolt, undefined, PLAYER_BOLT_MAX]}>
-        <meshBasicMaterial color={PLAYER_BOLT_COLOR} toneMapped={false} />
+        <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
       {/* 화살 자국 — 스스로 빛나고, 깊이를 안 적는다(마디끼리 겹칠 때 깜빡인다) */}
       <instancedMesh
@@ -756,12 +660,16 @@ export function Enemies({
       <instancedMesh ref={coreRef} args={[geometry.core, undefined, count]}>
         <meshBasicMaterial color={CORE_COLOR} toneMapped={false} />
       </instancedMesh>
-      {/* 빠져나간 빛 — 곧게 떠오르며 잦아든다. 색종이와 움직임이 다르다 */}
+      {/*
+        빠져나간 빛 — 곧게 떠오르며 잦아든다. 색종이와 움직임이 다르다.
+        가슴의 점과 **같은 색**이라 「저 안에 있던 것이 나왔다」로 읽힌다.
+      */}
       <instancedMesh ref={emberRef} args={[geometry.core, undefined, EMBER.poolSize]}>
-        <meshBasicMaterial color={CORE_COLOR} toneMapped={false} transparent opacity={0.9} />
+        <meshBasicMaterial toneMapped={false} transparent opacity={0.9} />
       </instancedMesh>
-      <instancedMesh ref={confettiRef} args={[geometry.confetti, undefined, PARTICLE_POOL]}>
-        <meshBasicMaterial color="#ffd23f" side={THREE.DoubleSide} toneMapped={false} transparent />
+      {/* 색종이 — 조각마다 제 색을 쥔다(`paintConfetti`) */}
+      <instancedMesh ref={confettiRef} args={[geometry.confetti, undefined, CONFETTI.poolSize]}>
+        <meshBasicMaterial side={THREE.DoubleSide} toneMapped={false} transparent />
       </instancedMesh>
     </group>
   );

@@ -10,6 +10,8 @@
  * cityLayout 하나로 모은 것과 같은 이유다.
  */
 
+import { WEAPON_ORDER } from "@/game/combat/weapons";
+
 /**
  * 단발 입력의 KeyboardEvent.code.
  *
@@ -114,7 +116,7 @@ export const CONTROLS: readonly ControlRow[] = [
     id: "companion",
     action: "도깨비 부르기 · 보내기",
     keyboard: "C",
-    touch: "동료 버튼",
+    touch: "⋯ 버튼 안 동료",
     hint: { key: "C", label: "동료 부르기" },
   },
   {
@@ -123,41 +125,44 @@ export const CONTROLS: readonly ControlRow[] = [
     id: "ability",
     action: "동료 능력",
     keyboard: "E",
-    touch: "능력 버튼",
+    touch: "⋯ 버튼 안 능력",
     hint: { key: "E", label: "동료 능력" },
   },
   {
     id: "dance",
     action: "감정 표현 (춤 · 손 흔들기 · 앉기)",
     keyboard: "R (멈춰 있을 때, 누를 때마다 다음 동작)",
-    touch: "춤 버튼",
+    touch: "⋯ 버튼 안 춤",
     hint: { key: "R", label: "춤" },
   },
   {
     id: "drink",
     action: "음료 뽑기",
     keyboard: "F (자판기 앞에서)",
-    touch: "음료 버튼",
+    touch: "⋯ 버튼 안 음료",
     hint: { key: "F", label: "음료" },
   },
   {
     id: "grapple",
     action: "그래플",
     keyboard: "G (가로등을 보고)",
-    touch: "그래플 버튼",
+    touch: "⋯ 버튼 안 그래플",
     hint: { key: "G", label: "그래플" },
   },
   {
     id: "weapon",
     action: "무기 바꾸기",
     /*
-     * 여섯 자루라 순환만으로는 답답하다 — 원하는 것까지 최대 다섯 번이고,
-     * 전투 중에는 그 다섯 번이 곧 맞는 횟수다. 숫자키는 `WEAPON_ORDER`의
-     * 자리 번호를 그대로 쓴다.
+     * 숫자키는 `WEAPON_ORDER`의 자리 번호를 그대로 쓴다.
+     *
+     * 문구가 「1~6」이었다. 여섯 자루를 다 들던 시절의 글인데 지금 드는 것은
+     * 둘뿐이라(`WEAPON_ORDER`) **3~6은 눌러도 아무 일이 없다** — 조작표가
+     * 없는 기능을 안내하고 있었다. 자리 수를 문자열에 박지 않고 목록에서
+     * 읽는다: 다음에 무기가 늘거나 줄어도 이 글이 같이 움직인다.
      */
-    keyboard: "Q (다음) · 1~6 (곧장 고르기)",
-    touch: "무기 버튼",
-    hint: { key: "Q / 1~6", label: "무기" },
+    keyboard: `Q (다음) · 1~${WEAPON_ORDER.length} (곧장 고르기)`,
+    touch: "⋯ 버튼 안 무기",
+    hint: { key: `Q / 1~${WEAPON_ORDER.length}`, label: "무기" },
   },
   {
     id: "talk",
@@ -169,7 +174,7 @@ export const CONTROLS: readonly ControlRow[] = [
     id: "photo",
     action: "포토 모드",
     keyboard: "P",
-    touch: "사진 버튼",
+    touch: "메뉴 안 사진",
   },
   {
     id: "zoomIn",
@@ -187,13 +192,13 @@ export const CONTROLS: readonly ControlRow[] = [
     id: "sound",
     action: "소리 켜기 · 끄기",
     keyboard: "M",
-    touch: "소리 버튼",
+    touch: "메뉴 안 소리",
   },
   {
     id: "perf",
     action: "성능 표시",
     keyboard: "F3",
-    touch: "성능 버튼",
+    touch: "메뉴 안 성능",
   },
 ];
 

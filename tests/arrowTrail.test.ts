@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ARROW_TRAIL, RAINBOW, trailInstanceCount, trailSegment } from "@/game/combat/arrowTrail";
+import { ARROW_TRAIL, trailInstanceCount, trailSegment } from "@/game/combat/arrowTrail";
+import { RAINBOW } from "@/game/core/rainbow";
 import { fireWeaponBolt, PLAYER_BOLT_MAX } from "@/game/combat/projectiles";
 import { WEAPONS } from "@/game/combat/weapons";
 

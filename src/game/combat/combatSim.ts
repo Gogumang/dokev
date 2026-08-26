@@ -22,8 +22,7 @@ export const COMBAT_TUNING = {
   /** 적 최대 체력. 두 대면 쓰러진다 */
   maxHp: 2,
 
-  // 휘두르기의 길이·사거리·부채꼴·피해는 **무기가 정한다**(`weapons.ts`).
-  // 방망이의 값은 예전 그대로 `WEAPONS.bat`에 있다.
+  // 공격 주기와 피해는 **무기가 정한다**(`weapons.ts`).
 
   /** 피격 시 밀려나는 속도(m/s) */
   knockbackSpeed: 9,
@@ -94,7 +93,7 @@ export const GUNNER = {
 
 // 무기를 안 넘긴 호출이 쓰는 값. **제품 호출이 넘기는지**는 `silentDefaults`가
 // 본다 — 빠뜨리면 무기를 바꿔도 조용히 방망이로 때린다.
-const DEFAULT_WEAPON_PROFILE = WEAPONS.bat;
+const DEFAULT_WEAPON_PROFILE = WEAPONS.bow;
 
 /** 시야 확인 간격(m). 가장 얇은 건물보다 촘촘해야 한다 */
 const SIGHT_STEP_METERS = 1.5;
@@ -158,15 +157,10 @@ export interface AttackState {
   phase: AttackPhase;
   /** 현재 단계가 끝나기까지 남은 시간(초) */
   timer: number;
-  /**
-   * 이번 휘두르기에서 이미 맞은 적의 인덱스.
-   * 판정이 여러 프레임 살아 있으므로 이것이 없으면 한 번 휘둘러 세 번 때린다.
-   */
-  hitThisSwing: number[];
 }
 
 export function createAttackState(): AttackState {
-  return { phase: "ready", timer: 0, hitThisSwing: [] };
+  return { phase: "ready", timer: 0 };
 }
 
 /**
@@ -254,12 +248,7 @@ export function stepAttack(
   const next = advanceAttackPhase(state.phase, state.timer, requested, dt, weapon.timing);
   if (next.phase === "ready") return createAttackState();
 
-  return {
-    phase: next.phase,
-    timer: next.timer,
-    // 새 휘두르기가 시작될 때만 맞은 목록을 비운다
-    hitThisSwing: state.phase === "ready" ? [] : state.hitThisSwing,
-  };
+  return { phase: next.phase, timer: next.timer };
 }
 
 /**
@@ -559,41 +548,12 @@ export function markFired(enemy: EnemyState): EnemyState {
   return { ...enemy, fireCooldown: GUNNER.fireIntervalSeconds };
 }
 
-/** 적이 공격 부채꼴 안에 있는지 판정한다. */
-export function isInAttackArc(
-  /*
-   * 위치만 있으면 된다. EnemyState 전체를 요구하면 보스처럼 다른 모양을 가진
-   * 대상을 판정할 때 **없는 필드를 지어내야 한다** — 실제로 보스 쪽에서
-   * `{x, z} as EnemyState`로 캐스트하고 있었고, 이 함수가 다른 필드를 읽기
-   * 시작하는 순간 조용히 undefined를 읽었을 것이다.
-   */
-  enemy: { x: number; z: number },
-  playerX: number,
-  playerZ: number,
-  playerFacing: number,
-  /** 사거리와 부채꼴이 무기마다 다르다 */
-  weapon: Weapon = DEFAULT_WEAPON_PROFILE,
-): boolean {
-  const dx = enemy.x - playerX;
-  const dz = enemy.z - playerZ;
-  const distance = Math.hypot(dx, dz);
-  if (distance > weapon.reachMeters) return false;
-  // 거리가 0이면 각도를 정할 수 없다. 바로 위에 겹친 적은 맞은 것으로 본다.
-  if (distance < 1e-4) return true;
-
-  const toEnemy = Math.atan2(dx, dz);
-  let delta = toEnemy - playerFacing;
-  while (delta > Math.PI) delta -= Math.PI * 2;
-  while (delta < -Math.PI) delta += Math.PI * 2;
-  return Math.abs(delta) <= weapon.halfAngle;
-}
-
 /**
  * 한 대 맞은 적의 다음 상태.
  *
- * 근접 판정과 **탄**이 같은 규칙을 써야 한다. 이 계산이 `resolveHits` 안에만
- * 있었다면 딱총을 만들면서 같은 식을 한 번 더 적었을 것이고, 그러면 넉백을
- * 고칠 때 한쪽만 바뀐다.
+ * 탄이 맞았을 때 부르는 유일한 자리다. 예전에는 부채꼴 판정도 같이 썼는데,
+ * 드는 무기가 활·광선총 둘뿐이 되면서 그쪽 경로가 사라졌다 — 넉백 계산이
+ * 여기 한 곳에만 있다는 것은 그대로다.
  */
 export function strikeEnemy(
   enemy: EnemyState,
@@ -619,55 +579,5 @@ export function strikeEnemy(
     timer: isDown ? COMBAT_TUNING.downSeconds : COMBAT_TUNING.hitStunSeconds,
     velocityX: (dx / distance) * knockback,
     velocityZ: (dz / distance) * knockback,
-  };
-}
-
-export interface HitResolution {
-  enemies: EnemyState[];
-  attack: AttackState;
-  /** 이번 프레임에 새로 맞은 적의 인덱스. 렌더가 파티클을 터뜨릴 때 쓴다 */
-  struck: number[];
-}
-
-/**
- * 공격 판정을 적용한다.
- *
- * 이미 이번 휘두르기에서 맞은 적은 건너뛴다. 판정이 여러 프레임 살아 있으므로
- * 이 기록이 없으면 한 번 휘둘러 같은 적을 서너 번 때린다.
- */
-export function resolveHits(
-  enemies: readonly EnemyState[],
-  attack: AttackState,
-  playerX: number,
-  playerZ: number,
-  playerFacing: number,
-  /** 사거리·부채꼴·피해·넉백이 여기서 온다 */
-  weapon: Weapon = DEFAULT_WEAPON_PROFILE,
-): HitResolution {
-  /*
-   * 원거리 무기는 부채꼴로 때리지 않는다. 걸러 두지 않으면 딱총을 들고도
-   * 코앞의 적이 **탄 없이** 맞는다 — 사거리 0이라 안전할 것 같지만, 거리 0
-   * (겹쳐 선 적)은 각도를 못 정해 「맞은 것으로 본다」로 빠진다.
-   */
-  if (weapon.kind === "ranged" || !isAttackActive(attack)) {
-    return { enemies: [...enemies], attack, struck: [] };
-  }
-
-  const struck: number[] = [];
-  const next = enemies.map((enemy, index) => {
-    if (enemy.mood === "down") return enemy;
-    if (attack.hitThisSwing.includes(index)) return enemy;
-    if (!isInAttackArc(enemy, playerX, playerZ, playerFacing, weapon)) return enemy;
-
-    struck.push(index);
-    return strikeEnemy(enemy, weapon.damage, playerX, playerZ, weapon.knockbackScale);
-  });
-
-  return {
-    enemies: next,
-    attack: struck.length
-      ? { ...attack, hitThisSwing: [...attack.hitThisSwing, ...struck] }
-      : attack,
-    struck,
   };
 }

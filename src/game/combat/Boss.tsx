@@ -39,7 +39,6 @@ import {
 } from "@/game/combat/bossSim";
 import type { CombatLink } from "@/game/combat/Enemies";
 import { BOSS_BODY } from "@/game/combat/bossBody";
-import { isInAttackArc } from "@/game/combat/combatSim";
 import { DOKEBI_ORDER, type DokebiId } from "@/game/dokebi/roster";
 import {
   canSummon,
@@ -52,7 +51,6 @@ import {
   type SummonRole,
   type SummonState,
 } from "@/game/combat/summonSim";
-import { WEAPONS } from "@/game/combat/weapons";
 import { getLampGlowTexture } from "@/game/world/textures";
 import { BossModel } from "@/game/combat/BossModel";
 import { BossSummons } from "@/game/combat/BossSummons";
@@ -114,9 +112,6 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
   const bodyRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const boss = useRef<BossState>(createBoss(home.x, home.z));
-  /** 공격 판정을 한 번의 휘두르기에 한 번만 적용하기 위한 표시 */
-  const struckThisSwing = useRef(false);
-
   const summon = useRef<SummonState>(createSummon());
   /** 궤도를 도는 도깨비. 슬롯을 미리 잡아 두고 남는 것은 숨긴다 */
   const orbRefs = useRef<(THREE.Mesh | null)[]>([]);
@@ -207,26 +202,6 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
       const shot = damageBoss(boss.current, boltDamage);
       boss.current = shot.state;
       recordBossHit(link, shot.downed);
-    }
-
-    /* ---------------- 플레이어의 공격 ---------------- */
-    if (link.attackQueued) {
-      /*
-       * 일반 적과 같은 부채꼴 판정을 쓴다. 보스만 다른 규칙을 두면 "저건
-       * 왜 안 맞았지"가 생긴다. 판정 함수는 위치만 받으므로 그대로 넘긴다.
-       */
-      const target = { x: boss.current.x, z: boss.current.z };
-      const weapon = WEAPONS[link.weapon];
-      if (!struckThisSwing.current && isInAttackArc(target, px, pz, link.facing, weapon)) {
-        // 로봇에게 그렇듯 대장에게도 무기 피해가 그대로 들어간다. 여기만
-        // 1로 고정하면 「망치를 들었는데 대장에게는 소용없다」가 된다.
-        const hit = damageBoss(boss.current, weapon.damage);
-        boss.current = hit.state;
-        struckThisSwing.current = true;
-        recordBossHit(link, hit.downed);
-      }
-    } else {
-      struckThisSwing.current = false;
     }
 
     /* ---------------- 부른 도깨비 ---------------- */

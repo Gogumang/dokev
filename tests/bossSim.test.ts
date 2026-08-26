@@ -20,7 +20,7 @@ import {
   type BossState,
 } from "@/game/combat/bossSim";
 import { COMBAT_TUNING } from "@/game/combat/combatSim";
-import { WEAPONS } from "@/game/combat/weapons";
+import { WEAPON_ORDER, WEAPONS } from "@/game/combat/weapons";
 import { LOCOMOTION } from "@/game/config/tuning";
 
 function at(overrides: Partial<BossState> = {}): BossState {
@@ -69,9 +69,8 @@ describe("단계 전이", () => {
      * 보스의 내용은 체력이 아니라 리듬이다. 예고가 일반 로봇의 준비 시간과
      * 같으면 피할 시간이 없어 그냥 두꺼운 로봇이 된다.
      */
-    expect(BOSS.windupSeconds, `boss=${BOSS.windupSeconds}`).toBeGreaterThan(
-      WEAPONS.bat.timing.windupSeconds * 5,
-    );
+    const quickest = Math.min(...WEAPON_ORDER.map((id) => WEAPONS[id].timing.windupSeconds));
+    expect(BOSS.windupSeconds, `boss=${BOSS.windupSeconds}`).toBeGreaterThan(quickest * 5);
   });
 });
 

@@ -121,6 +121,9 @@ const MARKER_THICKNESS = 0.06;
 /** 대상 표시 고리가 도는 속도(rad/s) */
 const MARKER_SPIN = 1.8;
 
+/** 줄과 표식이 함께 쓰는 색. 둘이 한 장치라는 것이 색으로 읽혀야 한다 */
+const GRAPPLE_COLOR = "#2fd4c4";
+
 export function GrappleVisuals({ view }: { view: GrappleView }) {
   const ropeRef = useRef<THREE.LineSegments>(null);
   const markerRef = useRef<THREE.Mesh>(null);
@@ -190,11 +193,21 @@ export function GrappleVisuals({ view }: { view: GrappleView }) {
 
   return (
     <group>
+      {/*
+        줄과 표식은 **한 색이다.** 한때 색상환을 태웠는데, 표식은 걸 수 있는
+        가로등이 사거리에 들어오면 **계속 떠 있는** 것이라 도시를 달리는 내내
+        색이 돌았다 — 무지개가 「지금 무슨 일이 일어났다」가 아니라 **화면의
+        기본 상태**가 되어 버린다.
+
+        원작에서 시스템 표시물은 색이 도는 법이 없다(DOKEV_VIDEO_STUDY
+        「시스템 표시물은 **지면의 발광 링** 하나뿐이다 (프레임)」). 무지개는
+        때리는 순간에만 나온다.
+      */}
       <lineSegments ref={ropeRef} geometry={ropeGeometry} visible={false}>
-        <lineBasicMaterial color="#2fd4c4" toneMapped={false} />
+        <lineBasicMaterial color={GRAPPLE_COLOR} toneMapped={false} />
       </lineSegments>
       <mesh ref={markerRef} geometry={markerGeometry} visible={false}>
-        <meshBasicMaterial color="#2fd4c4" toneMapped={false} transparent opacity={0.7} />
+        <meshBasicMaterial color={GRAPPLE_COLOR} toneMapped={false} transparent opacity={0.7} />
       </mesh>
     </group>
   );

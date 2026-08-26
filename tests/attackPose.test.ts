@@ -9,8 +9,8 @@ import {
 import { swingSeconds, WEAPONS } from "@/game/combat/weapons";
 import { attackPose } from "@/game/player/attackPose";
 
-/** 방망이 한 번의 휘두르기 길이(초). 무기마다 다르므로 어느 것인지 밝혀 둔다 */
-const BAT_SWING = swingSeconds(WEAPONS.bat);
+/** 활 한 번의 휘두르기 길이(초). 무기마다 다르므로 어느 것인지 밝혀 둔다 */
+const BOW_SWING = swingSeconds(WEAPONS.bow);
 
 describe("attackElapsed", () => {
   it("쉬고 있으면 null", () => {
@@ -34,18 +34,18 @@ describe("attackElapsed", () => {
   });
 
   it("전체 길이가 세 단계의 합이다", () => {
-    expect(BAT_SWING).toBeCloseTo(
-      WEAPONS.bat.timing.windupSeconds +
-        WEAPONS.bat.timing.activeSeconds +
-        WEAPONS.bat.timing.recoverySeconds,
+    expect(BOW_SWING).toBeCloseTo(
+      WEAPONS.bow.timing.windupSeconds +
+        WEAPONS.bow.timing.activeSeconds +
+        WEAPONS.bow.timing.recoverySeconds,
       9,
     );
   });
 });
 
 describe("attackPose", () => {
-  const windupEnd = WEAPONS.bat.timing.windupSeconds;
-  const activeEnd = windupEnd + WEAPONS.bat.timing.activeSeconds;
+  const windupEnd = WEAPONS.bow.timing.windupSeconds;
+  const activeEnd = windupEnd + WEAPONS.bow.timing.activeSeconds;
 
   it("준비 구간에서 팔을 뒤로 당긴다", () => {
     const ready = attackPose(0);
@@ -64,7 +64,7 @@ describe("attackPose", () => {
      */
     const atEnd = attackPose(activeEnd);
     const before = attackPose(windupEnd);
-    const after = attackPose(activeEnd + WEAPONS.bat.timing.recoverySeconds * 0.5);
+    const after = attackPose(activeEnd + WEAPONS.bow.timing.recoverySeconds * 0.5);
 
     expect(atEnd.rightArmX, `end=${atEnd.rightArmX}`).toBeLessThan(before.rightArmX);
     expect(atEnd.rightArmX, `end=${atEnd.rightArmX}, after=${after.rightArmX}`).toBeLessThan(
@@ -73,7 +73,7 @@ describe("attackPose", () => {
   });
 
   it("후딜이 끝나면 제자리로 돌아온다", () => {
-    const done = attackPose(BAT_SWING);
+    const done = attackPose(BOW_SWING);
     expect(done.rightArmX, `rightArmX=${done.rightArmX}`).toBeCloseTo(0, 6);
     expect(done.lean).toBeCloseTo(0, 6);
   });
@@ -92,7 +92,7 @@ describe("attackPose", () => {
   });
 
   it("팔이 몸통을 통과하지 않는다", () => {
-    for (let t = 0; t <= BAT_SWING; t += 0.01) {
+    for (let t = 0; t <= BOW_SWING; t += 0.01) {
       const pose = attackPose(t);
       expect(Math.abs(pose.rightArmX), `t=${t.toFixed(2)}`).toBeLessThan(Math.PI);
     }
@@ -101,7 +101,7 @@ describe("attackPose", () => {
   it("범위를 벗어난 시간도 안전하다", () => {
     // 프레임이 밀려 큰 dt가 들어와도 자세가 뒤집히면 안 된다
     expect(attackPose(-1).rightArmX).toBeCloseTo(0, 6);
-    expect(attackPose(BAT_SWING * 3).rightArmX).toBeCloseTo(0, 6);
+    expect(attackPose(BOW_SWING * 3).rightArmX).toBeCloseTo(0, 6);
   });
 
   it("판정이 살아 있는 동안 대부분 팔이 앞에 있다", () => {
@@ -128,7 +128,7 @@ describe("attackPose", () => {
   });
 
   it("판정 중반부터는 완전히 뻗어 있다", () => {
-    const midway = attackPose(windupEnd + WEAPONS.bat.timing.activeSeconds * 0.5);
+    const midway = attackPose(windupEnd + WEAPONS.bow.timing.activeSeconds * 0.5);
     const atEnd = attackPose(activeEnd);
     expect(midway.rightArmX, `midway=${midway.rightArmX}`).toBeLessThan(0);
     expect(atEnd.rightArmX).toBeCloseTo(midway.rightArmX, 6);

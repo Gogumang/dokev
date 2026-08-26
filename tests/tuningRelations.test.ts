@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BOSS } from "@/game/combat/bossSim";
 import { COMBAT_TUNING, GUNNER } from "@/game/combat/combatSim";
 import { PLAYER_COMBAT } from "@/game/combat/playerCombat";
-import { WEAPONS } from "@/game/combat/weapons";
+import { swingSeconds, WEAPON_ORDER, WEAPONS, weaponRange } from "@/game/combat/weapons";
 import { PROJECTILE } from "@/game/combat/projectiles";
 import {
   AIR_JUMP_VELOCITY,
@@ -30,6 +30,15 @@ import { CITY } from "@/game/world/cityLayout";
  *
  * 이 파일이 잡는 것은 개별 값의 오류가 아니라 **조정으로 깨지는 약속**이다.
  */
+
+/**
+ * 드는 무기 중 **가장 빠른** 공격 주기(초).
+ *
+ * 예전에는 방망이 하나를 박아 두고 잤다. 무기가 은퇴하면 그 검사는 없는 값을
+ * 재게 되므로 목록에서 뽑는다 — 「빈틈에 한 번은 때릴 수 있는가」를 볼 때
+ * 기준이 되어야 하는 것은 **가장 빨리 때릴 수 있는 수단**이다.
+ */
+const QUICKEST_CYCLE = Math.min(...WEAPON_ORDER.map((id) => swingSeconds(WEAPONS[id])));
 
 describe("점프로 탄을 피할 수 있는가", () => {
   it("점프 정점이 탄 판정 높이를 넘는다", () => {
@@ -96,23 +105,18 @@ describe("보스 예고를 보고 피할 수 있는가", () => {
     ).toBeGreaterThan(needed);
   });
 
-  it("빈틈이 한 번 때릴 시간보다 길다", () => {
+  it("빈틈이 한 발 쏠 시간보다 길다", () => {
     // 빈틈에 때릴 수 없으면 그건 빈틈이 아니다
-    const swing =
-      WEAPONS.bat.timing.windupSeconds +
-      WEAPONS.bat.timing.activeSeconds +
-      WEAPONS.bat.timing.recoverySeconds;
-    expect(BOSS.recoverSeconds, `recover=${BOSS.recoverSeconds}, swing=${swing}`).toBeGreaterThan(
-      swing,
-    );
+    expect(
+      BOSS.recoverSeconds,
+      `recover=${BOSS.recoverSeconds}, cycle=${QUICKEST_CYCLE}`,
+    ).toBeGreaterThan(QUICKEST_CYCLE);
   });
 
   it("비틀거림 동안 여러 번 때릴 수 있다", () => {
-    const swing =
-      WEAPONS.bat.timing.windupSeconds +
-      WEAPONS.bat.timing.activeSeconds +
-      WEAPONS.bat.timing.recoverySeconds;
-    expect(BOSS.staggerSeconds / swing, "비틀거림이 짧아 보상이 안 된다").toBeGreaterThan(3);
+    expect(BOSS.staggerSeconds / QUICKEST_CYCLE, "비틀거림이 짧아 보상이 안 된다").toBeGreaterThan(
+      3,
+    );
   });
 });
 
@@ -409,9 +413,23 @@ describe("전투가 성립하는가", () => {
     expect(PROJECTILE.speed).toBeGreaterThan(LOCOMOTION.run.maxSpeed);
   });
 
-  it("사수의 유지 거리가 근접 사거리 밖이다", () => {
-    // 사수가 근접 사거리 안에 서면 근접형과 구분되지 않는다
-    expect(GUNNER.minDistance).toBeGreaterThan(WEAPONS.bat.reachMeters);
+  it("사수가 다른 로봇보다 멀리 서되, 쏴서 닿는 자리에 선다", () => {
+    /*
+     * 예전에는 「근접 사거리 밖인가」를 봤다. 드는 무기가 활·광선총 둘로
+     * 좁혀지면서 근접 사거리라는 것이 사라졌고, 그 검사는 **없는 값**을
+     * 재고 있었다.
+     *
+     * 지금 지켜야 하는 것은 둘이다: 달려드는 로봇(`standoffRadius`)보다 멀리
+     * 서야 「저건 쏘는 놈」으로 읽히고, 내 사거리 안에 있어야 **답할 수 있는
+     * 싸움**이 된다. 밖에 서면 그건 어려운 것이 아니라 고장이다.
+     */
+    expect(GUNNER.minDistance, "달려드는 로봇과 같은 자리에 선다").toBeGreaterThan(
+      COMBAT_TUNING.standoffRadius,
+    );
+    const shortest = Math.min(...WEAPON_ORDER.map((id) => weaponRange(WEAPONS[id])));
+    expect(GUNNER.minDistance, `사수 ${GUNNER.minDistance}m, 내 사거리 ${shortest}m`).toBeLessThan(
+      shortest,
+    );
   });
 
   it("사수가 자기 사거리 안에 선다", () => {
@@ -427,12 +445,8 @@ describe("전투가 성립하는가", () => {
      * 무적이 더 길면 여러 마리에 둘러싸여도 사실상 무적이 된다. 반대로 너무
      * 짧으면 한 번에 체력이 다 깎인다 — 그 균형이 이 두 값의 관계다.
      */
-    const cycle =
-      WEAPONS.bat.timing.windupSeconds +
-      WEAPONS.bat.timing.activeSeconds +
-      WEAPONS.bat.timing.recoverySeconds;
-    expect(PLAYER_COMBAT.invulnerableSeconds).toBeGreaterThan(cycle);
-    expect(PLAYER_COMBAT.invulnerableSeconds).toBeLessThan(cycle * 4);
+    expect(PLAYER_COMBAT.invulnerableSeconds).toBeGreaterThan(QUICKEST_CYCLE);
+    expect(PLAYER_COMBAT.invulnerableSeconds).toBeLessThan(QUICKEST_CYCLE * 4);
   });
 
   it("최대 체력이 회복 대기보다 오래 버틴다", () => {
