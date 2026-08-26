@@ -8,6 +8,11 @@
 
 import { describe, expect, it } from "vitest";
 
+import { readFileSync } from "node:fs";
+
+import { weaponAtSlot } from "@/game/combat/weapons";
+import { CONTROL_CODES } from "@/game/systems/controls";
+
 import { LOCOMOTION, isVehicle } from "@/game/config/tuning";
 import {
   beatAt,
@@ -177,5 +182,87 @@ describe("화면 안내가 읽는 값", () => {
     const client = readFileSync("src/app/play/PlayClient.tsx", "utf8");
     expect(client, "안내를 그리지 않는다").toContain("<DemoGuide");
     expect(client, "시연 지점에서만 뜨는 조건이 없다").toMatch(/scenario\?\.id === "demo"/);
+  });
+});
+
+describe("대본이 시키는 키가 실제로 먹는가", () => {
+  /*
+   * 대본이 **없는 무기와 안 먹는 키**를 시키고 있었다. 「장난감 칼로 넓게
+   * 벤다」는 그 무기가 지워진 뒤에도 남았고, `5 → J, 6 → J`는 무기가 여섯이던
+   * 시절의 자리 번호였다 — 지금 자리는 둘뿐이라 5와 6은 눌러도 아무 일이
+   * 없다. 카메라 앞에서 그 두 번이 그냥 흘러간다.
+   *
+   * 대본은 사람이 읽고 손으로 따라 하는 글이라 **틀려도 코드가 안 터진다.**
+   * 그래서 여기서 잰다.
+   */
+  const keyed = BEATS.filter((beat) => beat.keys);
+
+  it("키를 적은 장면을 실제로 찾았다", () => {
+    // 못 찾으면 아래 검사가 빈 목록을 훑으며 통과한다
+    expect(keyed.length, `키가 적힌 장면 ${keyed.length}개`).toBeGreaterThan(3);
+  });
+
+  it("숫자키가 실제 무기 자리를 가리킨다", () => {
+    const dead: string[] = [];
+    for (const beat of keyed) {
+      for (const digit of beat.keys?.match(/\d/g) ?? []) {
+        if (weaponAtSlot(Number(digit)) === null)
+          dead.push(`${beat.at}초 "${beat.keys}": ${digit}`);
+      }
+    }
+    expect(dead, `없는 무기 자리를 누르라고 한다:\n${dead.join("\n")}`).toEqual([]);
+  });
+
+  it("글자키가 실제 조작이다", () => {
+    /*
+     * 조작표의 코드에서 글자만 뽑아 견준다(`KeyB` → `B`). 대본이 「B (내리기)」
+     * 처럼 설명을 붙이므로 낱말이 아니라 **홀로 선 대문자**만 본다.
+     */
+    const known = new Set(
+      Object.values(CONTROL_CODES).map((code) => (code.startsWith("Key") ? code.slice(3) : code)),
+    );
+    const unknown: string[] = [];
+    for (const beat of keyed) {
+      for (const letter of beat.keys?.match(/(?<![A-Za-z])[A-Z](?![A-Za-z])/g) ?? []) {
+        if (!known.has(letter)) unknown.push(`${beat.at}초 "${beat.keys}": ${letter}`);
+      }
+    }
+    expect(unknown, `조작표에 없는 키를 누르라고 한다:\n${unknown.join("\n")}`).toEqual([]);
+  });
+});
+
+describe("시연 문서가 대본과 맞는가", () => {
+  /*
+   * `docs/DEMO_SCRIPT.md`의 표는 대본을 **손으로 옮겨 적은 것**이고, 실제로
+   * 낡아 있었다 — 대장을 공사장으로 옮긴 뒤에도 좌표가 `(-47, 108)`로 남아
+   * 있었다. 그 표를 보고 카메라를 세우면 빈 교차로를 찍는다.
+   *
+   * 표 전체를 글자로 맞추지 않는다. 시각과 자리는 **사람이 읽고 찾아가는
+   * 값**이라 그 둘만 본다 — 제목이나 문장 다듬기까지 막으면 문서를 고칠
+   * 때마다 검사가 걸려 결국 지워진다.
+   */
+  const doc = readFileSync("docs/DEMO_SCRIPT.md", "utf8");
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  it("문서에서 표를 실제로 찾았다", () => {
+    expect(doc, "시연 표가 없다").toContain("| 0:00–");
+  });
+
+  it("장면마다 시작 시각이 적혀 있다", () => {
+    const missing = BEATS.filter((beat) => !doc.includes(`| ${mmss(beat.at)}–`));
+    expect(
+      missing.map((beat) => mmss(beat.at)),
+      "문서에 없는 장면 시각",
+    ).toEqual([]);
+  });
+
+  it("장면마다 자리가 대본과 같다", () => {
+    const wrong = BEATS.filter(
+      (beat) => !doc.includes(`\`(${Math.round(beat.x)}, ${Math.round(beat.z)})\``),
+    );
+    expect(
+      wrong.map((beat) => `${mmss(beat.at)} → (${Math.round(beat.x)}, ${Math.round(beat.z)})`),
+      "문서가 다른 자리를 적었다",
+    ).toEqual([]);
   });
 });

@@ -139,13 +139,13 @@ export function buildDemoRoute(layout: CityLayout): DemoBeat[] {
     },
     {
       at: 56,
-      title: "돌아와 로봇 무리와 붙는다 — 장난감 칼로 넓게 벤다",
+      title: "돌아와 로봇 무리와 붙는다 — 활로 한 발에 하나씩 눕힌다",
       topics: ["무기"],
       // 내려서 싸운다. 다음 장면이 같은 자리라 이동은 없다
       mode: "walk",
       x: -78,
       z: 84,
-      keys: "B (내리기) → 2 → J",
+      keys: "B (내리기) → 1 → J",
     },
     {
       at: 62,
@@ -161,7 +161,7 @@ export function buildDemoRoute(layout: CityLayout): DemoBeat[] {
       mode: "run",
       x: -78,
       z: 84,
-      keys: "5 → J, 6 → J",
+      keys: "2 → J, 1 → J",
     },
     {
       at: 72,
