@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
+import { CONTROLS } from "@/game/systems/controls";
 import { SCENARIOS } from "@/game/systems/devScenario";
 
 /*
@@ -260,5 +261,55 @@ describe("사람에게 부탁하는 시간이 정직한가", () => {
      */
     const actual = (body.match(/^\d+\. /gm) ?? []).length + (body.match(/^- \*\*/gm) ?? []).length;
     expect(actual, `적힌 ${NUMBERS[claimed]}개 vs 실제 ${actual}개`).toBe(NUMBERS[claimed]);
+  });
+});
+
+describe("README 조작표가 정본과 맞는가", () => {
+  /*
+   * README에 「정본은 `controls.ts`다」라고 적어 두고 **표는 손으로 복제**해
+   * 두었다. 그 표가 실제로 낡았다 — 모바일 버튼을 접으면서 자리가 「⋯ 버튼
+   * 안 무기」로 바뀌었는데 README는 여전히 「무기 버튼」이었고, 여섯 줄은
+   * 터치란이 **「—」**였다. 터치로 못 하는 조작은 하나도 없는데도.
+   *
+   * 「정본은 저기」라는 문장은 복제를 정당화하지 못한다. 그 말이 참이려면
+   * 어긋났을 때 무언가가 울려야 한다.
+   */
+  const table = (() => {
+    const at = readme.indexOf("| | 키보드 | 터치 |");
+    return at < 0 ? "" : readme.slice(at, readme.indexOf("\n\n", at));
+  })();
+
+  it("표를 실제로 찾았다", () => {
+    // 못 찾으면 아래 검사들이 빈 문자열을 훑으며 조용히 통과한다
+    expect(table.length, "README에서 조작표를 못 찾았다").toBeGreaterThan(200);
+  });
+
+  it("모든 조작이 표에 있다", () => {
+    const missing = CONTROLS.filter((row) => !table.includes(row.action));
+    expect(
+      missing.map((row) => row.id),
+      `README 조작표에 없다: ${missing.map((row) => row.action).join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("터치 방법이 정본과 같다", () => {
+    /*
+     * 여기가 실제로 어긋났던 자리다. 키보드 표기는 README가 백틱을 두르므로
+     * 글자 그대로 맞출 수 없지만, **터치 방법은 그냥 글**이라 같아야 한다.
+     */
+    const wrong = CONTROLS.filter((row) => !table.includes(row.touch));
+    expect(
+      wrong.map((row) => `${row.action}: 정본은 "${row.touch}"`),
+      "README가 정본과 다른 터치 방법을 적었다",
+    ).toEqual([]);
+  });
+
+  it("터치란에 「없음」이 없다", () => {
+    // 키로 되는 것은 전부 터치로도 된다 — 저장소가 그것을 검사로 지킨다
+    const rows = table
+      .split("\n")
+      .filter((line) => line.startsWith("| ") && !line.startsWith("|---"));
+    const dashes = rows.filter((line) => /\|\s*—\s*\|?\s*$/.test(line));
+    expect(dashes, `터치 방법이 비었다:\n${dashes.join("\n")}`).toEqual([]);
   });
 });
