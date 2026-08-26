@@ -92,7 +92,7 @@ export function GameScene(props: SceneProps) {
       facing: 0,
       grounded: true,
       attackQueued: false,
-      // 시작 무기. 저장하지 않는다 — 판마다 방망이로 시작하는 편이 배우기 쉽다.
+      // 시작 무기. 저장하지 않는다 — 판마다 같은 것으로 시작하는 편이 배우기 쉽다.
       weapon: DEFAULT_WEAPON,
       // 평소에는 없다. 전투가 부른다 (`dokebi/summonWindow`)
       summoned: false,

@@ -92,7 +92,7 @@ export const GUNNER = {
 } as const;
 
 // 무기를 안 넘긴 호출이 쓰는 값. **제품 호출이 넘기는지**는 `silentDefaults`가
-// 본다 — 빠뜨리면 무기를 바꿔도 조용히 방망이로 때린다.
+// 본다 — 빠뜨리면 무기를 바꿔도 조용히 시작 무기의 주기로 때린다.
 const DEFAULT_WEAPON_PROFILE = WEAPONS.bow;
 
 /** 시야 확인 간격(m). 가장 얇은 건물보다 촘촘해야 한다 */
@@ -569,7 +569,7 @@ export function strikeEnemy(
   const hp = enemy.hp - damage;
   const isDown = hp <= 0;
   // 쓰러질 때 더 크게 날아간다. 마지막 한 방이 시원해야 한다.
-  // 무기 무게가 곱해진다 — 망치에 맞고 살짝 밀리면 눈과 수치가 따로 논다.
+  // 무기 무게가 곱해진다 — 센 것에 맞고 살짝 밀리면 눈과 수치가 따로 논다.
   const knockback = COMBAT_TUNING.knockbackSpeed * knockbackScale * (isDown ? 1.6 : 1);
 
   return {

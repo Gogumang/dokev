@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { weaponAtSlot, WEAPON_ORDER, WEAPONS } from "@/game/combat/weapons";
+import { weaponAtSlot, WEAPON_ORDER } from "@/game/combat/weapons";
 import { CONTROLS } from "@/game/systems/controls";
 
 describe("weaponAtSlot", () => {

@@ -9,7 +9,6 @@ import {
   createEnemies,
   ENEMY_STRIKE,
   type EnemyState,
-  isAttackActive,
   stepAttack,
   stepEnemy,
 } from "@/game/combat/combatSim";

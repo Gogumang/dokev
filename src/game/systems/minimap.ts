@@ -1,25 +1,25 @@
 /**
- * 미니맵 좌표 변환 — 순수 함수.
+ * 지도 좌표 변환과 표식 — 순수 함수.
  *
- * 282m짜리 도시에서 방향을 잡을 수단이 없었다. 격자 도시라 길만 그려도
- * "지금 어느 골목인가"가 읽힌다.
- *
- * **진행 방향이 위로 오게 회전한다**(heading-up). 북쪽 고정이 격자에는 더
- * 읽기 쉽지만, 3인칭 시점에서는 화면의 위와 지도의 위가 어긋나 매번 머릿속에서
- * 돌려야 한다.
+ * 미니맵을 걷어낸 뒤 남은 둘이다. **화면 안 도는 변환**(`toMapPoint`)은
+ * 대장 화살표가 쓰고, **표식 수집**(`collectBlips`)은 전체 지도가 쓴다.
+ * 둘 다 「내 둘레의 무엇이 어디에 있는가」라 한 파일에 남는다.
  *
  * three.js와 캔버스에 의존하지 않는다 — 변환만 들고 있고 그리는 일은 밖이다.
  */
 
 import { CITY, ROAD_CENTERS as LAYOUT_ROAD_CENTERS } from "@/game/world/cityLayout";
 
-export const MINIMAP = {
-  /** 지름(px). 화면 구석을 너무 먹지 않으면서 골목이 구분되는 크기 */
-  sizePx: 148,
-  /** 지도 반지름이 담는 실제 거리(m) */
+/**
+ * 표식을 모으는 반경.
+ *
+ * 이름이 `MINIMAP`이었고 지름·여유 픽셀을 함께 들고 있었다. 미니맵을
+ * 걷어내면서 그 둘은 죽었고 이름은 없는 물건을 가리키게 됐다 — 남은 것은
+ * **얼마나 먼 것까지 표식으로 셀 것인가** 하나뿐이다.
+ */
+export const BLIPS = {
+  /** 이 안에 있는 것만 표식으로 센다(m) */
   rangeMeters: 80,
-  /** 가장자리에 붙는 표식의 여유(px). 0이면 반쯤 잘린다 */
-  edgeInsetPx: 9,
 } as const;
 
 /** 지도 좌표(m). 오른쪽이 +u, 위쪽이 +v다 */
@@ -93,7 +93,7 @@ export function collectBlips(
   centerX: number,
   centerZ: number,
   out: Float32Array,
-  rangeMeters: number = MINIMAP.rangeMeters,
+  rangeMeters: number = BLIPS.rangeMeters,
 ): number {
   // 회전하면 모서리 방향이 더 멀리 보인다 (roadsInRange와 같은 이유).
   const reach = rangeMeters * Math.SQRT2;

@@ -91,7 +91,7 @@ export function CharacterModel({ motion, fallback, fade }: CharacterModelProps) 
 
   useEffect(() => {
     let alive = true;
-    loadGltf("/character.glb")
+    loadGltf(MODEL_URL)
       .then((model) => {
         if (alive) setLoaded(model);
       })

@@ -45,10 +45,8 @@ import {
   createSummon,
   memberPosition,
   requestSummon,
-  roleForDokebi,
   staggerHitsWithMark,
   stepSummon,
-  type SummonRole,
   type SummonState,
 } from "@/game/combat/summonSim";
 import { getLampGlowTexture } from "@/game/world/textures";
@@ -186,7 +184,7 @@ export function Boss({ link, home, reducedMotion, view, met }: BossProps) {
 
     /* ---------------- 자리 알리기 ---------------- */
     /*
-     * 탄은 로봇 쪽(`Enemies`)에서 굴러간다. 자리를 알리지 않으면 딱총만
+     * 탄은 로봇 쪽(`Enemies`)에서 굴러간다. 자리를 알리지 않으면 탄만
      * 대장을 통과한다 — 무기마다 통하는 상대가 다르면 규칙이 아니라 결함이다.
      *
      * 쓰러져 있는 동안에는 맞지 않는다. 근접(`damageBoss`)도 같은 규칙이다.

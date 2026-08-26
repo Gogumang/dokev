@@ -65,7 +65,7 @@ export interface CompanionProps {
   effects: {
     abilityAggroScale: number;
     abilityRegenScale: number;
-    /** 미니맵이 읽는 동료 위치. 사라져 있으면 companionVisible이 false다 */
+    /** 지도가 읽는 동료 위치. 사라져 있으면 companionVisible이 false다 */
     companionX: number;
     companionZ: number;
     companionVisible: boolean;

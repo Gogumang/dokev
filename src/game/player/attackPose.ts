@@ -18,7 +18,7 @@ import type { PhotoPose } from "@/game/player/photoPose";
  * 돌아온다. **판정이 살아 있는 순간에 팔이 가장 앞에 있어야** 눈과 규칙이
  * 맞는다 — 어긋나면 "맞았는데 안 맞은 것처럼" 보인다.
  *
- * 무기를 받는다. 망치는 방망이보다 준비가 네 배 길어서, 한 벌의 길이로
+ * 무기를 받는다. 활은 광선총보다 준비가 세 배 길어서, 한 벌의 길이로
  * 둘을 그리면 **느린 무기가 이미 다 휘두른 자세로 서서 기다린다.**
  */
 export function attackPose(elapsedSeconds: number, weapon: Weapon = WEAPONS.bow): PhotoPose {

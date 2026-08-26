@@ -162,7 +162,7 @@ export interface SceneProps {
   /**
    * HUD가 읽는 전투 상태. 이 씬이 매 프레임 갱신한다.
    *
-   * 미니맵 표식도 여기로 흘린다 — 적 좌표는 Enemies 안에만 있고 HUD는
+   * 지도 표식도 여기로 흘린다 — 적 좌표는 Enemies 안에만 있고 HUD는
    * 그 컴포넌트를 모른다.
    */
   combatView: {

@@ -18,7 +18,7 @@ import { VENDING } from "@/game/systems/vending";
 import { CROWD } from "@/game/world/crowdLayout";
 import { TRAFFIC } from "@/game/world/trafficLayout";
 import { QUALITY_PRESETS, type QualityLevel } from "@/game/systems/quality";
-import { MINIMAP } from "@/game/systems/minimap";
+import { BLIPS } from "@/game/systems/minimap";
 import { CITY } from "@/game/world/cityLayout";
 
 /*
@@ -349,29 +349,29 @@ describe("표가 약속한 것이 실제로 일어나는가", () => {
   });
 });
 
-describe("미니맵이 길잡이가 되는가", () => {
+describe("지도 표식이 길잡이가 되는가", () => {
   /*
    * 반경을 1m로 줄여도 모든 검사가 통과했다 — 그 크기면 자기 발밑만 보인다.
-   * 미니맵은 「다음 모퉁이가 어디인가」를 알려 주는 물건이므로, 적어도 한
+   * 지도는 「다음 모퉁이에 무엇이 있는가」를 알려 주는 물건이므로, 적어도 한
    * 블록은 담아야 한다.
    */
   const blockPitch = CITY.blockSize + CITY.roadWidth;
 
   it("한 블록 너머까지 보인다", () => {
     expect(
-      MINIMAP.rangeMeters,
-      `반경 ${MINIMAP.rangeMeters}m, 블록 간격 ${blockPitch}m`,
+      BLIPS.rangeMeters,
+      `반경 ${BLIPS.rangeMeters}m, 블록 간격 ${blockPitch}m`,
     ).toBeGreaterThan(blockPitch);
   });
 
   it("적을 알아보기 전에 화면에 들어온다", () => {
     /*
-     * 로봇이 나를 인지하는 거리보다 미니맵이 좁으면, 표식이 뜨는 순간 이미
+     * 로봇이 나를 인지하는 거리보다 표식 반경이 좁으면, 표식이 뜨는 순간 이미
      * 쫓기고 있다 — 미리 보라고 만든 것이 사후 통보가 된다.
      */
     expect(
-      MINIMAP.rangeMeters,
-      `반경 ${MINIMAP.rangeMeters}m vs 인지 ${COMBAT_TUNING.aggroRadius}m`,
+      BLIPS.rangeMeters,
+      `반경 ${BLIPS.rangeMeters}m vs 인지 ${COMBAT_TUNING.aggroRadius}m`,
     ).toBeGreaterThan(COMBAT_TUNING.aggroRadius);
   });
 });

@@ -4,8 +4,6 @@ import { collectSources, readCode } from "./support/source";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { MINIMAP } from "@/game/systems/minimap";
-
 import { prefersReducedMotion } from "@/game/systems/motionPreference";
 import { DOKEBI, DOKEBI_ORDER } from "@/game/dokebi/roster";
 
@@ -365,11 +363,6 @@ describe("위쪽 가운데가 겹치지 않는가", () => {
     for (const name of ["HealthPanel"]) {
       expect(body, `${name}이 컨테이너 밖에 있다`).toContain(`<${name}`);
     }
-  });
-
-  it("미니맵 크기가 커져도 간격이 따라온다", () => {
-    // 컨테이너가 쌓으므로 크기 상한이 더는 필요 없다 — 다만 화면을 덮지는 않아야 한다
-    expect(MINIMAP.sizePx, `미니맵 ${MINIMAP.sizePx}px`).toBeLessThan(240);
   });
 });
 

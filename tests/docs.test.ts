@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { BOSS_QUEST, FIRST_RUN_QUEST, QUEST_CHAIN } from "@/game/quest/questContent";
 import { LOCOMOTION } from "@/game/config/tuning";
 
-import { MINIMAP } from "@/game/systems/minimap";
+import { BLIPS } from "@/game/systems/minimap";
 import { QUALITY_PRESETS } from "@/game/systems/quality";
 import { DOKEBI, DOKEBI_ORDER, type DokebiSpirit } from "@/game/dokebi/roster";
 import { CONTROLS } from "@/game/systems/controls";
@@ -215,8 +215,8 @@ describe("문서가 적은 숫자가 상수와 맞는가", () => {
    * 랜딩의 「저장되지 않습니다」, README의 낡은 확인 지점 목록과 같은 종류다.
    * 숫자는 특히 조용히 틀어진다 — 상수를 조정할 때 문서까지 여는 사람은 드물다.
    */
-  it("미니맵 반경", () => {
-    expect(plan, `실제 ${MINIMAP.rangeMeters}m`).toContain(`반경 ${MINIMAP.rangeMeters}m`);
+  it("표식 반경", () => {
+    expect(plan, `실제 ${BLIPS.rangeMeters}m`).toContain(`반경 ${BLIPS.rangeMeters}m`);
   });
 
   it("여정 단계 수", () => {
