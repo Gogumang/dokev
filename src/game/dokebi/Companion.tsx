@@ -32,7 +32,14 @@ import { COMPANION_BODY } from "@/game/dokebi/companionBody";
 import { CompanionAbilityVfx } from "@/game/dokebi/CompanionAbilityVfx";
 import { CompanionLantern } from "@/game/dokebi/CompanionLantern";
 import { CompanionModel } from "@/game/dokebi/CompanionModel";
+import { recordCompanionStrike } from "@/game/combat/combatLink";
 import { COMPANION_SHAPE } from "@/game/dokebi/companionShapes";
+import {
+  canStrike,
+  COMPANION_STRIKE,
+  firstStrikeDelay,
+  stepStrikeCooldown,
+} from "@/game/dokebi/companionStrike";
 import { BASE_LIGHT_RANGE, type DokebiSpirit } from "@/game/dokebi/roster";
 import {
   bobOffset,
@@ -69,6 +76,9 @@ export interface CompanionProps {
     companionX: number;
     companionZ: number;
     companionVisible: boolean;
+    /** 때린 자리를 쌓는 곳. 전투가 읽고 비운다 */
+    companionStrikes: Float32Array;
+    companionStrikeCount: number;
     /** 능력을 지금 쓸 수 있는지. HUD가 버튼 안내에 쓴다 */
     companionAbilityReady: boolean;
     /** 지금 빛이 닿는 거리(m). 능력이 꺼져 있으면 0 — 흔적을 드러내는 범위다 */
@@ -83,6 +93,14 @@ const RING_SPIN_RUSH = 3.4;
 /** 눈을 깜빡이는 주기(초)와 감고 있는 시간(초) */
 const BLINK_CYCLE = 3.4;
 const BLINK_DURATION = 0.12;
+
+/**
+ * 타격 박자를 어긋나게 할 때 쓰는 동행 수.
+ *
+ * 실제로 몇이 나와 있는지는 이 컴포넌트가 모른다 — 자기 자리 번호만 안다.
+ * 넷을 전제로 벌려 두면 셋일 때도 겹치지 않는다(0·1·2번이 서로 다른 박자).
+ */
+const PARTY_FOR_PHASE = 4;
 
 export function Companion({
   target,
@@ -103,6 +121,14 @@ export function Companion({
   const formationScale = companionFormationScale(viewportWidth);
 
   const state = useRef<CompanionState>(createCompanionState(target.position, slot, formationScale));
+  /*
+   * 다음 타격까지 남은 시간(초).
+   *
+   * 자리 번호로 어긋나게 시작한다 — 0으로 두면 넷이 같은 프레임에 치고,
+   * 그 뒤로도 같은 박자로만 쳐서 넷이 아니라 하나가 네 배 세게 치는 것으로
+   * 보인다.
+   */
+  const strikeIn = useRef(firstStrikeDelay(slot, PARTY_FOR_PHASE));
   const ringSpin = useRef(0);
   const blinkTimer = useRef(0);
   /*
@@ -145,6 +171,22 @@ export function Companion({
 
     const root = rootRef.current;
     if (!root) return;
+
+    /*
+     * 때린다.
+     *
+     * **자리만 적는다.** 어느 적을 칠지는 전투 쪽이 정한다 — 동료가 적을
+     * 직접 고르면 두 시스템이 서로를 알아야 하고, 적 목록은 저쪽에만 있다.
+     *
+     * 나와 있을 때만 시계가 돈다(`stepStrikeCooldown`). 안 그러면 도시를
+     * 걷는 내내 시계가 돌아 전투가 붙는 순간 넷이 한꺼번에 친다.
+     */
+    const present = next.presence > 0.5;
+    strikeIn.current = stepStrikeCooldown(strikeIn.current, dt, present);
+    if (present && canStrike(strikeIn.current)) {
+      strikeIn.current = COMPANION_STRIKE.intervalSeconds;
+      recordCompanionStrike(effects, next.position.x, next.position.z);
+    }
 
     // 완전히 사라졌으면 그리지 않는다. 투명한 물체도 렌더 비용은 든다.
     root.visible = next.presence > 0.01;

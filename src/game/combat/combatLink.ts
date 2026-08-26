@@ -119,6 +119,57 @@ export function recordEnemyHits(link: EnemyHitLink, struck: readonly EnemyState[
   }
 }
 
+/**
+ * 동료가 이번 프레임에 친 자리들.
+ *
+ * 동료 넷이 **같은 링을 나눠 쓴다**(`GameScene`이 넷 모두에 `playerLink`를
+ * 넘긴다). 그래서 「쳤다」를 불리언 하나로 두면 마지막 하나만 남는다 — 적
+ * 표식과 같은 방식으로 **쌓아** 둔다.
+ *
+ * 자리를 담는 이유: 전투 쪽이 그 자리에서 가장 가까운 적을 찾아 때린다.
+ * 동료가 적을 직접 고르면 두 시스템이 서로를 알아야 한다.
+ */
+export interface CompanionStrikeLink {
+  /** x, z 쌍이 이어진다 */
+  companionStrikes: Float32Array;
+  companionStrikeCount: number;
+}
+
+/** 동료 넷이 한 프레임에 한 번씩 쳐도 남는 자리 */
+const COMPANION_STRIKE_MAX = 8;
+
+/** 표식 버퍼 길이(x, z 한 쌍씩) */
+export const COMPANION_STRIKE_FLOATS = COMPANION_STRIKE_MAX * 2;
+
+/**
+ * 동료 하나가 친 자리를 적는다.
+ *
+ * 넘치면 **버린다.** 넷이 도는 판에서 여덟을 넘길 일이 없고, 넘겼다면
+ * 주기가 무너진 것이라 한 프레임 더 치는 것이 답이 아니다.
+ */
+export function recordCompanionStrike(link: CompanionStrikeLink, x: number, z: number): void {
+  if (link.companionStrikeCount >= COMPANION_STRIKE_MAX) return;
+  const at = link.companionStrikeCount * 2;
+  link.companionStrikes[at] = x;
+  link.companionStrikes[at + 1] = z;
+  link.companionStrikeCount += 1;
+}
+
+/**
+ * 쌓인 자리를 꺼내고 비운다.
+ *
+ * **비우는 것이 핵심이다.** 안 비우면 한 번 친 것이 매 프레임 다시 들어가
+ * 동료가 초당 예순 번 때린다.
+ */
+export function consumeCompanionStrikes(link: CompanionStrikeLink): { x: number; z: number }[] {
+  const out: { x: number; z: number }[] = [];
+  for (let i = 0; i < link.companionStrikeCount; i += 1) {
+    out.push({ x: link.companionStrikes[i * 2], z: link.companionStrikes[i * 2 + 1] });
+  }
+  link.companionStrikeCount = 0;
+  return out;
+}
+
 /** 휘두르기 진행 시간이 흘러가는 곳 — 캐릭터가 자세를 뽑는 데 쓴다 */
 export interface AttackTimingLink {
   attackElapsed: number | null;

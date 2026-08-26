@@ -32,6 +32,7 @@ import {
   stepAttack,
   stepEnemy,
   stepEnemyStrike,
+  resolveCompanionStrikes,
   strikeEnemy,
   strikeWindupProgress,
   type AttackState,
@@ -48,6 +49,7 @@ import {
   consumeSummonHeal,
   projectAttackTiming,
   projectPlayerVitals,
+  consumeCompanionStrikes,
   recordEnemyHits,
 } from "@/game/combat/combatLink";
 import {
@@ -80,6 +82,7 @@ import {
   type Particle,
 } from "@/game/combat/vfxPaint";
 import { WEAPONS, type WeaponId } from "@/game/combat/weapons";
+import { COMPANION_STRIKE } from "@/game/dokebi/companionStrike";
 import { createSeededRandom } from "@/game/core/mathx";
 import type { CombatCues } from "@/game/systems/audio/combat";
 import { projectEnemyBlips } from "@/game/systems/minimap";
@@ -161,6 +164,14 @@ export interface CombatLink {
    */
   enemyBlips: Float32Array;
   enemyBlipCount: number;
+  /**
+   * 동료가 이번 프레임에 친 자리(x, z 쌍). **여기서 읽고 비운다.**
+   *
+   * 동료 넷이 링 하나를 나눠 쓰므로 쌓아 두는 방식이다 — 안 비우면 한 번
+   * 친 것이 매 프레임 다시 들어가 초당 예순 번 때린다.
+   */
+  companionStrikes: Float32Array;
+  companionStrikeCount: number;
 }
 
 export interface EnemiesProps {
@@ -488,6 +499,20 @@ export function Enemies({
       }
       recordEnemyHits(link, boltStruck);
     }
+
+    /* ---------------- 동료의 타격 ---------------- */
+    const companionStruck = resolveCompanionStrikes(
+      enemies.current,
+      consumeCompanionStrikes(link),
+      COMPANION_STRIKE.reachMeters,
+      COMPANION_STRIKE.damage,
+      COMPANION_STRIKE.knockbackScale,
+    );
+    for (const enemy of companionStruck) {
+      if (!reducedMotion) burst(enemy.x, 0.9, enemy.z);
+      if (enemy.mood === "down") releaseEmber(embers.current, enemy.x, enemy.z);
+    }
+    recordEnemyHits(link, companionStruck);
 
     // 보스의 충격도 원거리 피해와 같은 통로로 넣는다. 무적 시간이 한 번만 걸린다.
     const slam = consumeSlam(link) ? 1 : 0;

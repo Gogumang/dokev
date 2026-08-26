@@ -44,6 +44,7 @@ import { Pier } from "@/game/world/PierDeck";
 import { DEFAULT_WEAPON } from "@/game/combat/weapons";
 import { BOSS_HOME } from "@/game/combat/bossSim";
 import { Shrines } from "@/game/dokebi/Shrine";
+import { COMPANION_STRIKE_FLOATS } from "@/game/combat/combatLink";
 import { BLIP_FLOAT_COUNT } from "@/game/systems/minimap";
 import { PLAYER_COMBAT } from "@/game/combat/playerCombat";
 import { isTransparentFilter, photoFilterPreset } from "@/game/systems/photoFilter";
@@ -142,6 +143,8 @@ export function GameScene(props: SceneProps) {
       abilityAggroScale: 1,
       abilityRegenScale: 1,
       enemyBlips: new Float32Array(BLIP_FLOAT_COUNT),
+      companionStrikes: new Float32Array(COMPANION_STRIKE_FLOATS),
+      companionStrikeCount: 0,
       enemyBlipCount: 0,
       companionX: 0,
       companionZ: 0,

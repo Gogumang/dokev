@@ -284,10 +284,18 @@ export interface PlayerLink extends CompanionTarget, CombatLink, CompanionComman
    * 지금은 부두 끝의 낚시가 유일한 소비자다.
    */
   interactPressed: boolean;
-  /** 동료가 매 프레임 써 넣는 자기 위치. 미니맵이 읽는다 */
+  /** 동료가 매 프레임 써 넣는 자기 위치. 지도가 읽는다 */
   companionX: number;
   companionZ: number;
   companionVisible: boolean;
+  /**
+   * 동료가 이번 프레임에 친 자리(x, z 쌍). 전투가 읽고 **비운다.**
+   *
+   * 넷이 이 링 하나를 나눠 쓰므로 불리언으로는 마지막 하나만 남는다 — 적
+   * 표식과 같은 방식으로 쌓는다(`combatLink.recordCompanionStrike`).
+   */
+  companionStrikes: Float32Array;
+  companionStrikeCount: number;
 }
 
 export interface RigProps extends SceneProps {

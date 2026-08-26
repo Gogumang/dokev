@@ -543,6 +543,50 @@ function hasLineOfSight(
   return true;
 }
 
+/**
+ * 동료가 친 자리에서 가장 가까운 적을 때린다.
+ *
+ * 동료는 **자리만** 적는다(`recordCompanionStrike`). 어느 적을 칠지는 여기서
+ * 정한다 — 동료 쪽에 적 목록을 넘기면 두 시스템이 서로를 알아야 하고, 적
+ * 상태는 전투 안에만 있다.
+ *
+ * 탄과 같은 통로(`strikeEnemy`)를 쓴다. 넉백·경직·처치 판정이 한 곳에 있어야
+ * 「동료에게 맞으면 안 밀린다」 같은 것이 안 생긴다.
+ *
+ * **제자리에서 고친다.** 전투 한복판에서 한 프레임에 넷까지 불리므로 배열을
+ * 새로 만들지 않는다. 맞은 것만 돌려주고, 색종이와 소리는 부르는 쪽이 맡는다.
+ */
+export function resolveCompanionStrikes(
+  enemies: EnemyState[],
+  spots: readonly { x: number; z: number }[],
+  reachMeters: number,
+  damage: number,
+  knockbackScale: number,
+): EnemyState[] {
+  const struck: EnemyState[] = [];
+
+  for (const at of spots) {
+    let nearest = -1;
+    let best = reachMeters;
+    for (let i = 0; i < enemies.length; i += 1) {
+      const enemy = enemies[i];
+      // 누운 것은 세지 않는다 — 동료가 시체를 계속 두들기는 그림이 된다
+      if (enemy.mood === "down") continue;
+      const distance = Math.hypot(enemy.x - at.x, enemy.z - at.z);
+      if (distance > best) continue;
+      best = distance;
+      nearest = i;
+    }
+    if (nearest < 0) continue;
+
+    const next = strikeEnemy(enemies[nearest], damage, at.x, at.z, knockbackScale);
+    enemies[nearest] = next;
+    struck.push(next);
+  }
+
+  return struck;
+}
+
 /** 발사 직후 쿨다운을 채운다. */
 export function markFired(enemy: EnemyState): EnemyState {
   return { ...enemy, fireCooldown: GUNNER.fireIntervalSeconds };
